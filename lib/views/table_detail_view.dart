@@ -96,7 +96,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                 itemBuilder: (context, index) {
                                   final order = orders[index];
                                   return Dismissible(
-                                    key: Key('order_$index'),
+                                    key: Key('order_${order['id']}'),
                                     direction: DismissDirection.endToStart,
                                     background: Container(
                                       alignment: Alignment.centerRight,
@@ -108,8 +108,10 @@ class _TableDetailViewState extends State<TableDetailView> {
                                       ),
                                     ),
                                     onDismissed: (direction) {
-                                      TableService.to.removeOrder(
-                                          widget.tableIndex, index);
+                                      setState(() {
+                                        TableService.to.removeOrder(
+                                            widget.tableIndex, index);
+                                      });
                                     },
                                     child: _buildOrderItem(
                                       order['name'],

@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:adisyos/views/notifications_view.dart';
 import 'package:adisyos/views/tables_view.dart';
 import 'package:adisyos/views/menu_management_view.dart';
+import 'package:adisyos/views/reports_view.dart';
 import 'dart:async';
 
 class HomeView extends StatefulWidget {
@@ -42,6 +43,9 @@ class _HomeViewState extends State<HomeView> {
         break;
       case 'menu':
         Get.to(() => const MenuManagementView());
+        break;
+      case 'reports':
+        Get.to(() => const ReportsView());
         break;
       // Diğer sayfalar için case'ler buraya eklenecek
     }
@@ -86,93 +90,105 @@ class _HomeViewState extends State<HomeView> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              DateFormat('dd MMMM EEEE', Get.locale?.languageCode)
-                  .format(_currentTime),
-              style: const TextStyle(color: Colors.white70),
-            ),
-            Row(
-              children: [
-                Text(
-                  DateFormat('HH:mm').format(_currentTime),
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(WeatherIcons.day_sunny, color: Colors.white),
-                const SizedBox(width: 4),
-                Text(
-                  '${_currentTime.hour > 12 ? (_currentTime.hour - 12) * 2 : _currentTime.hour * 2}°',
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ],
-            ),
-          ],
+        Expanded(
+          flex: 2,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                DateFormat('dd MMMM EEEE', Get.locale?.languageCode)
+                    .format(_currentTime),
+                style: const TextStyle(color: Colors.white70),
+              ),
+              Row(
+                children: [
+                  Text(
+                    DateFormat('HH:mm').format(_currentTime),
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(WeatherIcons.day_sunny, color: Colors.white),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${_currentTime.hour > 12 ? (_currentTime.hour - 12) * 2 : _currentTime.hour * 2}°',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        Padding(
-          padding: const EdgeInsets.only(left: 30),
-          child: Text(
-            'adisyos',
-            style: GoogleFonts.righteous(
-              fontSize: 32,
-              color: Colors.white.withOpacity(0.9),
-              letterSpacing: 2,
+        Expanded(
+          flex: 1,
+          child: Center(
+            child: Text(
+              'adisyos',
+              style: GoogleFonts.righteous(
+                fontSize: 32,
+                color: Colors.white.withOpacity(0.9),
+                letterSpacing: 2,
+              ),
             ),
           ),
         ),
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(Icons.wifi, color: Colors.green, size: 16),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(Icons.computer, color: Colors.green, size: 16),
-            ),
-            const SizedBox(width: 8),
-            Stack(
-              children: [
-                IconButton(
-                  onPressed: () => Get.to(() => const NotificationsView()),
-                  icon: const Icon(Icons.notifications, color: Colors.white),
+        Expanded(
+          flex: 2,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Text(
-                      '3',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                child: const Icon(Icons.wifi, color: Colors.green, size: 16),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child:
+                    const Icon(Icons.computer, color: Colors.green, size: 16),
+              ),
+              const SizedBox(width: 8),
+              Stack(
+                children: [
+                  IconButton(
+                    onPressed: () => Get.to(() => const NotificationsView()),
+                    icon: const Icon(Icons.notifications, color: Colors.white),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Text(
+                        '3',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -267,7 +283,8 @@ class _HomeViewState extends State<HomeView> {
     required String route,
     required bool isWeb,
   }) {
-    final bool showComingSoon = route != 'tables' && route != 'menu';
+    final bool showComingSoon =
+        route != 'tables' && route != 'menu' && route != 'reports';
 
     return InkWell(
       onTap: showComingSoon ? null : () => _handleGridItemTap(route),

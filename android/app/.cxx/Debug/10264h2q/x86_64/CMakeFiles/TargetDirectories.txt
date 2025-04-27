@@ -1,0 +1,2 @@
+/Users/ahmetyasary/MyApps/Adisyos/android/app/.cxx/Debug/10264h2q/x86_64/CMakeFiles/edit_cache.dir
+/Users/ahmetyasary/MyApps/Adisyos/android/app/.cxx/Debug/10264h2q/x86_64/CMakeFiles/rebuild_cache.dir
