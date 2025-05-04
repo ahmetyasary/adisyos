@@ -92,17 +92,29 @@ class TablesView extends StatelessWidget {
           ),
         ),
         child: Obx(
-          () => GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.2,
-            ),
-            itemCount: TableService.to.tables.length,
-            itemBuilder: (context, index) => _buildTableCard(index),
-          ),
+          () => TableService.to.tables.isEmpty
+              ? Center(
+                  child: Text(
+                    'Masanız bulunmuyor. Sağ üstten ekleyiniz.',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                )
+              : GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 1.2,
+                  ),
+                  itemCount: TableService.to.tables.length,
+                  itemBuilder: (context, index) => _buildTableCard(index),
+                ),
         ),
       ),
     );
@@ -176,6 +188,15 @@ class TablesView extends StatelessWidget {
               style: TextStyle(
                 color: Colors.white.withOpacity(0.9),
                 fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '₺${table['total'].toStringAsFixed(2)}',
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],

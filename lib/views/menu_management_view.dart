@@ -117,87 +117,101 @@ class MenuManagementView extends StatelessWidget {
           ),
         ),
         child: Obx(
-          () => ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: MenuService.to.menus.length,
-            itemBuilder: (context, menuIndex) {
-              final menu = MenuService.to.menus[menuIndex];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ListTile(
-                      title: Text(
-                        menu['name'],
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
+          () => MenuService.to.menus.isEmpty
+              ? Center(
+                  child: Text(
+                    'Menünüz bulunmuyor. Sağ üstten ekleyiniz.',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: MenuService.to.menus.length,
+                  itemBuilder: (context, menuIndex) {
+                    final menu = MenuService.to.menus[menuIndex];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          IconButton(
-                            icon: const Icon(Icons.add),
-                            onPressed: () => _showAddItemDialog(menuIndex),
+                          ListTile(
+                            title: Text(
+                              menu['name'],
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.add),
+                                  onPressed: () =>
+                                      _showAddItemDialog(menuIndex),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.edit),
+                                  onPressed: () {
+                                    // Menü düzenleme işlevi
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete),
+                                  onPressed: () =>
+                                      MenuService.to.removeMenu(menuIndex),
+                                ),
+                              ],
+                            ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.edit),
-                            onPressed: () {
-                              // Menü düzenleme işlevi
+                          const Divider(),
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: menu['items'].length,
+                            itemBuilder: (context, itemIndex) {
+                              final item = menu['items'][itemIndex];
+                              return ListTile(
+                                title: Text(item['name']),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '₺${item['price'].toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.edit),
+                                      onPressed: () {
+                                        // Ürün düzenleme işlevi
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete),
+                                      onPressed: () =>
+                                          MenuService.to.removeMenuItem(
+                                        menuIndex,
+                                        itemIndex,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
                             },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete),
-                            onPressed: () =>
-                                MenuService.to.removeMenu(menuIndex),
                           ),
                         ],
                       ),
-                    ),
-                    const Divider(),
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: menu['items'].length,
-                      itemBuilder: (context, itemIndex) {
-                        final item = menu['items'][itemIndex];
-                        return ListTile(
-                          title: Text(item['name']),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '₺${item['price'].toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.edit),
-                                onPressed: () {
-                                  // Ürün düzenleme işlevi
-                                },
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete),
-                                onPressed: () => MenuService.to.removeMenuItem(
-                                  menuIndex,
-                                  itemIndex,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         ),
       ),
     );

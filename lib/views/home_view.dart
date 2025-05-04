@@ -7,7 +7,9 @@ import 'package:adisyos/views/notifications_view.dart';
 import 'package:adisyos/views/tables_view.dart';
 import 'package:adisyos/views/menu_management_view.dart';
 import 'package:adisyos/views/reports_view.dart';
+import 'package:adisyos/views/settings_view.dart';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -187,6 +189,12 @@ class _HomeViewState extends State<HomeView> {
                   ),
                 ],
               ),
+              IconButton(
+                onPressed: () => Get.to(() => const SettingsView()),
+                icon: const Icon(Icons.settings, color: Colors.white),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
             ],
           ),
         ),
@@ -345,22 +353,35 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Widget _buildFooter() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'customer_service'.tr,
-          style: const TextStyle(color: Colors.white70),
-        ),
-        const Text(
-          'Adisyos v0.1 (Beta) by Smartlogy',
-          style: TextStyle(color: Colors.white70),
-        ),
-        Text(
-          '23 Society',
-          style: TextStyle(color: Colors.white.withOpacity(0.7)),
-        ),
-      ],
+    return FutureBuilder<String?>(
+      future: _getCompanyName(),
+      builder: (context, snapshot) {
+        final companyName = (snapshot.data != null && snapshot.data!.isNotEmpty)
+            ? snapshot.data!
+            : 'Şirket Adınızı Giriniz';
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'customer_service'.tr,
+              style: const TextStyle(color: Colors.white70),
+            ),
+            const Text(
+              'Adisyos v0.1 (Beta) by Smartlogy',
+              style: TextStyle(color: Colors.white70),
+            ),
+            Text(
+              companyName,
+              style: TextStyle(color: Colors.white.withOpacity(0.7)),
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  Future<String?> _getCompanyName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('companyName');
   }
 }

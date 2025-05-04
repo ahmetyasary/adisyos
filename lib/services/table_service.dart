@@ -2,6 +2,8 @@ import 'package:get/get.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
 class TableService extends GetxService {
   static TableService get to => Get.find();
@@ -16,25 +18,43 @@ class TableService extends GetxService {
   }
 
   Future<void> _initTablesFile() async {
-    final directory = await getApplicationDocumentsDirectory();
-    _tablesFilePath = '${directory.path}/tables.json';
+    if (!kIsWeb) {
+      final directory = await getApplicationDocumentsDirectory();
+      _tablesFilePath = '${directory.path}/tables.json';
+    }
     await _loadTables();
   }
 
   Future<void> _loadTables() async {
     try {
-      final file = File(_tablesFilePath);
-      if (await file.exists()) {
-        final jsonString = await file.readAsString();
-        final List<dynamic> jsonList = json.decode(jsonString);
-        tables.assignAll(jsonList.map((item) {
-          final Map<String, dynamic> table = Map<String, dynamic>.from(item);
-          table['orders'] = List<Map<String, dynamic>>.from(
-            (table['orders'] as List)
-                .map((order) => Map<String, dynamic>.from(order)),
-          );
-          return table;
-        }));
+      if (kIsWeb) {
+        final prefs = await SharedPreferences.getInstance();
+        final jsonString = prefs.getString('tables');
+        if (jsonString != null) {
+          final List<dynamic> jsonList = json.decode(jsonString);
+          tables.assignAll(jsonList.map((item) {
+            final Map<String, dynamic> table = Map<String, dynamic>.from(item);
+            table['orders'] = List<Map<String, dynamic>>.from(
+              (table['orders'] as List)
+                  .map((order) => Map<String, dynamic>.from(order)),
+            );
+            return table;
+          }));
+        }
+      } else {
+        final file = File(_tablesFilePath);
+        if (await file.exists()) {
+          final jsonString = await file.readAsString();
+          final List<dynamic> jsonList = json.decode(jsonString);
+          tables.assignAll(jsonList.map((item) {
+            final Map<String, dynamic> table = Map<String, dynamic>.from(item);
+            table['orders'] = List<Map<String, dynamic>>.from(
+              (table['orders'] as List)
+                  .map((order) => Map<String, dynamic>.from(order)),
+            );
+            return table;
+          }));
+        }
       }
     } catch (e) {
       print('Error loading tables: $e');
@@ -43,9 +63,14 @@ class TableService extends GetxService {
 
   Future<void> _saveTables() async {
     try {
-      final file = File(_tablesFilePath);
       final jsonString = json.encode(tables);
-      await file.writeAsString(jsonString);
+      if (kIsWeb) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('tables', jsonString);
+      } else {
+        final file = File(_tablesFilePath);
+        await file.writeAsString(jsonString);
+      }
     } catch (e) {
       print('Error saving tables: $e');
     }

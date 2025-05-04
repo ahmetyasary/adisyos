@@ -59,15 +59,16 @@ class _TableDetailViewState extends State<TableDetailView> {
                         Text(
                           widget.tableName,
                           style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black),
                         ),
                         Obx(
                           () => Text(
                             '${('total'.tr)}: ₺${TableService.to.getTotal(widget.tableIndex).toStringAsFixed(2)}',
                             style: const TextStyle(
                               fontSize: 18,
+                              color: Colors.black,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -143,17 +144,11 @@ class _TableDetailViewState extends State<TableDetailView> {
                         _buildActionButton(
                             Icons.add_circle_outline, 'new'.tr, Colors.blue),
                         _buildActionButton(
-                            Icons.card_giftcard, 'gift'.tr, Colors.purple),
-                        _buildActionButton(
-                            Icons.sync, 'exchange'.tr, Colors.orange),
-                        _buildActionButton(
                             Icons.call_split, 'split'.tr, Colors.green),
                         _buildActionButton(
                             Icons.discount, 'discount'.tr, Colors.red),
                         _buildActionButton(
                             Icons.print, 'print'.tr, Colors.grey),
-                        _buildActionButton(
-                            Icons.cancel, 'cancel'.tr, Colors.red),
                         _buildActionButton(
                             Icons.compare_arrows, 'move'.tr, Colors.blue),
                         _buildActionButton(
@@ -207,34 +202,49 @@ class _TableDetailViewState extends State<TableDetailView> {
                   // Menü içeriği
                   Expanded(
                     child: Obx(
-                      () => GridView.builder(
-                        padding: const EdgeInsets.all(16),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          childAspectRatio: 0.8,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                        ),
-                        itemCount: MenuService
-                            .to.menus[_selectedMenuIndex]['items'].length,
-                        itemBuilder: (context, index) {
-                          final item = MenuService.to.menus[_selectedMenuIndex]
-                              ['items'][index];
-                          return InkWell(
-                            onTap: () => TableService.to.addOrder(
-                              widget.tableIndex,
-                              item['name'],
-                              item['price'],
-                            ),
-                            child: _buildMenuItem(
-                              item['name'],
-                              'assets/images/coffee.jpg',
-                              '₺${item['price'].toStringAsFixed(2)}',
+                      () {
+                        if (MenuService.to.menus.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'Tanımlı menü yok.',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
                           );
-                        },
-                      ),
+                        }
+                        return GridView.builder(
+                          padding: const EdgeInsets.all(16),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 4,
+                            childAspectRatio: 0.8,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                          ),
+                          itemCount: MenuService
+                              .to.menus[_selectedMenuIndex]['items'].length,
+                          itemBuilder: (context, index) {
+                            final item = MenuService
+                                .to.menus[_selectedMenuIndex]['items'][index];
+                            return InkWell(
+                              onTap: () => TableService.to.addOrder(
+                                widget.tableIndex,
+                                item['name'],
+                                item['price'],
+                              ),
+                              child: _buildMenuItem(
+                                item['name'],
+                                'assets/images/coffee.jpg',
+                                '₺${item['price'].toStringAsFixed(2)}',
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -259,19 +269,19 @@ class _TableDetailViewState extends State<TableDetailView> {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.grey,
+              color: Colors.black,
             ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Text(
               name,
-              style: const TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 16, color: Colors.black),
             ),
           ),
           Text(
             '₺${(price * quantity).toStringAsFixed(2)}',
-            style: const TextStyle(fontSize: 16),
+            style: const TextStyle(fontSize: 16, color: Colors.black),
           ),
         ],
       ),
@@ -345,6 +355,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                   name,
                   style: const TextStyle(
                     fontSize: 16,
+                    color: Colors.black,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
