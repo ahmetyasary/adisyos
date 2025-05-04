@@ -197,25 +197,9 @@ class _HomeViewState extends State<HomeView> {
   Widget _buildMainGrid(BuildContext context) {
     final items = [
       {'icon': Icons.table_bar, 'title': 'tables'.tr, 'route': 'tables'},
-      {
-        'icon': Icons.shopping_cart,
-        'title': 'quick_sale'.tr,
-        'route': 'quick_sale'
-      },
-      {
-        'icon': Icons.delivery_dining,
-        'title': 'packages'.tr,
-        'route': 'packages'
-      },
-      {
-        'icon': Icons.shopping_bag,
-        'title': 'online_orders'.tr,
-        'route': 'online_orders'
-      },
       {'icon': Icons.restaurant_menu, 'title': 'menu'.tr, 'route': 'menu'},
-      {'icon': Icons.category, 'title': 'products'.tr, 'route': 'products'},
-      {'icon': Icons.people, 'title': 'staff'.tr, 'route': 'staff'},
       {'icon': Icons.bar_chart, 'title': 'reports'.tr, 'route': 'reports'},
+      {'icon': Icons.people, 'title': 'staff'.tr, 'route': 'staff'}
     ];
 
     return LayoutBuilder(
@@ -369,7 +353,7 @@ class _HomeViewState extends State<HomeView> {
           style: const TextStyle(color: Colors.white70),
         ),
         const Text(
-          'Smartlogy POS 1.0 Standart Edition',
+          'Adisyos v0.1 (Beta) by Smartlogy',
           style: TextStyle(color: Colors.white70),
         ),
         Text(

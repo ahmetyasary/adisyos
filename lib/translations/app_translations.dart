@@ -17,7 +17,7 @@ class AppTranslations extends Translations {
           'settings': 'Ayarlar',
           'logout': 'Çıkış',
           'new_order': 'Yeni sipariş var!',
-          'customer_service': 'Müşteri Hizmetleri',
+          'customer_service': 'Bize Ulaşın',
           'notifications': 'Bildirimler',
           'new_order_message': 'Yeni bir sipariş geldi. Lütfen kontrol edin.',
           'internet': 'İnternet',
@@ -115,9 +115,9 @@ class AppTranslations extends Translations {
           'add_table': 'Add Table',
           'table_name': 'Table Name',
           'delete_table': 'Delete Table',
-          'delete_table_confirmation': 'Delete %s?',
-          'yes': 'Yes',
-          'no': 'No',
+          'delete_table_confirmation': 'Silinecek %s?',
+          'yes': 'Evet',
+          'no': 'Hayır',
         },
       };
 }

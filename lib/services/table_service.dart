@@ -1,9 +1,55 @@
 import 'package:get/get.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class TableService extends GetxService {
   static TableService get to => Get.find();
 
   final RxList<Map<String, dynamic>> tables = <Map<String, dynamic>>[].obs;
+  late final String _tablesFilePath;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _initTablesFile();
+  }
+
+  Future<void> _initTablesFile() async {
+    final directory = await getApplicationDocumentsDirectory();
+    _tablesFilePath = '${directory.path}/tables.json';
+    await _loadTables();
+  }
+
+  Future<void> _loadTables() async {
+    try {
+      final file = File(_tablesFilePath);
+      if (await file.exists()) {
+        final jsonString = await file.readAsString();
+        final List<dynamic> jsonList = json.decode(jsonString);
+        tables.assignAll(jsonList.map((item) {
+          final Map<String, dynamic> table = Map<String, dynamic>.from(item);
+          table['orders'] = List<Map<String, dynamic>>.from(
+            (table['orders'] as List)
+                .map((order) => Map<String, dynamic>.from(order)),
+          );
+          return table;
+        }));
+      }
+    } catch (e) {
+      print('Error loading tables: $e');
+    }
+  }
+
+  Future<void> _saveTables() async {
+    try {
+      final file = File(_tablesFilePath);
+      final jsonString = json.encode(tables);
+      await file.writeAsString(jsonString);
+    } catch (e) {
+      print('Error saving tables: $e');
+    }
+  }
 
   void addTable(String name) {
     tables.add({
@@ -12,21 +58,25 @@ class TableService extends GetxService {
       'orders': <Map<String, dynamic>>[],
       'total': 0.0,
     });
+    _saveTables();
   }
 
   void removeTable(int index) {
     tables.removeAt(index);
+    _saveTables();
   }
 
   void toggleTableStatus(int index) {
     tables[index]['isOccupied'] = !tables[index]['isOccupied'];
     tables.refresh();
+    _saveTables();
   }
 
   void _updateTableStatus(int tableIndex) {
     final orders = (tables[tableIndex]['orders'] as List<Map<String, dynamic>>);
     tables[tableIndex]['isOccupied'] = orders.isNotEmpty;
     tables.refresh();
+    _saveTables();
   }
 
   void addOrder(int tableIndex, String name, double price) {
