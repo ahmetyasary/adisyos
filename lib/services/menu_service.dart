@@ -97,7 +97,9 @@ class MenuService extends GetxService {
         }
       }
     } catch (e) {
-      print('Error loading menus: $e');
+      if (kDebugMode) {
+        print('Error loading menus: $e');
+      }
     }
   }
 
@@ -112,7 +114,9 @@ class MenuService extends GetxService {
         await file.writeAsString(jsonString);
       }
     } catch (e) {
-      print('Error saving menus: $e');
+      if (kDebugMode) {
+        print('Error saving menus: $e');
+      }
     }
   }
 

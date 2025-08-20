@@ -90,9 +90,9 @@ class _HomeViewState extends State<HomeView> {
 
   Widget _buildHeader(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
+        Flexible(
           flex: 2,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,102 +100,71 @@ class _HomeViewState extends State<HomeView> {
               Text(
                 DateFormat('dd MMMM EEEE', Get.locale?.languageCode)
                     .format(_currentTime),
-                style: const TextStyle(color: Colors.white70),
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               Row(
                 children: [
                   Text(
                     DateFormat('HH:mm').format(_currentTime),
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
                   ),
                   const SizedBox(width: 8),
-                  const Icon(WeatherIcons.day_sunny, color: Colors.white),
+                  const Icon(WeatherIcons.day_sunny,
+                      color: Colors.white, size: 18),
                   const SizedBox(width: 4),
                   Text(
                     '${_currentTime.hour > 12 ? (_currentTime.hour - 12) * 2 : _currentTime.hour * 2}°',
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
                   ),
                 ],
               ),
             ],
           ),
         ),
-        Expanded(
-          flex: 1,
+        Flexible(
+          flex: 2,
           child: Center(
-            child: Text(
-              'adisyos',
-              style: GoogleFonts.righteous(
-                fontSize: 32,
-                color: Colors.white.withOpacity(0.9),
-                letterSpacing: 2,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                'adisyos',
+                style: GoogleFonts.righteous(
+                  fontSize: 32,
+                  color: Colors.white.withValues(alpha: 0.9),
+                  letterSpacing: 2,
+                ),
+                maxLines: 1,
               ),
             ),
           ),
         ),
-        Expanded(
+        Flexible(
           flex: 2,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => Get.to(() => const NotificationsView()),
+                  icon: const Icon(Icons.notifications, color: Colors.white),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
-                child: const Icon(Icons.wifi, color: Colors.green, size: 16),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
+                IconButton(
+                  onPressed: () => Get.to(() => const SettingsView()),
+                  icon: const Icon(Icons.settings, color: Colors.white),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
-                child:
-                    const Icon(Icons.computer, color: Colors.green, size: 16),
-              ),
-              const SizedBox(width: 8),
-              Stack(
-                children: [
-                  IconButton(
-                    onPressed: () => Get.to(() => const NotificationsView()),
-                    icon: const Icon(Icons.notifications, color: Colors.white),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Text(
-                        '3',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              IconButton(
-                onPressed: () => Get.to(() => const SettingsView()),
-                icon: const Icon(Icons.settings, color: Colors.white),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
@@ -282,10 +251,10 @@ class _HomeViewState extends State<HomeView> {
       onTap: showComingSoon ? null : () => _handleGridItemTap(route),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(isWeb ? 32 : 16),
           border: Border.all(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withValues(alpha: 0.1),
             width: isWeb ? 2 : 1,
           ),
         ),
@@ -299,7 +268,7 @@ class _HomeViewState extends State<HomeView> {
                   Icon(
                     icon,
                     color: showComingSoon
-                        ? Colors.white.withOpacity(0.5)
+                        ? Colors.white.withValues(alpha: 0.5)
                         : Colors.white,
                     size: isWeb ? 64 : 32,
                   ),
@@ -310,7 +279,7 @@ class _HomeViewState extends State<HomeView> {
                       title,
                       style: TextStyle(
                         color: showComingSoon
-                            ? Colors.white.withOpacity(0.5)
+                            ? Colors.white.withValues(alpha: 0.5)
                             : Colors.white,
                         fontSize: isWeb ? 20 : 14,
                         fontWeight: FontWeight.w500,
@@ -333,7 +302,7 @@ class _HomeViewState extends State<HomeView> {
                     vertical: isWeb ? 8 : 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.9),
+                    color: Colors.orange.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(isWeb ? 20 : 12),
                   ),
                   child: Text(
@@ -359,22 +328,37 @@ class _HomeViewState extends State<HomeView> {
         final companyName = (snapshot.data != null && snapshot.data!.isNotEmpty)
             ? snapshot.data!
             : 'Şirket Adınızı Giriniz';
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'customer_service'.tr,
-              style: const TextStyle(color: Colors.white70),
-            ),
-            const Text(
-              'Adisyos v0.1 (Beta) by Smartlogy',
-              style: TextStyle(color: Colors.white70),
-            ),
-            Text(
-              companyName,
-              style: TextStyle(color: Colors.white.withOpacity(0.7)),
-            ),
-          ],
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2.0),
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 2,
+            children: [
+              Text(
+                'customer_service'.tr,
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                overflow: TextOverflow.ellipsis,
+              ),
+              const Text(
+                'Adisyos v0.1 (Beta) by Smartlogy',
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(
+                width: 120,
+                child: Text(
+                  companyName,
+                  style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+          ),
         );
       },
     );

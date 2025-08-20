@@ -57,7 +57,9 @@ class TableService extends GetxService {
         }
       }
     } catch (e) {
-      print('Error loading tables: $e');
+      if (kDebugMode) {
+        print('Error loading tables: $e');
+      }
     }
   }
 
@@ -72,7 +74,9 @@ class TableService extends GetxService {
         await file.writeAsString(jsonString);
       }
     } catch (e) {
-      print('Error saving tables: $e');
+      if (kDebugMode) {
+        print('Error saving tables: $e');
+      }
     }
   }
 

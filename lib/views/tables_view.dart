@@ -169,8 +169,8 @@ class TablesView extends StatelessWidget {
       },
       child: Card(
         color: isOccupied
-            ? Colors.red.withOpacity(0.8)
-            : Colors.green.withOpacity(0.8),
+            ? Colors.red.withValues(alpha: 0.8)
+            : Colors.green.withValues(alpha: 0.8),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -186,7 +186,7 @@ class TablesView extends StatelessWidget {
             Text(
               isOccupied ? 'Dolu' : 'Müsait',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 16,
               ),
             ),

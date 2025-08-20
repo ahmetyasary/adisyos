@@ -32,7 +32,7 @@ class ReportsView extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.bar_chart,
-                  size: 80, color: Colors.white.withOpacity(0.8)),
+                  size: 80, color: Colors.white.withValues(alpha: 0.8)),
               const SizedBox(height: 24),
               Text(
                 'Raporlar Sayfası',
@@ -45,7 +45,6 @@ class ReportsView extends StatelessWidget {
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: () => Get.to(() => const DailyReportView()),
-                child: const Text('Günlük Rapor'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: Theme.of(context).colorScheme.primary,
@@ -53,11 +52,11 @@ class ReportsView extends StatelessWidget {
                   textStyle: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold),
                 ),
+                child: const Text('Günlük Rapor'),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => Get.to(() => const MonthlyReportView()),
-                child: const Text('Aylık Rapor'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: Theme.of(context).colorScheme.primary,
@@ -65,11 +64,11 @@ class ReportsView extends StatelessWidget {
                   textStyle: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold),
                 ),
+                child: const Text('Aylık Rapor'),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => Get.to(() => const YearlyReportView()),
-                child: const Text('Yıllık Rapor'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: Theme.of(context).colorScheme.primary,
@@ -77,6 +76,7 @@ class ReportsView extends StatelessWidget {
                   textStyle: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold),
                 ),
+                child: const Text('Yıllık Rapor'),
               ),
             ],
           ),
