@@ -302,7 +302,7 @@ class _HomeViewState extends State<HomeView> {
                     vertical: isWeb ? 8 : 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.9),
+                    color: const Color(0xFFF39C12).withValues(alpha: 0.95),
                     borderRadius: BorderRadius.circular(isWeb ? 20 : 12),
                   ),
                   child: Text(

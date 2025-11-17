@@ -86,6 +86,7 @@ class TableService extends GetxService {
       'isOccupied': false,
       'orders': <Map<String, dynamic>>[],
       'total': 0.0,
+      'discount': 0.0,
     });
     _saveTables();
   }
@@ -146,5 +147,73 @@ class TableService extends GetxService {
 
   double getTotal(int tableIndex) {
     return tables[tableIndex]['total'] as double;
+  }
+
+  // Masayı temizle (Ödeme sonrası veya yeni sipariş)
+  void clearTable(int tableIndex) {
+    tables[tableIndex]['orders'] = <Map<String, dynamic>>[];
+    tables[tableIndex]['total'] = 0.0;
+    tables[tableIndex]['isOccupied'] = false;
+    tables[tableIndex]['discount'] = 0.0;
+    tables.refresh();
+    _saveTables();
+  }
+
+  // İndirim uygula
+  void applyDiscount(int tableIndex, double discountPercentage) {
+    final currentTotal = tables[tableIndex]['total'] as double;
+    final discountAmount = currentTotal * (discountPercentage / 100);
+    tables[tableIndex]['discount'] = discountAmount;
+    tables.refresh();
+    _saveTables();
+  }
+
+  // İndirimli toplam al
+  double getTotalWithDiscount(int tableIndex) {
+    final total = tables[tableIndex]['total'] as double;
+    final discount = (tables[tableIndex]['discount'] ?? 0.0) as double;
+    return total - discount;
+  }
+
+  // İndirim miktarını al
+  double getDiscount(int tableIndex) {
+    return (tables[tableIndex]['discount'] ?? 0.0) as double;
+  }
+
+  // Sipariş taşıma
+  void moveOrderToTable(int fromTableIndex, int toTableIndex, int orderIndex) {
+    final orders = getOrders(fromTableIndex);
+    if (orderIndex < orders.length) {
+      final order = orders[orderIndex];
+      final price = order['price'] as double;
+      final quantity = order['quantity'] as int;
+
+      // Hedef masaya sipariş ekle
+      addOrder(toTableIndex, order['name'], price);
+      
+      // Kaynak masadan sipariş çıkar (quantity kadar)
+      for (int i = 0; i < quantity - 1; i++) {
+        addOrder(toTableIndex, order['name'], price);
+      }
+      
+      // Orijinal siparişi sil
+      removeOrder(fromTableIndex, orderIndex);
+    }
+  }
+
+  // Tüm siparişleri başka masaya taşı
+  void moveAllOrdersToTable(int fromTableIndex, int toTableIndex) {
+    final orders = List<Map<String, dynamic>>.from(getOrders(fromTableIndex));
+    
+    for (var order in orders) {
+      final price = order['price'] as double;
+      final quantity = order['quantity'] as int;
+      
+      for (int i = 0; i < quantity; i++) {
+        addOrder(toTableIndex, order['name'], price);
+      }
+    }
+    
+    clearTable(fromTableIndex);
   }
 }

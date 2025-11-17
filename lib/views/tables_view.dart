@@ -168,9 +168,10 @@ class TablesView extends StatelessWidget {
         });
       },
       child: Card(
+        elevation: 4,
         color: isOccupied
-            ? Colors.red.withValues(alpha: 0.8)
-            : Colors.green.withValues(alpha: 0.8),
+            ? const Color(0xFFE74C3C).withValues(alpha: 0.9)
+            : const Color(0xFF27AE60).withValues(alpha: 0.9),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -186,17 +187,24 @@ class TablesView extends StatelessWidget {
             Text(
               isOccupied ? 'Dolu' : 'Müsait',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.9),
+                color: Colors.white.withValues(alpha: 0.95),
                 fontSize: 16,
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              '₺${table['total'].toStringAsFixed(2)}',
-              style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '₺${table['total'].toStringAsFixed(2)}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
