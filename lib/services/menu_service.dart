@@ -33,32 +33,13 @@ class MenuService extends GetxService {
         if (jsonString != null) {
           final List<dynamic> jsonList = json.decode(jsonString);
           menus.assignAll(jsonList.map((item) {
-            final Map<String, dynamic> menu = Map<String, dynamic>.from(item);
+            final Map<String, dynamic> menu = Map<String, dynamic>.from(item as Map);
             menu['items'] = List<Map<String, dynamic>>.from(
-                menu['items'].map((item) => Map<String, dynamic>.from(item)));
+                menu['items'].map((i) => Map<String, dynamic>.from(i as Map)));
             return menu;
           }));
         } else {
-          // Varsayılan menüleri yükle
-          menus.assignAll([
-            {
-              'name': 'İçecekler',
-              'items': [
-                {'name': 'Americano', 'price': 30.0},
-                {'name': 'Caffe Latte', 'price': 36.0},
-                {'name': 'Caramel Latte', 'price': 40.0},
-                {'name': 'Espresso', 'price': 25.0},
-              ]
-            },
-            {
-              'name': 'Tatlılar',
-              'items': [
-                {'name': 'Cookie', 'price': 25.0},
-                {'name': 'Tiramisu', 'price': 45.0},
-                {'name': 'Banana Bread', 'price': 35.0},
-              ]
-            },
-          ]);
+          _loadDefaults();
           await _saveMenus();
         }
       } else {
@@ -67,32 +48,13 @@ class MenuService extends GetxService {
           final jsonString = await file.readAsString();
           final List<dynamic> jsonList = json.decode(jsonString);
           menus.assignAll(jsonList.map((item) {
-            final Map<String, dynamic> menu = Map<String, dynamic>.from(item);
+            final Map<String, dynamic> menu = Map<String, dynamic>.from(item as Map);
             menu['items'] = List<Map<String, dynamic>>.from(
-                menu['items'].map((item) => Map<String, dynamic>.from(item)));
+                menu['items'].map((i) => Map<String, dynamic>.from(i as Map)));
             return menu;
           }));
         } else {
-          // Varsayılan menüleri yükle
-          menus.assignAll([
-            {
-              'name': 'İçecekler',
-              'items': [
-                {'name': 'Americano', 'price': 30.0},
-                {'name': 'Caffe Latte', 'price': 36.0},
-                {'name': 'Caramel Latte', 'price': 40.0},
-                {'name': 'Espresso', 'price': 25.0},
-              ]
-            },
-            {
-              'name': 'Tatlılar',
-              'items': [
-                {'name': 'Cookie', 'price': 25.0},
-                {'name': 'Tiramisu', 'price': 45.0},
-                {'name': 'Banana Bread', 'price': 35.0},
-              ]
-            },
-          ]);
+          _loadDefaults();
           await _saveMenus();
         }
       }
@@ -101,6 +63,28 @@ class MenuService extends GetxService {
         print('Error loading menus: $e');
       }
     }
+  }
+
+  void _loadDefaults() {
+    menus.assignAll([
+      {
+        'name': 'İçecekler',
+        'items': [
+          {'name': 'Americano', 'price': 30.0},
+          {'name': 'Caffe Latte', 'price': 36.0},
+          {'name': 'Caramel Latte', 'price': 40.0},
+          {'name': 'Espresso', 'price': 25.0},
+        ]
+      },
+      {
+        'name': 'Tatlılar',
+        'items': [
+          {'name': 'Cookie', 'price': 25.0},
+          {'name': 'Tiramisu', 'price': 45.0},
+          {'name': 'Banana Bread', 'price': 35.0},
+        ]
+      },
+    ]);
   }
 
   Future<void> _saveMenus() async {
@@ -123,16 +107,29 @@ class MenuService extends GetxService {
   void addMenu(String name) {
     menus.add({
       'name': name,
-      'items': [],
+      'items': <Map<String, dynamic>>[],
     });
     _saveMenus();
   }
 
+  void updateMenu(int index, String name) {
+    menus[index]['name'] = name;
+    menus.refresh();
+    _saveMenus();
+  }
+
   void addMenuItem(int menuIndex, String name, double price) {
-    menus[menuIndex]['items'].add({
+    (menus[menuIndex]['items'] as List).add({
       'name': name,
       'price': price,
     });
+    menus.refresh();
+    _saveMenus();
+  }
+
+  void updateMenuItem(int menuIndex, int itemIndex, String name, double price) {
+    final items = menus[menuIndex]['items'] as List;
+    items[itemIndex] = {'name': name, 'price': price};
     menus.refresh();
     _saveMenus();
   }
@@ -143,7 +140,7 @@ class MenuService extends GetxService {
   }
 
   void removeMenuItem(int menuIndex, int itemIndex) {
-    menus[menuIndex]['items'].removeAt(itemIndex);
+    (menus[menuIndex]['items'] as List).removeAt(itemIndex);
     menus.refresh();
     _saveMenus();
   }

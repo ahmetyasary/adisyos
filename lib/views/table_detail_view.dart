@@ -24,6 +24,21 @@ class TableDetailView extends StatefulWidget {
 
 class _TableDetailViewState extends State<TableDetailView> {
   int _selectedMenuIndex = 0;
+  bool _isSearching = false;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  int get _safeMenuIndex {
+    final count = MenuService.to.menus.length;
+    if (count == 0) return 0;
+    return _selectedMenuIndex.clamp(0, count - 1);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,167 +49,36 @@ class _TableDetailViewState extends State<TableDetailView> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: Icon(_isSearching ? Icons.close : Icons.search),
             onPressed: () {
-              // Arama işlevi
+              setState(() {
+                _isSearching = !_isSearching;
+                if (!_isSearching) {
+                  _searchQuery = '';
+                  _searchController.clear();
+                }
+              });
             },
           ),
         ],
       ),
       body: Row(
         children: [
-          // Sol taraf - Sipariş listesi
+          // Left side - Order list
           Expanded(
             flex: 2,
             child: Container(
               color: Colors.white,
               child: Column(
                 children: [
-                  // Sipariş listesi başlığı
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    color: Colors.grey[100],
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          widget.tableName,
-                          style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black),
-                        ),
-                        Obx(
-                          () {
-                            final total = TableService.to.getTotal(widget.tableIndex);
-                            final discount = TableService.to.getDiscount(widget.tableIndex);
-                            final finalTotal = TableService.to.getTotalWithDiscount(widget.tableIndex);
-                            
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (discount > 0) ...[
-                                  Text(
-                                    '₺${total.toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[600],
-                                      decoration: TextDecoration.lineThrough,
-                                    ),
-                                  ),
-                                  Text(
-                                    '-₺${discount.toStringAsFixed(2)}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppTheme.warningColor,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                                Text(
-                                  '${('total'.tr)}: ₺${finalTotal.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Sipariş listesi
-                  Expanded(
-                    child: Obx(
-                      () {
-                        final orders =
-                            TableService.to.getOrders(widget.tableIndex);
-                        return orders.isEmpty
-                            ? Center(
-                                child: Text(
-                                  'Henüz sipariş yok',
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              )
-                            : ListView.builder(
-                                itemCount: orders.length,
-                                itemBuilder: (context, index) {
-                                  final order = orders[index];
-                                  return Dismissible(
-                                    key: Key('order_${order['id']}'),
-                                    direction: DismissDirection.endToStart,
-                                    background: Container(
-                                      alignment: Alignment.centerRight,
-                                      padding: const EdgeInsets.only(right: 16),
-                                      color: Colors.red,
-                                      child: const Icon(
-                                        Icons.delete,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    onDismissed: (direction) {
-                                      setState(() {
-                                        TableService.to.removeOrder(
-                                            widget.tableIndex, index);
-                                      });
-                                    },
-                                    child: _buildOrderItem(
-                                      order['name'],
-                                      order['quantity'],
-                                      order['price'],
-                                    ),
-                                  );
-                                },
-                              );
-                      },
-                    ),
-                  ),
-                  // Alt butonlar
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, -2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildActionButton(
-                            Icons.add_circle_outline,
-                            'new'.tr,
-                            AppTheme.accentColor,
-                            _handleNewOrder),
-                        _buildActionButton(Icons.call_split, 'split'.tr,
-                            AppTheme.infoColor, _handleSplit),
-                        _buildActionButton(Icons.discount, 'discount'.tr,
-                            AppTheme.warningColor, _handleDiscount),
-                        _buildActionButton(Icons.print, 'print'.tr,
-                            Colors.grey[700]!, _handlePrint),
-                        _buildActionButton(Icons.compare_arrows, 'move'.tr,
-                            AppTheme.accentColor, _handleMove),
-                        _buildActionButton(Icons.payment, 'pay'.tr,
-                            AppTheme.successColor, _handlePayment),
-                      ],
-                    ),
-                  ),
+                  _buildOrderHeader(),
+                  Expanded(child: _buildOrderList()),
+                  _buildActionButtons(),
                 ],
               ),
             ),
           ),
-          // Sağ taraf - Menü
+          // Right side - Menu
           Expanded(
             flex: 3,
             child: Container(
@@ -210,77 +94,8 @@ class _TableDetailViewState extends State<TableDetailView> {
               ),
               child: Column(
                 children: [
-                  // Menü kategorileri
-                  Container(
-                    height: 50,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Obx(
-                      () => ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: MenuService.to.menus.length,
-                        itemBuilder: (context, index) {
-                          final menu = MenuService.to.menus[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: _buildCategoryButton(
-                              menu['name'],
-                              index == _selectedMenuIndex,
-                              onTap: () =>
-                                  setState(() => _selectedMenuIndex = index),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  // Menü içeriği
-                  Expanded(
-                    child: Obx(
-                      () {
-                        if (MenuService.to.menus.isEmpty) {
-                          return Center(
-                            child: Text(
-                              'Tanımlı menü yok.',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          );
-                        }
-                        return GridView.builder(
-                          padding: const EdgeInsets.all(16),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
-                            childAspectRatio: 0.8,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                          ),
-                          itemCount: MenuService
-                              .to.menus[_selectedMenuIndex]['items'].length,
-                          itemBuilder: (context, index) {
-                            final item = MenuService
-                                .to.menus[_selectedMenuIndex]['items'][index];
-                            return InkWell(
-                              onTap: () => TableService.to.addOrder(
-                                widget.tableIndex,
-                                item['name'],
-                                item['price'],
-                              ),
-                              child: _buildMenuItem(
-                                item['name'],
-                                'assets/images/coffee.jpg',
-                                '₺${item['price'].toStringAsFixed(2)}',
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
+                  if (_isSearching) _buildSearchBar() else _buildCategoryTabs(),
+                  Expanded(child: _buildMenuGrid()),
                 ],
               ),
             ),
@@ -290,32 +105,426 @@ class _TableDetailViewState extends State<TableDetailView> {
     );
   }
 
-  Widget _buildOrderItem(String name, int quantity, double price) {
+  Widget _buildOrderHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
-      ),
+      padding: const EdgeInsets.all(16),
+      color: Colors.grey[100],
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            '${quantity}x',
+            widget.tableName,
             style: const TextStyle(
-              fontSize: 16,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.black,
             ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              name,
-              style: const TextStyle(fontSize: 16, color: Colors.black),
+          Obx(() {
+            final total = TableService.to.getTotal(widget.tableIndex);
+            final discount = TableService.to.getDiscount(widget.tableIndex);
+            final finalTotal =
+                TableService.to.getTotalWithDiscount(widget.tableIndex);
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (discount > 0) ...[
+                  Text(
+                    '₺${total.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      decoration: TextDecoration.lineThrough,
+                    ),
+                  ),
+                  Text(
+                    '-₺${discount.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.warningColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+                Text(
+                  '${'total'.tr}: ₺${finalTotal.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderList() {
+    return Obx(() {
+      final orders = TableService.to.getOrders(widget.tableIndex);
+      if (orders.isEmpty) {
+        return Center(
+          child: Text(
+            'no_orders_yet'.tr,
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 16,
             ),
           ),
-          Text(
-            '₺${(price * quantity).toStringAsFixed(2)}',
-            style: const TextStyle(fontSize: 16, color: Colors.black),
+        );
+      }
+      return ListView.builder(
+        itemCount: orders.length,
+        itemBuilder: (context, index) {
+          final order = orders[index];
+          return _buildOrderItem(
+            name: order['name'] as String,
+            quantity: order['quantity'] as int,
+            price: order['price'] as double,
+            index: index,
+          );
+        },
+      );
+    });
+  }
+
+  Widget _buildOrderItem({
+    required String name,
+    required int quantity,
+    required double price,
+    required int index,
+  }) {
+    return Dismissible(
+      key: ValueKey('${name}_order'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 16),
+        color: Colors.red,
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      onDismissed: (_) {
+        TableService.to.removeOrder(widget.tableIndex, index);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+        ),
+        child: Row(
+          children: [
+            // Decrement button
+            InkWell(
+              onTap: () =>
+                  TableService.to.decrementOrder(widget.tableIndex, index),
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                child: const Icon(Icons.remove, size: 16, color: Colors.grey),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '${quantity}x',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            // Increment button
+            InkWell(
+              onTap: () =>
+                  TableService.to.addOrder(widget.tableIndex, name, price),
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                child: const Icon(Icons.add, size: 16, color: Colors.grey),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                name,
+                style:
+                    const TextStyle(fontSize: 15, color: Colors.black),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Text(
+              '₺${(price * quantity).toStringAsFixed(2)}',
+              style: const TextStyle(fontSize: 15, color: Colors.black),
+            ),
+            const SizedBox(width: 4),
+            InkWell(
+              onTap: () =>
+                  TableService.to.removeOrder(widget.tableIndex, index),
+              borderRadius: BorderRadius.circular(4),
+              child: const Icon(Icons.close, size: 16, color: Colors.red),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 4,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildActionButton(Icons.add_circle_outline, 'new'.tr,
+                AppTheme.accentColor, _handleNewOrder),
+            _buildActionButton(Icons.call_split, 'split'.tr,
+                AppTheme.infoColor, _handleSplit),
+            _buildActionButton(Icons.discount, 'discount'.tr,
+                AppTheme.warningColor, _handleDiscount),
+            _buildActionButton(
+                Icons.print, 'print'.tr, Colors.grey[700]!, _handlePrint),
+            _buildActionButton(Icons.compare_arrows, 'move'.tr,
+                AppTheme.accentColor, _handleMove),
+            _buildActionButton(Icons.payment, 'pay'.tr,
+                AppTheme.successColor, _handlePayment),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: TextField(
+        controller: _searchController,
+        autofocus: true,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: 'search_menu'.tr,
+          hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+          prefixIcon:
+              Icon(Icons.search, color: Colors.white.withValues(alpha: 0.7)),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(24),
+            borderSide:
+                BorderSide(color: Colors.white.withValues(alpha: 0.4)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(24),
+            borderSide:
+                BorderSide(color: Colors.white.withValues(alpha: 0.4)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(24),
+            borderSide: const BorderSide(color: Colors.white),
+          ),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+        ),
+        onChanged: (value) {
+          setState(() {
+            _searchQuery = value.toLowerCase();
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildCategoryTabs() {
+    return Container(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Obx(
+        () => ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: MenuService.to.menus.length,
+          itemBuilder: (context, index) {
+            final menu = MenuService.to.menus[index];
+            final isSelected = index == _safeMenuIndex;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: InkWell(
+                onTap: () => setState(() => _selectedMenuIndex = index),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    menu['name'] as String,
+                    style: TextStyle(
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuGrid() {
+    return Obx(() {
+      final menus = MenuService.to.menus;
+
+      if (menus.isEmpty) {
+        return Center(
+          child: Text(
+            'no_menu_defined'.tr,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        );
+      }
+
+      List<Map<String, dynamic>> items;
+      if (_isSearching && _searchQuery.isNotEmpty) {
+        // Search across all menus
+        items = [];
+        for (final menu in menus) {
+          for (final item in (menu['items'] as List)) {
+            final itemMap = item as Map<String, dynamic>;
+            if ((itemMap['name'] as String)
+                .toLowerCase()
+                .contains(_searchQuery)) {
+              items.add(itemMap);
+            }
+          }
+        }
+      } else {
+        final safeIdx = _safeMenuIndex;
+        items = List<Map<String, dynamic>>.from(
+          (menus[safeIdx]['items'] as List).map((i) => i as Map<String, dynamic>),
+        );
+      }
+
+      if (items.isEmpty) {
+        return Center(
+          child: Text(
+            _isSearching
+                ? 'Sonuç bulunamadı'
+                : 'no_menu_defined'.tr,
+            style: const TextStyle(color: Colors.white, fontSize: 16),
+          ),
+        );
+      }
+
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final crossAxisCount = constraints.maxWidth < 300
+              ? 2
+              : constraints.maxWidth < 500
+                  ? 3
+                  : 4;
+          return GridView.builder(
+            padding: const EdgeInsets.all(16),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              childAspectRatio: 0.8,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+            ),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return InkWell(
+                onTap: () => TableService.to.addOrder(
+                  widget.tableIndex,
+                  item['name'] as String,
+                  item['price'] as double,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                child: _buildMenuCard(
+                  item['name'] as String,
+                  '₺${(item['price'] as double).toStringAsFixed(2)}',
+                ),
+              );
+            },
+          );
+        },
+      );
+    });
+  }
+
+  Widget _buildMenuCard(String name, String price) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFEEEEEE),
+                borderRadius:
+                    BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: const Center(
+                child: Icon(Icons.fastfood, size: 40, color: Colors.grey),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  price,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -328,16 +537,18 @@ class _TableDetailViewState extends State<TableDetailView> {
       onTap: onPressed,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(6.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 4),
+            Icon(icon, color: color, size: 26),
+            const SizedBox(height: 2),
             Text(
               label,
               style: TextStyle(
-                  color: color, fontSize: 12, fontWeight: FontWeight.w600),
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -345,13 +556,13 @@ class _TableDetailViewState extends State<TableDetailView> {
     );
   }
 
-  // Yeni sipariş (Masayı temizle)
+  // Clear table (new order)
   void _handleNewOrder() {
     final orders = TableService.to.getOrders(widget.tableIndex);
     if (orders.isEmpty) {
       Get.snackbar(
-        'Bilgi',
-        'Masa zaten boş',
+        'info'.tr,
+        'table_already_empty'.tr,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppTheme.infoColor,
         colorText: Colors.white,
@@ -361,8 +572,8 @@ class _TableDetailViewState extends State<TableDetailView> {
 
     Get.dialog(
       AlertDialog(
-        title: const Text('Masayı Temizle'),
-        content: const Text('Mevcut siparişler silinecek. Onaylıyor musunuz?'),
+        title: Text('clear_table'.tr),
+        content: Text('clear_table_confirm'.tr),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
@@ -377,27 +588,27 @@ class _TableDetailViewState extends State<TableDetailView> {
               TableService.to.clearTable(widget.tableIndex);
               Get.back();
               Get.snackbar(
-                'Başarılı',
-                'Masa temizlendi',
+                'success'.tr,
+                'table_cleared'.tr,
                 snackPosition: SnackPosition.BOTTOM,
                 backgroundColor: AppTheme.successColor,
                 colorText: Colors.white,
               );
             },
-            child: const Text('Temizle'),
+            child: Text('clear'.tr),
           ),
         ],
       ),
     );
   }
 
-  // Hesap bölme
+  // Split bill
   void _handleSplit() {
     final orders = TableService.to.getOrders(widget.tableIndex);
     if (orders.isEmpty) {
       Get.snackbar(
-        'Uyarı',
-        'Masa boş. Hesap bölünemez.',
+        'warning'.tr,
+        'empty_no_split'.tr,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppTheme.warningColor,
         colorText: Colors.white,
@@ -409,25 +620,23 @@ class _TableDetailViewState extends State<TableDetailView> {
 
     Get.dialog(
       AlertDialog(
-        title: const Text('Hesap Böl'),
+        title: Text('split_bill'.tr),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Toplam: ₺${TableService.to.getTotalWithDiscount(widget.tableIndex).toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+              '${'total'.tr}: ₺${TableService.to.getTotalWithDiscount(widget.tableIndex).toStringAsFixed(2)}',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: peopleController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Kaç kişiye bölünecek?',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.people),
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'how_many_people'.tr,
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.people),
               ),
             ),
           ],
@@ -445,49 +654,40 @@ class _TableDetailViewState extends State<TableDetailView> {
             onPressed: () {
               final people = int.tryParse(peopleController.text);
               if (people != null && people > 1) {
-                final total = TableService.to.getTotalWithDiscount(widget.tableIndex);
+                final total = TableService.to
+                    .getTotalWithDiscount(widget.tableIndex);
                 final perPerson = total / people;
-                
                 Get.back();
-                
-                // Sonucu göster
+
                 Get.dialog(
                   AlertDialog(
-                    title: const Text('Hesap Bölümü'),
+                    title: Text('bill_split_result'.tr),
                     content: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Toplam Tutar',
+                          'total_amount'.tr,
                           style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
+                              fontSize: 14, color: Colors.grey[600]),
                         ),
                         Text(
                           '₺${total.toStringAsFixed(2)}',
                           style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+                              fontSize: 24, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 16),
                         const Divider(),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 8),
                         Text(
                           '$people Kişi',
                           style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
+                              fontSize: 16, fontWeight: FontWeight.w500),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Kişi Başı',
+                          'per_person'.tr,
                           style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
+                              fontSize: 14, color: Colors.grey[600]),
                         ),
                         Text(
                           '₺${perPerson.toStringAsFixed(2)}',
@@ -500,37 +700,37 @@ class _TableDetailViewState extends State<TableDetailView> {
                       ],
                     ),
                     actions: [
-                      TextButton(
+                      ElevatedButton(
                         onPressed: () => Get.back(),
-                        child: const Text('Kapat'),
+                        child: Text('close'.tr),
                       ),
                     ],
                   ),
                 );
               } else {
                 Get.snackbar(
-                  'Hata',
-                  'Geçerli bir kişi sayısı girin (minimum 2)',
+                  'error'.tr,
+                  'valid_people_count'.tr,
                   snackPosition: SnackPosition.BOTTOM,
                   backgroundColor: AppTheme.errorColor,
                   colorText: Colors.white,
                 );
               }
             },
-            child: const Text('Hesapla'),
+            child: Text('calculate'.tr),
           ),
         ],
       ),
     );
   }
 
-  // İndirim uygula
+  // Apply discount
   void _handleDiscount() {
     final orders = TableService.to.getOrders(widget.tableIndex);
     if (orders.isEmpty) {
       Get.snackbar(
-        'Uyarı',
-        'Masa boş. İndirim uygulanamaz.',
+        'warning'.tr,
+        'empty_no_discount'.tr,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppTheme.warningColor,
         colorText: Colors.white,
@@ -542,21 +742,23 @@ class _TableDetailViewState extends State<TableDetailView> {
 
     Get.dialog(
       AlertDialog(
-        title: const Text('İndirim Uygula'),
+        title: Text('apply_discount'.tr),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Toplam: ₺${TableService.to.getTotal(widget.tableIndex).toStringAsFixed(2)}',
+              '${'total'.tr}: ₺${TableService.to.getTotal(widget.tableIndex).toStringAsFixed(2)}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: discountController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'İndirim Yüzdesi (%)',
-                border: OutlineInputBorder(),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'discount_percent'.tr,
+                border: const OutlineInputBorder(),
                 suffixText: '%',
               ),
             ),
@@ -575,127 +777,40 @@ class _TableDetailViewState extends State<TableDetailView> {
             onPressed: () {
               final discount = double.tryParse(discountController.text);
               if (discount != null && discount > 0 && discount <= 100) {
-                TableService.to.applyDiscount(widget.tableIndex, discount);
+                TableService.to
+                    .applyDiscount(widget.tableIndex, discount);
                 Get.back();
                 Get.snackbar(
-                  'Başarılı',
-                  '%$discount indirim uygulandı',
+                  'success'.tr,
+                  'discount_applied'.tr,
                   snackPosition: SnackPosition.BOTTOM,
                   backgroundColor: AppTheme.successColor,
                   colorText: Colors.white,
                 );
               } else {
                 Get.snackbar(
-                  'Hata',
-                  'Geçerli bir indirim yüzdesi girin (1-100)',
+                  'error'.tr,
+                  'valid_discount'.tr,
                   snackPosition: SnackPosition.BOTTOM,
                   backgroundColor: AppTheme.errorColor,
                   colorText: Colors.white,
                 );
               }
             },
-            child: const Text('Uygula'),
+            child: Text('apply'.tr),
           ),
         ],
       ),
     );
   }
 
-  // Yazdır
+  // Print receipt (shows formatted receipt dialog)
   void _handlePrint() {
     final orders = TableService.to.getOrders(widget.tableIndex);
     if (orders.isEmpty) {
       Get.snackbar(
-        'Uyarı',
-        'Masa boş. Yazdırılacak sipariş yok.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppTheme.warningColor,
-        colorText: Colors.white,
-      );
-      return;
-    }
-
-    Get.snackbar(
-      'Başarılı',
-      'Adisyon yazdırılıyor...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: AppTheme.successColor,
-      colorText: Colors.white,
-    );
-  }
-
-  // Sipariş taşı
-  void _handleMove() {
-    final orders = TableService.to.getOrders(widget.tableIndex);
-    if (orders.isEmpty) {
-      Get.snackbar(
-        'Uyarı',
-        'Masa boş. Taşınacak sipariş yok.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppTheme.warningColor,
-        colorText: Colors.white,
-      );
-      return;
-    }
-
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Sipariş Taşı'),
-        content: SizedBox(
-          width: 300,
-          height: 400,
-          child: Obx(
-            () => ListView.builder(
-              itemCount: TableService.to.tables.length,
-              itemBuilder: (context, index) {
-                if (index == widget.tableIndex) return const SizedBox.shrink();
-                final table = TableService.to.tables[index];
-                return ListTile(
-                  title: Text(table['name']),
-                  subtitle: Text(
-                    table['isOccupied'] ? 'Dolu' : 'Müsait',
-                    style: TextStyle(
-                      color: table['isOccupied']
-                          ? AppTheme.errorColor
-                          : AppTheme.successColor,
-                    ),
-                  ),
-                  trailing: const Icon(Icons.arrow_forward),
-                  onTap: () {
-                    TableService.to
-                        .moveAllOrdersToTable(widget.tableIndex, index);
-                    Get.back();
-                    Get.back();
-                    Get.snackbar(
-                      'Başarılı',
-                      '${table['name']} masasına taşındı',
-                      snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: AppTheme.successColor,
-                      colorText: Colors.white,
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text('cancel'.tr),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Ödeme al
-  void _handlePayment() {
-    final orders = TableService.to.getOrders(widget.tableIndex);
-    if (orders.isEmpty) {
-      Get.snackbar(
-        'Uyarı',
-        'Masa boş. Ödeme alınamaz.',
+        'warning'.tr,
+        'empty_no_print'.tr,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppTheme.warningColor,
         colorText: Colors.white,
@@ -709,27 +824,256 @@ class _TableDetailViewState extends State<TableDetailView> {
 
     Get.dialog(
       AlertDialog(
-        title: const Text('Ödeme Al'),
+        title: Row(
+          children: [
+            const Icon(Icons.receipt_long),
+            const SizedBox(width: 8),
+            Text('print'.tr),
+          ],
+        ),
+        content: SizedBox(
+          width: 280,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Text(
+                  widget.tableName,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+              ),
+              const Divider(),
+              ...orders.map((order) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      children: [
+                        Text('${order['quantity']}x ',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold)),
+                        Expanded(
+                            child: Text(order['name'] as String,
+                                overflow: TextOverflow.ellipsis)),
+                        Text(
+                            '₺${((order['price'] as double) * (order['quantity'] as int)).toStringAsFixed(2)}'),
+                      ],
+                    ),
+                  )),
+              const Divider(),
+              if (discount > 0) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('subtotal'.tr),
+                    Text('₺${total.toStringAsFixed(2)}'),
+                  ],
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('discount'.tr),
+                    Text('-₺${discount.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                            color: AppTheme.warningColor)),
+                  ],
+                ),
+              ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('total'.tr,
+                      style:
+                          const TextStyle(fontWeight: FontWeight.bold)),
+                  Text('₺${finalTotal.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16)),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('close'.tr),
+          ),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.print),
+            label: Text('printing'.tr),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.successColor,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Get.back();
+              Get.snackbar(
+                'success'.tr,
+                'printing'.tr,
+                snackPosition: SnackPosition.BOTTOM,
+                backgroundColor: AppTheme.successColor,
+                colorText: Colors.white,
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Move orders to another table
+  void _handleMove() {
+    final orders = TableService.to.getOrders(widget.tableIndex);
+    if (orders.isEmpty) {
+      Get.snackbar(
+        'warning'.tr,
+        'empty_no_move'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppTheme.warningColor,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    Get.dialog(
+      AlertDialog(
+        title: Text('move_orders'.tr),
+        content: SizedBox(
+          width: 300,
+          height: 350,
+          child: Obx(
+            () {
+              final otherTables = TableService.to.tables
+                  .asMap()
+                  .entries
+                  .where((e) => e.key != widget.tableIndex)
+                  .toList();
+
+              if (otherTables.isEmpty) {
+                return Center(
+                  child: Text(
+                    'Başka masa yok.',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                itemCount: otherTables.length,
+                itemBuilder: (context, i) {
+                  final entry = otherTables[i];
+                  final tableIdx = entry.key;
+                  final table = entry.value;
+                  return ListTile(
+                    title: Text(table['name'] as String),
+                    subtitle: Text(
+                      (table['isOccupied'] as bool)
+                          ? 'occupied_status'.tr
+                          : 'available_status'.tr,
+                      style: TextStyle(
+                        color: (table['isOccupied'] as bool)
+                            ? AppTheme.errorColor
+                            : AppTheme.successColor,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.arrow_forward),
+                    onTap: () {
+                      final tName = table['name'] as String;
+                      TableService.to
+                          .moveAllOrdersToTable(widget.tableIndex, tableIdx);
+                      Get.back();
+                      Get.back();
+                      Get.snackbar(
+                        'success'.tr,
+                        '$tName ${'moved_to_table'.tr}',
+                        snackPosition: SnackPosition.BOTTOM,
+                        backgroundColor: AppTheme.successColor,
+                        colorText: Colors.white,
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('cancel'.tr),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Take payment
+  void _handlePayment() {
+    final orders = TableService.to.getOrders(widget.tableIndex);
+    if (orders.isEmpty) {
+      Get.snackbar(
+        'warning'.tr,
+        'empty_no_pay'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppTheme.warningColor,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    final total = TableService.to.getTotal(widget.tableIndex);
+    final discount = TableService.to.getDiscount(widget.tableIndex);
+    final finalTotal = TableService.to.getTotalWithDiscount(widget.tableIndex);
+
+    Get.dialog(
+      AlertDialog(
+        title: Text('pay_title'.tr),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Masa: ${widget.tableName}',
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text('Ara Toplam: ₺${total.toStringAsFixed(2)}'),
-            if (discount > 0) ...[
-              Text('İndirim: -₺${discount.toStringAsFixed(2)}',
-                  style: const TextStyle(color: AppTheme.warningColor)),
-            ],
-            const Divider(),
             Text(
-              'Toplam: ₺${finalTotal.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.successColor,
+              '${'table_label'.tr}: ${widget.tableName}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('subtotal'.tr),
+                Text('₺${total.toStringAsFixed(2)}'),
+              ],
+            ),
+            if (discount > 0)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('discount'.tr),
+                  Text(
+                    '-₺${discount.toStringAsFixed(2)}',
+                    style:
+                        const TextStyle(color: AppTheme.warningColor),
+                  ),
+                ],
               ),
+            const Divider(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'total'.tr,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+                Text(
+                  '₺${finalTotal.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.successColor,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -744,93 +1088,18 @@ class _TableDetailViewState extends State<TableDetailView> {
               foregroundColor: Colors.white,
             ),
             onPressed: () {
-              TableService.to.clearTable(widget.tableIndex);
+              TableService.to.recordPayment(widget.tableIndex);
               Get.back();
               Get.back();
               Get.snackbar(
-                'Başarılı',
-                'Ödeme alındı. Masa temizlendi.',
+                'success'.tr,
+                'payment_received'.tr,
                 snackPosition: SnackPosition.BOTTOM,
                 backgroundColor: AppTheme.successColor,
                 colorText: Colors.white,
               );
             },
-            child: const Text('Ödeme Al'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryButton(String label, bool isSelected,
-      {VoidCallback? onTap}) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color:
-              isSelected ? Colors.white : Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected
-                ? Theme.of(context).colorScheme.primary
-                : Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenuItem(String name, String imageUrl, String price) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: const Center(
-                child: Icon(Icons.coffee, size: 48, color: Colors.grey),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  price,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
+            child: Text('pay'.tr),
           ),
         ],
       ),

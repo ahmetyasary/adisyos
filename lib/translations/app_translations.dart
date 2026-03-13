@@ -16,16 +16,21 @@ class AppTranslations extends Translations {
           'reports': 'Raporlar',
           'settings': 'Ayarlar',
           'logout': 'Çıkış',
-          'new_order': 'Yeni sipariş var!',
-          'customer_service': 'Bize Ulaşın',
           'notifications': 'Bildirimler',
-          'new_order_message': 'Yeni bir sipariş geldi. Lütfen kontrol edin.',
+          'customer_service': 'Bize Ulaşın',
           'internet': 'İnternet',
           'server': 'Sunucu',
+          'coming_soon': 'Yakında',
+
+          // Table statuses
           'table': 'MASA',
           'available': 'Müsait',
           'occupied': 'Dolu',
           'reserved': 'Rezerve',
+          'available_status': 'Müsait',
+          'occupied_status': 'Dolu',
+
+          // Menu categories (legacy keys)
           'menu': 'Menüler',
           'drinks': 'İçecekler',
           'desserts': 'Tatlılar',
@@ -34,7 +39,10 @@ class AppTranslations extends Translations {
           'salads': 'Salatalar',
           'from_oven': 'Fırından',
           'special': 'Special',
+
+          // Actions
           'search': 'Ara',
+          'search_menu': 'Menüde Ara...',
           'new': 'Yeni',
           'gift': 'İkram',
           'exchange': 'İade',
@@ -44,22 +52,116 @@ class AppTranslations extends Translations {
           'cancel': 'İptal',
           'move': 'Taşı',
           'pay': 'Ödeme Al',
-          'total': 'Toplam',
-          'menu_management': 'Menü Yönetimi',
-          'add_menu': 'Menü Ekle',
-          'add_item': 'Ürün Ekle',
-          'menu_name': 'Menü Adı',
-          'item_name': 'Ürün Adı',
-          'price': 'Fiyat',
           'save': 'Kaydet',
           'edit': 'Düzenle',
           'delete': 'Sil',
+          'apply': 'Uygula',
+          'close': 'Kapat',
+          'calculate': 'Hesapla',
+          'clear': 'Temizle',
+
+          // Labels
+          'total': 'Toplam',
+          'subtotal': 'Ara Toplam',
+          'total_amount': 'Toplam Tutar',
+          'per_person': 'Kişi Başı',
+          'table_label': 'Masa',
+          'price': 'Fiyat',
+
+          // Feedback
+          'info': 'Bilgi',
+          'warning': 'Uyarı',
+          'error': 'Hata',
+          'success': 'Başarılı',
+
+          // Table management
           'add_table': 'Masa Ekle',
           'table_name': 'Masa Adı',
+          'edit_table': 'Masa Düzenle',
           'delete_table': 'Masayı Sil',
           'delete_table_confirmation': '%s silinsin mi?',
+          'no_tables': 'Masanız bulunmuyor. Sağ üstten ekleyiniz.',
           'yes': 'Evet',
           'no': 'Hayır',
+
+          // Orders
+          'no_orders_yet': 'Henüz sipariş yok',
+          'table_already_empty': 'Masa zaten boş',
+          'clear_table': 'Masayı Temizle',
+          'clear_table_confirm': 'Mevcut siparişler silinecek. Onaylıyor musunuz?',
+          'table_cleared': 'Masa temizlendi',
+          'empty_no_print': 'Masa boş. Yazdırılacak sipariş yok.',
+          'empty_no_move': 'Masa boş. Taşınacak sipariş yok.',
+          'empty_no_pay': 'Masa boş. Ödeme alınamaz.',
+          'empty_no_discount': 'Masa boş. İndirim uygulanamaz.',
+          'empty_no_split': 'Masa boş. Hesap bölünemez.',
+
+          // Split bill
+          'split_bill': 'Hesap Böl',
+          'how_many_people': 'Kaç kişiye bölünecek?',
+          'bill_split_result': 'Hesap Bölümü',
+          'valid_people_count': 'Geçerli bir kişi sayısı girin (minimum 2)',
+
+          // Discount
+          'apply_discount': 'İndirim Uygula',
+          'discount_percent': 'İndirim Yüzdesi (%)',
+          'discount_applied': 'İndirim uygulandı',
+          'valid_discount': 'Geçerli bir indirim yüzdesi girin (1-100)',
+
+          // Print
+          'printing': 'Adisyon yazdırılıyor...',
+
+          // Move
+          'move_orders': 'Sipariş Taşı',
+          'moved_to_table': 'masasına taşındı',
+
+          // Payment
+          'pay_title': 'Ödeme Al',
+          'payment_received': 'Ödeme alındı. Masa temizlendi.',
+
+          // Menu management
+          'menu_management': 'Menü Yönetimi',
+          'add_menu': 'Menü Ekle',
+          'edit_menu': 'Menü Düzenle',
+          'delete_menu': 'Menüyü Sil',
+          'delete_menu_confirm': 'silinsin mi?',
+          'no_menus': 'Menünüz bulunmuyor. Sağ üstten ekleyiniz.',
+          'no_menu_defined': 'Tanımlı menü yok',
+          'add_item': 'Ürün Ekle',
+          'edit_item': 'Ürün Düzenle',
+          'menu_name': 'Menü Adı',
+          'item_name': 'Ürün Adı',
+          'invalid_price': 'Geçersiz fiyat formatı',
+
+          // Settings
+          'company_name': 'Şirket Adı',
+          'company_name_hint': 'Şirket adınızı girin',
+          'default_discount_rate': 'İskonto Oranı (%)',
+          'default_discount_hint': 'Örn: 10',
+          'language': 'Dil',
+          'save_settings': 'Kaydet',
+
+          // Reports
+          'reports_page': 'Raporlar',
+          'daily_report': 'Günlük Rapor',
+          'monthly_report': 'Aylık Rapor',
+          'yearly_report': 'Yıllık Rapor',
+          'daily_sales_title': 'Günlük Satış Raporu',
+          'monthly_sales_title': 'Aylık Satış Raporu',
+          'yearly_sales_title': 'Yıllık Satış Raporu',
+          'total_sales': 'Toplam Satış',
+          'sale_count': 'İşlem Sayısı',
+          'top_items': 'En Çok Satılan',
+          'no_sales_today': 'Bugün henüz satış yok',
+          'no_sales': 'Henüz satış verisi yok',
+          'hourly_sales': 'Saatlik Satışlar',
+
+          // Notifications
+          'new_order': 'Ödeme Alındı',
+          'new_order_message': 'Yeni bir sipariş geldi. Lütfen kontrol edin.',
+          'payment_notification': 'Ödeme Alındı',
+          'recent_activity': 'Son Aktivite',
+          'no_notifications': 'Henüz bildirim yok',
         },
         'en_US': {
           'app_name': 'Adisyos',
@@ -74,16 +176,21 @@ class AppTranslations extends Translations {
           'reports': 'Reports',
           'settings': 'Settings',
           'logout': 'Logout',
-          'new_order': 'New order!',
-          'customer_service': 'Customer Service',
           'notifications': 'Notifications',
-          'new_order_message': 'A new order has arrived. Please check.',
+          'customer_service': 'Contact Us',
           'internet': 'Internet',
           'server': 'Server',
+          'coming_soon': 'Coming Soon',
+
+          // Table statuses
           'table': 'TABLE',
           'available': 'Available',
           'occupied': 'Occupied',
           'reserved': 'Reserved',
+          'available_status': 'Available',
+          'occupied_status': 'Occupied',
+
+          // Menu categories
           'menu': 'Menu',
           'drinks': 'Drinks',
           'desserts': 'Desserts',
@@ -92,32 +199,130 @@ class AppTranslations extends Translations {
           'salads': 'Salads',
           'from_oven': 'From Oven',
           'special': 'Special',
+
+          // Actions
           'search': 'Search',
+          'search_menu': 'Search menu...',
           'new': 'New',
           'gift': 'Gift',
-          'exchange': 'Exchange',
+          'exchange': 'Return',
           'split': 'Split',
           'discount': 'Discount',
           'print': 'Print',
           'cancel': 'Cancel',
           'move': 'Move',
           'pay': 'Pay',
-          'total': 'Total',
-          'menu_management': 'Menu Management',
-          'add_menu': 'Add Menu',
-          'add_item': 'Add Item',
-          'menu_name': 'Menu Name',
-          'item_name': 'Item Name',
-          'price': 'Price',
           'save': 'Save',
           'edit': 'Edit',
           'delete': 'Delete',
+          'apply': 'Apply',
+          'close': 'Close',
+          'calculate': 'Calculate',
+          'clear': 'Clear',
+
+          // Labels
+          'total': 'Total',
+          'subtotal': 'Subtotal',
+          'total_amount': 'Total Amount',
+          'per_person': 'Per Person',
+          'table_label': 'Table',
+          'price': 'Price',
+
+          // Feedback
+          'info': 'Info',
+          'warning': 'Warning',
+          'error': 'Error',
+          'success': 'Success',
+
+          // Table management
           'add_table': 'Add Table',
           'table_name': 'Table Name',
+          'edit_table': 'Edit Table',
           'delete_table': 'Delete Table',
-          'delete_table_confirmation': 'Silinecek %s?',
-          'yes': 'Evet',
-          'no': 'Hayır',
+          'delete_table_confirmation': 'Delete %s?',
+          'no_tables': 'No tables found. Add one from the top right.',
+          'yes': 'Yes',
+          'no': 'No',
+
+          // Orders
+          'no_orders_yet': 'No orders yet',
+          'table_already_empty': 'Table is already empty',
+          'clear_table': 'Clear Table',
+          'clear_table_confirm':
+              'Current orders will be deleted. Do you confirm?',
+          'table_cleared': 'Table cleared',
+          'empty_no_print': 'Table is empty. Nothing to print.',
+          'empty_no_move': 'Table is empty. Nothing to move.',
+          'empty_no_pay': 'Table is empty. No payment possible.',
+          'empty_no_discount': 'Table is empty. Cannot apply discount.',
+          'empty_no_split': 'Table is empty. Cannot split.',
+
+          // Split bill
+          'split_bill': 'Split Bill',
+          'how_many_people': 'How many people?',
+          'bill_split_result': 'Bill Split',
+          'valid_people_count': 'Enter a valid number (minimum 2)',
+
+          // Discount
+          'apply_discount': 'Apply Discount',
+          'discount_percent': 'Discount Percentage (%)',
+          'discount_applied': 'Discount applied',
+          'valid_discount': 'Enter a valid discount percentage (1-100)',
+
+          // Print
+          'printing': 'Printing receipt...',
+
+          // Move
+          'move_orders': 'Move Orders',
+          'moved_to_table': 'moved to table',
+
+          // Payment
+          'pay_title': 'Take Payment',
+          'payment_received': 'Payment received. Table cleared.',
+
+          // Menu management
+          'menu_management': 'Menu Management',
+          'add_menu': 'Add Menu',
+          'edit_menu': 'Edit Menu',
+          'delete_menu': 'Delete Menu',
+          'delete_menu_confirm': 'delete?',
+          'no_menus': 'No menus found. Add one from the top right.',
+          'no_menu_defined': 'No menu defined',
+          'add_item': 'Add Item',
+          'edit_item': 'Edit Item',
+          'menu_name': 'Menu Name',
+          'item_name': 'Item Name',
+          'invalid_price': 'Invalid price format',
+
+          // Settings
+          'company_name': 'Company Name',
+          'company_name_hint': 'Enter your company name',
+          'default_discount_rate': 'Default Discount Rate (%)',
+          'default_discount_hint': 'e.g. 10',
+          'language': 'Language',
+          'save_settings': 'Save',
+
+          // Reports
+          'reports_page': 'Reports',
+          'daily_report': 'Daily Report',
+          'monthly_report': 'Monthly Report',
+          'yearly_report': 'Yearly Report',
+          'daily_sales_title': 'Daily Sales Report',
+          'monthly_sales_title': 'Monthly Sales Report',
+          'yearly_sales_title': 'Yearly Sales Report',
+          'total_sales': 'Total Sales',
+          'sale_count': 'Transactions',
+          'top_items': 'Top Selling Items',
+          'no_sales_today': 'No sales today yet',
+          'no_sales': 'No sales data yet',
+          'hourly_sales': 'Hourly Sales',
+
+          // Notifications
+          'new_order': 'Payment Received',
+          'new_order_message': 'A new order has arrived. Please check.',
+          'payment_notification': 'Payment Received',
+          'recent_activity': 'Recent Activity',
+          'no_notifications': 'No notifications yet',
         },
       };
 }

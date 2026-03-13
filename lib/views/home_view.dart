@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:weather_icons/weather_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:adisyos/views/notifications_view.dart';
@@ -26,9 +25,11 @@ class _HomeViewState extends State<HomeView> {
   void initState() {
     super.initState();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        _currentTime = DateTime.now();
-      });
+      if (mounted) {
+        setState(() {
+          _currentTime = DateTime.now();
+        });
+      }
     });
   }
 
@@ -38,8 +39,8 @@ class _HomeViewState extends State<HomeView> {
     super.dispose();
   }
 
-  void _handleGridItemTap(String title) {
-    switch (title) {
+  void _handleGridItemTap(String route) {
+    switch (route) {
       case 'tables':
         Get.to(() => const TablesView());
         break;
@@ -49,7 +50,12 @@ class _HomeViewState extends State<HomeView> {
       case 'reports':
         Get.to(() => const ReportsView());
         break;
-      // Diğer sayfalar için case'ler buraya eklenecek
+      case 'settings':
+        Get.to(() => const SettingsView());
+        break;
+      case 'notifications':
+        Get.to(() => const NotificationsView());
+        break;
     }
   }
 
@@ -104,24 +110,12 @@ class _HomeViewState extends State<HomeView> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              Row(
-                children: [
-                  Text(
-                    DateFormat('HH:mm').format(_currentTime),
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(WeatherIcons.day_sunny,
-                      color: Colors.white, size: 18),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${_currentTime.hour > 12 ? (_currentTime.hour - 12) * 2 : _currentTime.hour * 2}°',
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                ],
+              Text(
+                DateFormat('HH:mm:ss').format(_currentTime),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
             ],
           ),
@@ -145,26 +139,23 @@ class _HomeViewState extends State<HomeView> {
         ),
         Flexible(
           flex: 2,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () => Get.to(() => const NotificationsView()),
-                  icon: const Icon(Icons.notifications, color: Colors.white),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-                IconButton(
-                  onPressed: () => Get.to(() => const SettingsView()),
-                  icon: const Icon(Icons.settings, color: Colors.white),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton(
+                onPressed: () => Get.to(() => const NotificationsView()),
+                icon: const Icon(Icons.notifications, color: Colors.white),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () => Get.to(() => const SettingsView()),
+                icon: const Icon(Icons.settings, color: Colors.white),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
           ),
         ),
       ],
@@ -173,54 +164,46 @@ class _HomeViewState extends State<HomeView> {
 
   Widget _buildMainGrid(BuildContext context) {
     final items = [
-      {'icon': Icons.table_bar, 'title': 'tables'.tr, 'route': 'tables'},
-      {'icon': Icons.restaurant_menu, 'title': 'menu'.tr, 'route': 'menu'},
-      {'icon': Icons.bar_chart, 'title': 'reports'.tr, 'route': 'reports'},
-      {'icon': Icons.people, 'title': 'staff'.tr, 'route': 'staff'}
+      {
+        'icon': Icons.table_bar,
+        'title': 'tables'.tr,
+        'route': 'tables',
+        'active': true,
+      },
+      {
+        'icon': Icons.restaurant_menu,
+        'title': 'menu'.tr,
+        'route': 'menu',
+        'active': true,
+      },
+      {
+        'icon': Icons.bar_chart,
+        'title': 'reports'.tr,
+        'route': 'reports',
+        'active': true,
+      },
+      {
+        'icon': Icons.people,
+        'title': 'staff'.tr,
+        'route': 'staff',
+        'active': false,
+      },
     ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Web platformu için özel düzenleme
-        if (constraints.maxWidth > 800) {
-          const crossAxisCount = 4;
-          final cardWidth =
-              (constraints.maxWidth - (32 * (crossAxisCount + 1))) /
-                  crossAxisCount;
-          final cardHeight = cardWidth * 0.75;
+        final isWide = constraints.maxWidth > 600;
+        final crossAxisCount = isWide ? 4 : 2;
+        final spacing = isWide ? 32.0 : 16.0;
+        final padding = isWide ? 32.0 : 16.0;
 
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: GridView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 32,
-                mainAxisSpacing: 32,
-                childAspectRatio: cardWidth / cardHeight,
-              ),
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                return _buildGridItem(
-                  context,
-                  icon: items[index]['icon'] as IconData,
-                  title: items[index]['title'] as String,
-                  route: items[index]['route'] as String,
-                  isWeb: true,
-                );
-              },
-            ),
-          );
-        }
-
-        // Mobil görünüm için varsayılan düzen
         return GridView.builder(
-          padding: const EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: 1.2,
+          padding: EdgeInsets.all(padding),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: spacing,
+            mainAxisSpacing: spacing,
+            childAspectRatio: isWide ? 1.33 : 1.2,
           ),
           itemCount: items.length,
           itemBuilder: (context, index) {
@@ -229,7 +212,8 @@ class _HomeViewState extends State<HomeView> {
               icon: items[index]['icon'] as IconData,
               title: items[index]['title'] as String,
               route: items[index]['route'] as String,
-              isWeb: false,
+              active: items[index]['active'] as bool,
+              isWide: isWide,
             );
           },
         );
@@ -242,20 +226,19 @@ class _HomeViewState extends State<HomeView> {
     required IconData icon,
     required String title,
     required String route,
-    required bool isWeb,
+    required bool active,
+    required bool isWide,
   }) {
-    final bool showComingSoon =
-        route != 'tables' && route != 'menu' && route != 'reports';
-
     return InkWell(
-      onTap: showComingSoon ? null : () => _handleGridItemTap(route),
+      onTap: active ? () => _handleGridItemTap(route) : null,
+      borderRadius: BorderRadius.circular(isWide ? 32 : 16),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(isWeb ? 32 : 16),
+          borderRadius: BorderRadius.circular(isWide ? 32 : 16),
           border: Border.all(
             color: Colors.white.withValues(alpha: 0.1),
-            width: isWeb ? 2 : 1,
+            width: isWide ? 2 : 1,
           ),
         ),
         child: Stack(
@@ -263,25 +246,25 @@ class _HomeViewState extends State<HomeView> {
             Positioned.fill(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Icon(
                     icon,
-                    color: showComingSoon
-                        ? Colors.white.withValues(alpha: 0.5)
-                        : Colors.white,
-                    size: isWeb ? 64 : 32,
+                    color: active
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.4),
+                    size: isWide ? 64 : 32,
                   ),
-                  SizedBox(height: isWeb ? 24 : 12),
+                  SizedBox(height: isWide ? 24 : 12),
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 12),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: isWide ? 24 : 12),
                     child: Text(
                       title,
                       style: TextStyle(
-                        color: showComingSoon
-                            ? Colors.white.withValues(alpha: 0.5)
-                            : Colors.white,
-                        fontSize: isWeb ? 20 : 14,
+                        color: active
+                            ? Colors.white
+                            : Colors.white.withValues(alpha: 0.4),
+                        fontSize: isWide ? 20 : 14,
                         fontWeight: FontWeight.w500,
                       ),
                       textAlign: TextAlign.center,
@@ -292,24 +275,24 @@ class _HomeViewState extends State<HomeView> {
                 ],
               ),
             ),
-            if (showComingSoon)
+            if (!active)
               Positioned(
-                top: isWeb ? 24 : 12,
-                right: isWeb ? 24 : 12,
+                top: isWide ? 24 : 12,
+                right: isWide ? 24 : 12,
                 child: Container(
                   padding: EdgeInsets.symmetric(
-                    horizontal: isWeb ? 16 : 8,
-                    vertical: isWeb ? 8 : 4,
+                    horizontal: isWide ? 16 : 8,
+                    vertical: isWide ? 8 : 4,
                   ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF39C12).withValues(alpha: 0.95),
-                    borderRadius: BorderRadius.circular(isWeb ? 20 : 12),
+                    borderRadius: BorderRadius.circular(isWide ? 20 : 12),
                   ),
                   child: Text(
-                    'Yakında',
+                    'coming_soon'.tr,
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: isWeb ? 14 : 10,
+                      fontSize: isWide ? 14 : 10,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -325,9 +308,10 @@ class _HomeViewState extends State<HomeView> {
     return FutureBuilder<String?>(
       future: _getCompanyName(),
       builder: (context, snapshot) {
-        final companyName = (snapshot.data != null && snapshot.data!.isNotEmpty)
-            ? snapshot.data!
-            : 'Şirket Adınızı Giriniz';
+        final companyName =
+            (snapshot.data != null && snapshot.data!.isNotEmpty)
+                ? snapshot.data!
+                : 'Şirket Adınızı Giriniz';
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 2.0),
           child: Wrap(
@@ -351,7 +335,9 @@ class _HomeViewState extends State<HomeView> {
                 child: Text(
                   companyName,
                   style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontSize: 12,
+                  ),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                   textAlign: TextAlign.right,

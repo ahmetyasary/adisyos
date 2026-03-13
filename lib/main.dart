@@ -7,9 +7,12 @@ import 'package:adisyos/translations/app_translations.dart';
 import 'package:adisyos/views/home_view.dart';
 import 'package:adisyos/services/menu_service.dart';
 import 'package:adisyos/services/table_service.dart';
+import 'package:adisyos/services/sales_history_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // SalesHistoryService must be registered before TableService
+  Get.put(SalesHistoryService());
   Get.put(MenuService());
   Get.put(TableService());
   runApp(const MyApp());
