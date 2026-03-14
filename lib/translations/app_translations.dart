@@ -156,6 +156,22 @@ class AppTranslations extends Translations {
           'no_sales': 'Henüz satış verisi yok',
           'hourly_sales': 'Saatlik Satışlar',
 
+          // Auth
+          'auth_subtitle': 'Restoran Yönetim Sistemi',
+          'auth_email': 'E-posta',
+          'auth_email_hint': 'ornek@sirket.com',
+          'auth_email_required': 'E-posta adresi gerekli',
+          'auth_email_invalid': 'Geçerli bir e-posta girin',
+          'auth_password': 'Şifre',
+          'auth_password_required': 'Şifre gerekli',
+          'auth_password_short': 'Şifre en az 6 karakter olmalı',
+          'auth_login': 'Giriş Yap',
+          'auth_error_invalid': 'E-posta veya şifre hatalı.',
+          'auth_error_unconfirmed': 'E-posta adresiniz henüz doğrulanmamış.',
+          'auth_error_network': 'Bağlantı hatası. İnternetinizi kontrol edin.',
+          'auth_error_generic': 'Giriş yapılamadı. Lütfen tekrar deneyin.',
+          'auth_error_role_not_found': 'Kullanıcı rolü bulunamadı. Yöneticinizle iletişime geçin.',
+
           // Notifications
           'new_order': 'Ödeme Alındı',
           'new_order_message': 'Yeni bir sipariş geldi. Lütfen kontrol edin.',
@@ -316,6 +332,22 @@ class AppTranslations extends Translations {
           'no_sales_today': 'No sales today yet',
           'no_sales': 'No sales data yet',
           'hourly_sales': 'Hourly Sales',
+
+          // Auth
+          'auth_subtitle': 'Restaurant Management System',
+          'auth_email': 'Email',
+          'auth_email_hint': 'you@company.com',
+          'auth_email_required': 'Email is required',
+          'auth_email_invalid': 'Enter a valid email address',
+          'auth_password': 'Password',
+          'auth_password_required': 'Password is required',
+          'auth_password_short': 'Password must be at least 6 characters',
+          'auth_login': 'Sign In',
+          'auth_error_invalid': 'Incorrect email or password.',
+          'auth_error_unconfirmed': 'Your email address has not been confirmed.',
+          'auth_error_network': 'Connection error. Check your internet.',
+          'auth_error_generic': 'Sign in failed. Please try again.',
+          'auth_error_role_not_found': 'User role not found. Contact your administrator.',
 
           // Notifications
           'new_order': 'Payment Received',

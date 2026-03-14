@@ -43,6 +43,7 @@ dependencies:
   weather_icons: ^3.0.0
   fl_chart: ^1.0.0
   path_provider: ^2.1.2
+  supabase_flutter: ^2.3.0
 
 dev_dependencies:
   flutter_test:

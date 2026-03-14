@@ -4,71 +4,130 @@ import 'package:intl/intl.dart';
 import 'package:adisyos/services/sales_history_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
 
+// ── Design tokens ──────────────────────────────────────────
+const _bg          = Color(0xFFF5F6FA);
+const _card        = Colors.white;
+const _textPrimary = Color(0xFF1A1A2E);
+const _textSec     = Color(0xFF9B9B9B);
+const _border      = Color(0xFFEEEEEE);
+
 class NotificationsView extends StatelessWidget {
   const NotificationsView({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('notifications'.tr),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Theme.of(context).colorScheme.primary,
-              Theme.of(context).colorScheme.secondary,
-            ],
-          ),
-        ),
-        child: Obx(() {
-          final recentSales = SalesHistoryService.to.getRecentSales(limit: 30);
+      backgroundColor: _bg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _PageHeader(title: 'notifications'.tr),
+            Expanded(
+              child: Obx(() {
+                final recentSales =
+                    SalesHistoryService.to.getRecentSales(limit: 30);
 
-          if (recentSales.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.notifications_none,
-                    size: 64,
-                    color: Colors.white.withValues(alpha: 0.4),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'no_notifications'.tr,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      fontSize: 16,
+                if (recentSales.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: _textSec.withValues(alpha: 0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.notifications_none_rounded,
+                            size: 48,
+                            color: _textSec,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'no_notifications'.tr,
+                          style: const TextStyle(
+                            color: _textSec,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            );
-          }
+                  );
+                }
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: recentSales.length,
-            separatorBuilder: (_, __) =>
-                Divider(color: Colors.white.withValues(alpha: 0.15), height: 1),
-            itemBuilder: (context, index) {
-              final sale = recentSales[index];
-              return _buildNotificationItem(context, sale);
-            },
-          );
-        }),
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: recentSales.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    return _NotificationCard(sale: recentSales[index]);
+                  },
+                );
+              }),
+            ),
+          ],
+        ),
       ),
     );
   }
+}
 
-  Widget _buildNotificationItem(
-      BuildContext context, Map<String, dynamic> sale) {
+// ── _PageHeader ────────────────────────────────────────────
+
+class _PageHeader extends StatelessWidget {
+  const _PageHeader({required this.title});
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 60,
+      decoration: BoxDecoration(
+        color: _card,
+        border: const Border(bottom: BorderSide(color: _border)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                size: 18, color: _textPrimary),
+            onPressed: () => Get.back(),
+          ),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: _textPrimary,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const Spacer(),
+          const SizedBox(width: 8),
+        ],
+      ),
+    );
+  }
+}
+
+// ── _NotificationCard ──────────────────────────────────────
+
+class _NotificationCard extends StatelessWidget {
+  const _NotificationCard({required this.sale});
+  final Map<String, dynamic> sale;
+
+  @override
+  Widget build(BuildContext context) {
     final date = DateTime.parse(sale['date'] as String);
     final now = DateTime.now();
     final diff = now.difference(date);
@@ -81,9 +140,10 @@ class NotificationsView extends StatelessWidget {
     } else if (diff.inHours < 24) {
       timeLabel = DateFormat('HH:mm').format(date);
     } else {
-      timeLabel = DateFormat('dd MMM HH:mm',
-              Get.locale?.languageCode ?? 'tr')
-          .format(date);
+      timeLabel = DateFormat(
+        'dd MMM HH:mm',
+        Get.locale?.languageCode ?? 'tr',
+      ).format(date);
     }
 
     final total = sale['total'] as double;
@@ -95,19 +155,41 @@ class NotificationsView extends StatelessWidget {
         date.month == now.month &&
         date.day == now.day;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 14,
+            offset: Offset(0, 5),
+          ),
+          BoxShadow(
+            color: Color(0x07000000),
+            blurRadius: 4,
+            offset: Offset(0, 1),
+          ),
+          BoxShadow(
+            color: Colors.white,
+            blurRadius: 0,
+            offset: Offset(0, -1),
+          ),
+        ],
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppTheme.successColor.withValues(alpha: 0.2),
+              color: AppTheme.successColor.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
-              Icons.payment,
+            child: Icon(
+              Icons.payment_rounded,
               color: AppTheme.successColor,
               size: 22,
             ),
@@ -123,25 +205,26 @@ class NotificationsView extends StatelessWidget {
                     Text(
                       'payment_notification'.tr,
                       style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                        color: _textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     if (isToday)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                            horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
-                          color: AppTheme.successColor.withValues(alpha: 0.3),
+                          color: AppTheme.successColor.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Bugün',
                           style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold),
+                            color: AppTheme.successColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                   ],
@@ -149,29 +232,23 @@ class NotificationsView extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   '$tableName · $itemCount ürün${discount > 0 ? ' · İndirimli' : ''}',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.75),
-                    fontSize: 13,
-                  ),
+                  style: const TextStyle(color: _textSec, fontSize: 12),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       '₺${total.toStringAsFixed(2)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppTheme.successColor,
                         fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                     Text(
                       timeLabel,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        fontSize: 12,
-                      ),
+                      style: const TextStyle(color: _textSec, fontSize: 11),
                     ),
                   ],
                 ),

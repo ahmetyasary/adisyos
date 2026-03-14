@@ -5,6 +5,14 @@ import 'package:intl/intl.dart';
 import 'package:adisyos/services/sales_history_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
 
+// ── Design tokens ──────────────────────────────────────────
+const _bg          = Color(0xFFF5F6FA);
+const _card        = Colors.white;
+const _orange      = Color(0xFFF5A623);
+const _textPrimary = Color(0xFF1A1A2E);
+const _textSec     = Color(0xFF9B9B9B);
+const _border      = Color(0xFFEEEEEE);
+
 class MonthlyReportView extends StatelessWidget {
   const MonthlyReportView({super.key});
 
@@ -13,124 +21,102 @@ class MonthlyReportView extends StatelessWidget {
     final now = DateTime.now();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('monthly_report'.tr),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-      ),
-      body: Obx(() {
-        final sales =
-            SalesHistoryService.to.getSalesForMonth(now.year, now.month);
-        final total = SalesHistoryService.to.getTotalForSales(sales);
-        final dailyTotals =
-            SalesHistoryService.to.getDailyTotals(now.year, now.month);
-        final topItems = SalesHistoryService.to.getTopItems(sales, top: 5);
-        final monthName = DateFormat('MMMM yyyy',
-                Get.locale?.languageCode ?? 'tr')
-            .format(now);
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                monthName,
-                style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 16),
-
-              // Summary cards
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildSummaryCard(
-                      context,
-                      icon: Icons.attach_money,
-                      label: 'total_sales'.tr,
-                      value: '₺${total.toStringAsFixed(2)}',
-                      color: AppTheme.successColor,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildSummaryCard(
-                      context,
-                      icon: Icons.receipt_long,
-                      label: 'sale_count'.tr,
-                      value: '${sales.length}',
-                      color: AppTheme.accentColor,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildSummaryCard(
-                      context,
-                      icon: Icons.calendar_today,
-                      label: 'Aktif Gün',
-                      value: '${dailyTotals.length}',
-                      color: AppTheme.warningColor,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              if (sales.isEmpty)
-                _buildEmptyState(context)
-              else ...[
-                // Daily bar chart
-                _buildSectionTitle(
-                    context, 'monthly_sales_title'.tr, Icons.bar_chart),
-                const SizedBox(height: 12),
-                _buildDailyChart(context, dailyTotals, now),
-                const SizedBox(height: 24),
-
-                // Top items
-                if (topItems.isNotEmpty) ...[
-                  _buildSectionTitle(
-                      context, 'top_items'.tr, Icons.star),
-                  const SizedBox(height: 12),
-                  _buildTopItemsList(context, topItems),
-                ],
-              ],
-            ],
-          ),
-        );
-      }),
-    );
-  }
-
-  Widget _buildSummaryCard(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+      backgroundColor: _bg,
+      body: SafeArea(
         child: Column(
           children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              textAlign: TextAlign.center,
+            _Header(title: 'monthly_report'.tr),
+            Expanded(
+              child: Obx(() {
+                final sales = SalesHistoryService.to
+                    .getSalesForMonth(now.year, now.month);
+                final total =
+                    SalesHistoryService.to.getTotalForSales(sales);
+                final dailyTotals = SalesHistoryService.to
+                    .getDailyTotals(now.year, now.month);
+                final topItems =
+                    SalesHistoryService.to.getTopItems(sales, top: 5);
+                final monthName = DateFormat(
+                        'MMMM yyyy', Get.locale?.languageCode ?? 'tr')
+                    .format(now);
+
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Month label
+                      Text(
+                        monthName,
+                        style: const TextStyle(
+                          color: _textSec,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Summary cards
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _StatCard(
+                              icon: Icons.attach_money_rounded,
+                              label: 'total_sales'.tr,
+                              value: '₺${total.toStringAsFixed(2)}',
+                              accent: AppTheme.successColor,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _StatCard(
+                              icon: Icons.receipt_long_rounded,
+                              label: 'sale_count'.tr,
+                              value: '${sales.length}',
+                              accent: AppTheme.accentColor,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _StatCard(
+                              icon: Icons.calendar_today_rounded,
+                              label: 'Aktif Gün',
+                              value: '${dailyTotals.length}',
+                              accent: _orange,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      if (sales.isEmpty)
+                        _buildEmptyState()
+                      else ...[
+                        // Daily bar chart
+                        _SectionTitle(
+                            title: 'monthly_sales_title'.tr,
+                            icon: Icons.bar_chart_rounded,
+                            accent: _orange),
+                        const SizedBox(height: 12),
+                        _ChartCard(
+                            child: _buildDailyChart(dailyTotals, now)),
+                        const SizedBox(height: 24),
+
+                        // Top items
+                        if (topItems.isNotEmpty) ...[
+                          _SectionTitle(
+                              title: 'top_items'.tr,
+                              icon: Icons.star_rounded,
+                              accent: _orange),
+                          const SizedBox(height: 12),
+                          _ContentCard(
+                              child: _buildTopItemsList(topItems)),
+                        ],
+                      ],
+                    ],
+                  ),
+                );
+              }),
             ),
           ],
         ),
@@ -138,47 +124,26 @@ class MonthlyReportView extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionTitle(
-      BuildContext context, String title, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDailyChart(
-      BuildContext context, Map<int, double> dailyTotals, DateTime now) {
+  Widget _buildDailyChart(Map<int, double> dailyTotals, DateTime now) {
     if (dailyTotals.isEmpty) {
       return const SizedBox(
           height: 200, child: Center(child: Text('Veri yok')));
     }
 
-    final daysInMonth =
-        DateTime(now.year, now.month + 1, 0).day;
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
     final maxY = dailyTotals.values.reduce((a, b) => a > b ? a : b);
 
     final barGroups = List.generate(daysInMonth, (i) {
       final day = i + 1;
+      final val = dailyTotals[day] ?? 0.0;
       return BarChartGroupData(
         x: day,
         barRods: [
           BarChartRodData(
-            toY: dailyTotals[day] ?? 0,
-            color: (dailyTotals[day] ?? 0) > 0
-                ? AppTheme.successColor
-                : Colors.grey[300]!,
+            toY: val,
+            color: val > 0 ? AppTheme.successColor : _border,
             width: 8,
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: BorderRadius.circular(4),
           ),
         ],
       );
@@ -208,7 +173,7 @@ class MonthlyReportView extends StatelessWidget {
                 reservedSize: 44,
                 getTitlesWidget: (value, meta) => Text(
                   '₺${value.toInt()}',
-                  style: const TextStyle(fontSize: 9),
+                  style: const TextStyle(fontSize: 9, color: _textSec),
                 ),
               ),
             ),
@@ -218,7 +183,7 @@ class MonthlyReportView extends StatelessWidget {
                 interval: 5,
                 getTitlesWidget: (value, meta) => Text(
                   '${value.toInt()}',
-                  style: const TextStyle(fontSize: 9),
+                  style: const TextStyle(fontSize: 9, color: _textSec),
                 ),
               ),
             ),
@@ -232,6 +197,8 @@ class MonthlyReportView extends StatelessWidget {
             show: true,
             drawVerticalLine: false,
             horizontalInterval: maxY > 0 ? maxY / 4 : 1,
+            getDrawingHorizontalLine: (_) =>
+                const FlLine(color: _border, strokeWidth: 1),
           ),
           barGroups: barGroups,
         ),
@@ -239,8 +206,7 @@ class MonthlyReportView extends StatelessWidget {
     );
   }
 
-  Widget _buildTopItemsList(
-      BuildContext context, List<MapEntry<String, double>> topItems) {
+  Widget _buildTopItemsList(List<MapEntry<String, double>> topItems) {
     final maxQty = topItems.first.value;
     return Column(
       children: topItems.asMap().entries.map((entry) {
@@ -248,18 +214,28 @@ class MonthlyReportView extends StatelessWidget {
         final item = entry.value;
         final fraction = maxQty > 0 ? item.value / maxQty : 0.0;
         return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.only(bottom: 12),
           child: Row(
             children: [
-              SizedBox(
-                width: 24,
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: _orange.withValues(
+                      alpha: rank == 1 ? 0.15 : 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                alignment: Alignment.center,
                 child: Text(
-                  '$rank.',
+                  '$rank',
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 14),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: _orange,
+                  ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,19 +245,21 @@ class MonthlyReportView extends StatelessWidget {
                       children: [
                         Text(item.key,
                             style: const TextStyle(
-                                fontWeight: FontWeight.w500)),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                                color: _textPrimary)),
                         Text('${item.value.toInt()} adet',
-                            style: TextStyle(
-                                color: Colors.grey[600], fontSize: 12)),
+                            style: const TextStyle(
+                                color: _textSec, fontSize: 12)),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     LinearProgressIndicator(
                       value: fraction,
-                      backgroundColor: Colors.grey[200],
+                      backgroundColor: _border,
                       color: AppTheme.successColor,
                       minHeight: 6,
-                      borderRadius: BorderRadius.circular(3),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                   ],
                 ),
@@ -293,22 +271,216 @@ class MonthlyReportView extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState() {
     return SizedBox(
       height: 300,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.bar_chart, size: 64, color: Colors.grey[300]),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                color: _border,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.bar_chart_rounded,
+                  size: 48, color: _textSec),
+            ),
             const SizedBox(height: 16),
             Text(
               'no_sales'.tr,
-              style: TextStyle(color: Colors.grey[500], fontSize: 16),
+              style: const TextStyle(color: _textSec, fontSize: 15),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Shared widgets ──────────────────────────────────────────
+
+class _Header extends StatelessWidget {
+  const _Header({required this.title});
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 60,
+      decoration: const BoxDecoration(
+        color: _card,
+        border: Border(bottom: BorderSide(color: _border)),
+        boxShadow: [
+          BoxShadow(
+              color: Color(0x0D000000),
+              blurRadius: 12,
+              offset: Offset(0, 4)),
+        ],
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                size: 18, color: _textPrimary),
+            onPressed: () => Get.back(),
+          ),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: _textPrimary,
+              letterSpacing: -0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.accent,
+  });
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _border),
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x10000000),
+              blurRadius: 12,
+              offset: Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: accent, size: 16),
+          ),
+          const SizedBox(height: 10),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: _textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(label,
+              style: const TextStyle(color: _textSec, fontSize: 11),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(
+      {required this.title, required this.icon, required this.accent});
+  final String title;
+  final IconData icon;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: accent, size: 16),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: _textPrimary,
+            letterSpacing: -0.2,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChartCard extends StatelessWidget {
+  const _ChartCard({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 16, 16, 12),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _border),
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x0A000000),
+              blurRadius: 12,
+              offset: Offset(0, 4)),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _ContentCard extends StatelessWidget {
+  const _ContentCard({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _border),
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x0A000000),
+              blurRadius: 12,
+              offset: Offset(0, 4)),
+        ],
+      ),
+      child: child,
     );
   }
 }

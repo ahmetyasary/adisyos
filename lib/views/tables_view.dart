@@ -3,6 +3,15 @@ import 'package:get/get.dart';
 import 'package:adisyos/views/table_detail_view.dart';
 import 'package:adisyos/services/table_service.dart';
 
+// Design tokens
+const _bg = Color(0xFFF5F6FA);
+const _card = Colors.white;
+const _orange = Color(0xFFF5A623);
+const _textPrimary = Color(0xFF1A1A2E);
+const _textSecondary = Color(0xFF9B9B9B);
+const _occupied = Color(0xFFFF6B6B);
+const _available = Color(0xFF52C97F);
+
 class TablesView extends StatelessWidget {
   const TablesView({super.key});
 
@@ -150,62 +159,118 @@ class TablesView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('tables'.tr),
-        backgroundColor: Theme.of(context).colorScheme.primary,
+      backgroundColor: _bg,
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddTableDialog,
+        backgroundColor: _orange,
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _showAddTableDialog,
-          ),
-        ],
+        elevation: 4,
+        child: const Icon(Icons.add),
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Theme.of(context).colorScheme.primary,
-              Theme.of(context).colorScheme.secondary,
-            ],
-          ),
-        ),
-        child: Obx(
-          () => TableService.to.tables.isEmpty
-              ? Center(
-                  child: Text(
-                    'no_tables'.tr,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: _textPrimary),
+                    onPressed: () => Get.back(),
                   ),
-                )
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    final crossAxisCount = constraints.maxWidth < 500
-                        ? 2
-                        : constraints.maxWidth < 800
-                            ? 3
-                            : 4;
-                    return GridView.builder(
-                      padding: const EdgeInsets.all(16),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossAxisCount,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        childAspectRatio: 1.2,
-                      ),
-                      itemCount: TableService.to.tables.length,
-                      itemBuilder: (context, index) =>
-                          _buildTableCard(context, index),
-                    );
-                  },
+                  Expanded(
+                    child: Text(
+                      'tables'.tr,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 22,
+                            color: _textPrimary,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Stats row
+            Obx(() {
+              final tables = TableService.to.tables;
+              final total = tables.length;
+              final occupied =
+                  tables.where((t) => t['isOccupied'] as bool).length;
+              final available = total - occupied;
+              return Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Row(
+                  children: [
+                    _StatChip(
+                      label: 'Toplam: $total',
+                      color: _textPrimary,
+                    ),
+                    const SizedBox(width: 8),
+                    _StatChip(
+                      label: 'Dolu: $occupied',
+                      color: _occupied,
+                    ),
+                    const SizedBox(width: 8),
+                    _StatChip(
+                      label: 'Boş: $available',
+                      color: _available,
+                    ),
+                  ],
                 ),
+              );
+            }),
+            const SizedBox(height: 8),
+            // Grid
+            Expanded(
+              child: Obx(
+                () => TableService.to.tables.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.table_bar_rounded,
+                                size: 64, color: _textSecondary),
+                            const SizedBox(height: 16),
+                            Text(
+                              'no_tables'.tr,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(color: _textSecondary),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      )
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          final crossAxisCount = constraints.maxWidth < 500
+                              ? 2
+                              : constraints.maxWidth < 800
+                                  ? 3
+                                  : 4;
+                          return GridView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: 14,
+                              mainAxisSpacing: 14,
+                              childAspectRatio: 0.9,
+                            ),
+                            itemCount: TableService.to.tables.length,
+                            itemBuilder: (context, index) =>
+                                _buildTableCard(context, index),
+                          );
+                        },
+                      ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -214,6 +279,8 @@ class TablesView extends StatelessWidget {
   Widget _buildTableCard(BuildContext context, int index) {
     final table = TableService.to.tables[index];
     final isOccupied = table['isOccupied'] as bool;
+    final total = table['total'] as double;
+    final status = isOccupied ? 'occupied_status'.tr : 'available_status'.tr;
 
     return GestureDetector(
       onTap: () => Get.to(() => TableDetailView(
@@ -224,51 +291,144 @@ class TablesView extends StatelessWidget {
           )),
       onLongPressStart: (details) =>
           _showTableContextMenu(context, index, details.globalPosition),
-      child: Card(
-        elevation: 4,
-        color: isOccupied
-            ? const Color(0xFFE74C3C).withValues(alpha: 0.9)
-            : const Color(0xFF27AE60).withValues(alpha: 0.9),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      child: Container(
+        decoration: BoxDecoration(
+          color: _card,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: isOccupied
+                ? _occupied.withOpacity(0.4)
+                : _available.withOpacity(0.3),
+            width: 1.5,
+          ),
+        ),
+        child: Stack(
           children: [
-            Text(
-              table['name'] as String,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isOccupied ? 'occupied_status'.tr : 'available_status'.tr,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.95),
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '₺${(table['total'] as double).toStringAsFixed(2)}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+            // Status dot top-right
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isOccupied ? _occupied : _available,
                 ),
               ),
             ),
+            // Center content
+            Positioned.fill(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Table icon
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: isOccupied
+                          ? _occupied.withOpacity(0.1)
+                          : _available.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      Icons.table_bar_rounded,
+                      color: isOccupied ? _occupied : _available,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  // Table name
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      table['name'] as String,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: _textPrimary,
+                          ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Status pill
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isOccupied
+                          ? _occupied.withOpacity(0.1)
+                          : _available.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: isOccupied ? _occupied : _available,
+                      ),
+                    ),
+                  ),
+                  if (isOccupied && total > 0) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      '₺${total.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: _orange,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _StatChip({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: color,
         ),
       ),
     );
