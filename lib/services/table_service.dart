@@ -5,6 +5,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'package:adisyos/services/sales_history_service.dart';
+import 'package:adisyos/services/kitchen_service.dart';
+import 'package:adisyos/services/inventory_service.dart';
+import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
 
 class TableService extends GetxService {
   static TableService get to => Get.find();
@@ -34,11 +37,13 @@ class TableService extends GetxService {
         if (jsonString != null) {
           final List<dynamic> jsonList = json.decode(jsonString);
           tables.assignAll(jsonList.map((item) {
-            final Map<String, dynamic> table = Map<String, dynamic>.from(item as Map);
+            final Map<String, dynamic> table =
+                Map<String, dynamic>.from(item as Map);
             table['orders'] = List<Map<String, dynamic>>.from(
               (table['orders'] as List)
                   .map((order) => Map<String, dynamic>.from(order as Map)),
             );
+            table['staffEmail'] ??= '';
             return table;
           }));
         }
@@ -48,11 +53,13 @@ class TableService extends GetxService {
           final jsonString = await file.readAsString();
           final List<dynamic> jsonList = json.decode(jsonString);
           tables.assignAll(jsonList.map((item) {
-            final Map<String, dynamic> table = Map<String, dynamic>.from(item as Map);
+            final Map<String, dynamic> table =
+                Map<String, dynamic>.from(item as Map);
             table['orders'] = List<Map<String, dynamic>>.from(
               (table['orders'] as List)
                   .map((order) => Map<String, dynamic>.from(order as Map)),
             );
+            table['staffEmail'] ??= '';
             return table;
           }));
         }
@@ -88,11 +95,13 @@ class TableService extends GetxService {
       'orders': <Map<String, dynamic>>[],
       'total': 0.0,
       'discount': 0.0,
+      'staffEmail': '',
     });
     _saveTables();
   }
 
   void removeTable(int index) {
+    KitchenService.to.removeTicketsForTable(index);
     tables.removeAt(index);
     _saveTables();
   }
@@ -134,6 +143,26 @@ class TableService extends GetxService {
 
     tables[tableIndex]['total'] =
         (tables[tableIndex]['total'] as double) + price;
+
+    // Assign staff to table on first order
+    if ((tables[tableIndex]['staffEmail'] as String? ?? '').isEmpty) {
+      try {
+        final email = AuthController.to.user.value?.email ?? '';
+        if (email.isNotEmpty) tables[tableIndex]['staffEmail'] = email;
+      } catch (_) {}
+    }
+
+    // Update kitchen ticket
+    final newQty = existingOrderIndex != -1
+        ? orders[existingOrderIndex]['quantity'] as int
+        : 1;
+    KitchenService.to.addOrUpdateTicket(
+      tableIndex: tableIndex,
+      tableName: tables[tableIndex]['name'] as String,
+      itemName: name,
+      quantity: newQty,
+    );
+
     _updateTableStatus(tableIndex);
   }
 
@@ -143,6 +172,7 @@ class TableService extends GetxService {
     final order = orders[orderIndex];
     final price = order['price'] as double;
     final quantity = order['quantity'] as int;
+    final name = order['name'] as String;
 
     final currentTotal = tables[tableIndex]['total'] as double;
     tables[tableIndex]['total'] = (currentTotal - (price * quantity))
@@ -155,6 +185,7 @@ class TableService extends GetxService {
       tables[tableIndex]['discount'] = 0.0;
     }
 
+    KitchenService.to.removeTicketForItem(tableIndex, name);
     orders.removeAt(orderIndex);
     _updateTableStatus(tableIndex);
   }
@@ -165,15 +196,26 @@ class TableService extends GetxService {
     final order = orders[orderIndex];
     final price = order['price'] as double;
     final quantity = order['quantity'] as int;
+    final name = order['name'] as String;
 
     if (quantity <= 1) {
+      KitchenService.to.removeTicketForItem(tableIndex, name);
       removeOrder(tableIndex, orderIndex);
       return;
     }
 
     orders[orderIndex]['quantity'] = quantity - 1;
     tables[tableIndex]['total'] =
-        ((tables[tableIndex]['total'] as double) - price).clamp(0.0, double.infinity);
+        ((tables[tableIndex]['total'] as double) - price)
+            .clamp(0.0, double.infinity);
+
+    KitchenService.to.addOrUpdateTicket(
+      tableIndex: tableIndex,
+      tableName: tables[tableIndex]['name'] as String,
+      itemName: name,
+      quantity: quantity - 1,
+    );
+
     _updateTableStatus(tableIndex);
   }
 
@@ -186,10 +228,12 @@ class TableService extends GetxService {
   }
 
   void clearTable(int tableIndex) {
+    KitchenService.to.removeTicketsForTable(tableIndex);
     tables[tableIndex]['orders'] = <Map<String, dynamic>>[];
     tables[tableIndex]['total'] = 0.0;
     tables[tableIndex]['isOccupied'] = false;
     tables[tableIndex]['discount'] = 0.0;
+    tables[tableIndex]['staffEmail'] = '';
     tables.refresh();
     _saveTables();
   }
@@ -203,6 +247,7 @@ class TableService extends GetxService {
     final subtotal = table['total'] as double;
     final discount = (table['discount'] ?? 0.0) as double;
     final total = (subtotal - discount).clamp(0.0, double.infinity);
+    final staffEmail = (table['staffEmail'] as String? ?? '');
 
     SalesHistoryService.to.recordSale(
       tableName: table['name'] as String,
@@ -210,14 +255,16 @@ class TableService extends GetxService {
       subtotal: subtotal,
       discount: discount,
       total: total,
+      staffEmail: staffEmail,
     );
+
+    InventoryService.to.decrementForSale(orders);
 
     clearTable(tableIndex);
   }
 
   void applyDiscount(int tableIndex, double discountPercentage) {
     final currentTotal = tables[tableIndex]['total'] as double;
-    // Clamp to valid range 0-100%
     final clamped = discountPercentage.clamp(0.0, 100.0);
     final discountAmount = currentTotal * (clamped / 100);
     tables[tableIndex]['discount'] = discountAmount;
@@ -245,7 +292,6 @@ class TableService extends GetxService {
     final price = order['price'] as double;
     final quantity = order['quantity'] as int;
 
-    // Add to destination table, merging if item already exists
     final destOrders = getOrders(toTableIndex);
     final existingIdx = destOrders.indexWhere((o) => o['name'] == name);
     if (existingIdx != -1) {
@@ -259,19 +305,28 @@ class TableService extends GetxService {
         (tables[toTableIndex]['total'] as double) + (price * quantity);
     tables[toTableIndex]['isOccupied'] = true;
 
-    // Remove from source table
     tables[fromTableIndex]['total'] =
         ((tables[fromTableIndex]['total'] as double) - (price * quantity))
             .clamp(0.0, double.infinity);
     srcOrders.removeAt(orderIndex);
     tables[fromTableIndex]['isOccupied'] = srcOrders.isNotEmpty;
 
-    // If discount exceeds new total, reset discount on source
     final newSrcTotal = tables[fromTableIndex]['total'] as double;
     final srcDiscount = (tables[fromTableIndex]['discount'] ?? 0.0) as double;
     if (srcDiscount > newSrcTotal) {
       tables[fromTableIndex]['discount'] = 0.0;
     }
+
+    // Sync kitchen tickets
+    KitchenService.to.removeTicketForItem(fromTableIndex, name);
+    KitchenService.to.addOrUpdateTicket(
+      tableIndex: toTableIndex,
+      tableName: tables[toTableIndex]['name'] as String,
+      itemName: name,
+      quantity: existingIdx != -1
+          ? destOrders[existingIdx]['quantity'] as int
+          : quantity,
+    );
 
     tables.refresh();
     _saveTables();
@@ -297,17 +352,28 @@ class TableService extends GetxService {
       } else {
         destOrders.add({'name': name, 'quantity': quantity, 'price': price});
       }
+
+      KitchenService.to.removeTicketForItem(fromTableIndex, name);
+      final destQty = existingIdx != -1
+          ? destOrders[existingIdx]['quantity'] as int
+          : quantity;
+      KitchenService.to.addOrUpdateTicket(
+        tableIndex: toTableIndex,
+        tableName: tables[toTableIndex]['name'] as String,
+        itemName: name,
+        quantity: destQty,
+      );
     }
 
     tables[toTableIndex]['total'] =
         (tables[toTableIndex]['total'] as double) + addedTotal;
     tables[toTableIndex]['isOccupied'] = destOrders.isNotEmpty;
 
-    // Clear source
     tables[fromTableIndex]['orders'] = <Map<String, dynamic>>[];
     tables[fromTableIndex]['total'] = 0.0;
     tables[fromTableIndex]['discount'] = 0.0;
     tables[fromTableIndex]['isOccupied'] = false;
+    tables[fromTableIndex]['staffEmail'] = '';
 
     tables.refresh();
     _saveTables();

@@ -11,6 +11,8 @@ import 'package:adisyos/views/auth_screen.dart';
 import 'package:adisyos/services/menu_service.dart';
 import 'package:adisyos/services/table_service.dart';
 import 'package:adisyos/services/sales_history_service.dart';
+import 'package:adisyos/services/kitchen_service.dart';
+import 'package:adisyos/services/inventory_service.dart';
 import 'package:adisyos/guards/auth_middleware.dart';
 // Clean architecture layers
 import 'package:adisyos/features/auth/data/datasources/supabase_auth_datasource.dart';
@@ -39,8 +41,11 @@ Future<void> main() async {
 
   _registerAuth();
 
-  // SalesHistoryService must be registered before TableService
+  // Registration order matters: SalesHistoryService, KitchenService and
+  // InventoryService must all exist before TableService starts.
   Get.put(SalesHistoryService());
+  Get.put(KitchenService());
+  Get.put(InventoryService());
   Get.put(MenuService());
   Get.put(TableService());
 

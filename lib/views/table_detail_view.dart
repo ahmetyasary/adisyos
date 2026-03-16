@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:adisyos/services/menu_service.dart';
 import 'package:adisyos/services/table_service.dart';
+import 'package:adisyos/services/inventory_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
 
 // Design tokens
@@ -408,16 +414,63 @@ class _TableDetailViewState extends State<TableDetailView> {
             itemCount: items.length,
             itemBuilder: (context, index) {
               final item = items[index];
+              final name = item['name'] as String;
+              final isOut = InventoryService.to.isOutOfStock(name);
+              final isLow = InventoryService.to.isLowStock(name);
+              final isTracked = InventoryService.to.isTracked(name);
+              final stockVal = InventoryService.to.getStock(name);
+
               return InkWell(
-                onTap: () => TableService.to.addOrder(
-                  widget.tableIndex,
-                  item['name'] as String,
-                  item['price'] as double,
-                ),
+                onTap: () {
+                  if (isOut) {
+                    Get.snackbar(
+                      'warning'.tr,
+                      '$name stokta yok!',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: AppTheme.warningColor,
+                      colorText: Colors.white,
+                    );
+                    return;
+                  }
+                  TableService.to.addOrder(
+                    widget.tableIndex,
+                    name,
+                    item['price'] as double,
+                  );
+                },
                 borderRadius: BorderRadius.circular(16),
-                child: _buildMenuCard(
-                  item['name'] as String,
-                  '₺${(item['price'] as double).toStringAsFixed(2)}',
+                child: Stack(
+                  children: [
+                    _buildMenuCard(
+                      name,
+                      '₺${(item['price'] as double).toStringAsFixed(2)}',
+                      dimmed: isOut,
+                    ),
+                    if (isTracked)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isOut
+                                ? const Color(0xFFFF6B6B)
+                                : isLow
+                                    ? _orange
+                                    : const Color(0xFF52C97F),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            isOut ? 'Bitti' : '$stockVal',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               );
             },
@@ -427,18 +480,22 @@ class _TableDetailViewState extends State<TableDetailView> {
     });
   }
 
-  Widget _buildMenuCard(String name, String price) {
-    return Container(
+  Widget _buildMenuCard(String name, String price, {bool dimmed = false}) {
+    return Opacity(
+      opacity: dimmed ? 0.45 : 1.0,
+      child: Container(
       decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: dimmed
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -502,6 +559,7 @@ class _TableDetailViewState extends State<TableDetailView> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -1020,8 +1078,8 @@ class _TableDetailViewState extends State<TableDetailView> {
     );
   }
 
-  // Print receipt (shows formatted receipt dialog)
-  void _handlePrint() {
+  // Print receipt — generates a real PDF
+  Future<void> _handlePrint() async {
     final orders = TableService.to.getOrders(widget.tableIndex);
     if (orders.isEmpty) {
       Get.snackbar(
@@ -1034,107 +1092,135 @@ class _TableDetailViewState extends State<TableDetailView> {
       return;
     }
 
-    final total = TableService.to.getTotal(widget.tableIndex);
+    final subtotal = TableService.to.getTotal(widget.tableIndex);
     final discount = TableService.to.getDiscount(widget.tableIndex);
-    final finalTotal = TableService.to.getTotalWithDiscount(widget.tableIndex);
+    final finalTotal =
+        TableService.to.getTotalWithDiscount(widget.tableIndex);
 
-    Get.dialog(
-      AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.receipt_long),
-            const SizedBox(width: 8),
-            Text('print'.tr),
-          ],
-        ),
-        content: SizedBox(
-          width: 280,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Text(
-                  widget.tableName,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 18),
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final companyName =
+          prefs.getString('companyName') ?? 'Adisyos';
+
+      final regularFont = await PdfGoogleFonts.notoSansRegular();
+      final boldFont = await PdfGoogleFonts.notoSansBold();
+
+      final doc = pw.Document();
+      doc.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.roll80,
+          margin: const pw.EdgeInsets.all(16),
+          build: (pw.Context context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Center(
+                  child: pw.Text(
+                    companyName,
+                    style: pw.TextStyle(font: boldFont, fontSize: 16),
+                  ),
                 ),
-              ),
-              const Divider(),
-              ...orders.map((order) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Row(
+                pw.Center(
+                  child: pw.Text(
+                    widget.tableName,
+                    style: pw.TextStyle(font: regularFont, fontSize: 12),
+                  ),
+                ),
+                pw.Center(
+                  child: pw.Text(
+                    DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()),
+                    style: pw.TextStyle(font: regularFont, fontSize: 10),
+                  ),
+                ),
+                pw.SizedBox(height: 8),
+                pw.Divider(),
+                pw.SizedBox(height: 4),
+                ...orders.map(
+                  (order) => pw.Padding(
+                    padding:
+                        const pw.EdgeInsets.symmetric(vertical: 2),
+                    child: pw.Row(
+                      mainAxisAlignment:
+                          pw.MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('${order['quantity']}x ',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold)),
-                        Expanded(
-                            child: Text(order['name'] as String,
-                                overflow: TextOverflow.ellipsis)),
-                        Text(
-                            '₺${((order['price'] as double) * (order['quantity'] as int)).toStringAsFixed(2)}'),
+                        pw.Text(
+                          '${order['quantity']}x  ${order['name']}',
+                          style: pw.TextStyle(
+                              font: regularFont, fontSize: 12),
+                        ),
+                        pw.Text(
+                          'TL ${((order['price'] as double) * (order['quantity'] as int)).toStringAsFixed(2)}',
+                          style: pw.TextStyle(
+                              font: regularFont, fontSize: 12),
+                        ),
                       ],
                     ),
-                  )),
-              const Divider(),
-              if (discount > 0) ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  ),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Divider(),
+                pw.SizedBox(height: 4),
+                if (discount > 0) ...[
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text('Ara Toplam',
+                          style: pw.TextStyle(
+                              font: regularFont, fontSize: 11)),
+                      pw.Text('TL ${subtotal.toStringAsFixed(2)}',
+                          style: pw.TextStyle(
+                              font: regularFont, fontSize: 11)),
+                    ],
+                  ),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text('Iskonto',
+                          style: pw.TextStyle(
+                              font: regularFont, fontSize: 11)),
+                      pw.Text('-TL ${discount.toStringAsFixed(2)}',
+                          style: pw.TextStyle(
+                              font: regularFont, fontSize: 11)),
+                    ],
+                  ),
+                ],
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('subtotal'.tr),
-                    Text('₺${total.toStringAsFixed(2)}'),
+                    pw.Text('TOPLAM',
+                        style: pw.TextStyle(
+                            font: boldFont, fontSize: 14)),
+                    pw.Text(
+                        'TL ${finalTotal.toStringAsFixed(2)}',
+                        style: pw.TextStyle(
+                            font: boldFont, fontSize: 14)),
                   ],
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('discount'.tr),
-                    Text('-₺${discount.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                            color: AppTheme.warningColor)),
-                  ],
+                pw.SizedBox(height: 16),
+                pw.Center(
+                  child: pw.Text(
+                    'Tesekkur ederiz!',
+                    style:
+                        pw.TextStyle(font: regularFont, fontSize: 11),
+                  ),
                 ),
               ],
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('total'.tr,
-                      style:
-                          const TextStyle(fontWeight: FontWeight.bold)),
-                  Text('₺${finalTotal.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
-                ],
-              ),
-            ],
-          ),
+            );
+          },
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text('close'.tr),
-          ),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.print),
-            label: Text('printing'.tr),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.successColor,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Get.back();
-              Get.snackbar(
-                'success'.tr,
-                'printing'.tr,
-                snackPosition: SnackPosition.BOTTOM,
-                backgroundColor: AppTheme.successColor,
-                colorText: Colors.white,
-              );
-            },
-          ),
-        ],
-      ),
-    );
+      );
+
+      await Printing.layoutPdf(
+          onLayout: (format) async => doc.save());
+    } catch (e) {
+      Get.snackbar(
+        'error'.tr,
+        'PDF olusturulurken hata: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppTheme.errorColor,
+        colorText: Colors.white,
+      );
+    }
   }
 
   // Move orders to another table

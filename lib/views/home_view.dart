@@ -9,6 +9,9 @@ import 'package:adisyos/features/auth/presentation/controller/auth_controller.da
 import 'package:adisyos/models/app_role.dart';
 import 'package:adisyos/services/sales_history_service.dart';
 import 'package:adisyos/services/table_service.dart';
+import 'package:adisyos/views/kitchen_display_view.dart';
+import 'package:adisyos/views/inventory_management_view.dart';
+import 'package:adisyos/views/staff_report_view.dart';
 import 'package:adisyos/views/menu_management_view.dart';
 import 'package:adisyos/views/notifications_view.dart';
 import 'package:adisyos/views/reports_view.dart';
@@ -71,6 +74,9 @@ class _HomeViewState extends State<HomeView> {
       case 'reports':   Get.to(() => const ReportsView()); break;
       case 'settings':  Get.to(() => const SettingsView()); break;
       case 'notifications': Get.to(() => const NotificationsView()); break;
+      case 'kitchen':   Get.to(() => const KitchenDisplayView()); break;
+      case 'inventory': Get.to(() => const InventoryManagementView()); break;
+      case 'staff_report': Get.to(() => const StaffReportView()); break;
     }
   }
 
@@ -134,6 +140,36 @@ class _HomeViewState extends State<HomeView> {
         'btnLabel': 'Bildirimleri Gör',
         'icon':     Icons.notifications_rounded,
         'route':    'notifications',
+        'active':   true,
+        'primary':  false,
+        'roles':    [AppRole.admin],
+      },
+      {
+        'title':    'Mutfak',
+        'subtitle': 'Sipariş durumunu takip et',
+        'btnLabel': 'Mutfak Ekranı',
+        'icon':     Icons.kitchen_rounded,
+        'route':    'kitchen',
+        'active':   true,
+        'primary':  false,
+        'roles':    [AppRole.admin, AppRole.staff],
+      },
+      {
+        'title':    'Stoklar',
+        'subtitle': 'Ürün stok yönetimi',
+        'btnLabel': 'Stok Yönetimi',
+        'icon':     Icons.inventory_2_rounded,
+        'route':    'inventory',
+        'active':   true,
+        'primary':  false,
+        'roles':    [AppRole.admin],
+      },
+      {
+        'title':    'Personel',
+        'subtitle': 'Personel performans raporu',
+        'btnLabel': 'Raporu Gör',
+        'icon':     Icons.leaderboard_rounded,
+        'route':    'staff_report',
         'active':   true,
         'primary':  false,
         'roles':    [AppRole.admin],
@@ -424,7 +460,7 @@ class _StatsRow extends StatelessWidget {
       // Today's total from sales history
       final today = DateTime.now();
       final todaySales = SalesHistoryService.to.sales.where((s) {
-        final ts = DateTime.tryParse(s['timestamp'] as String? ?? '');
+        final ts = DateTime.tryParse(s['date'] as String? ?? '');
         return ts != null &&
             ts.year == today.year &&
             ts.month == today.month &&

@@ -178,6 +178,26 @@ class AppTranslations extends Translations {
           'payment_notification': 'Ödeme Alındı',
           'recent_activity': 'Son Aktivite',
           'no_notifications': 'Henüz bildirim yok',
+
+          // Kitchen
+          'kitchen': 'Mutfak',
+          'kitchen_display': 'Mutfak Ekranı',
+          'pending': 'Bekliyor',
+          'preparing': 'Hazırlanıyor',
+          'ready': 'Hazır',
+
+          // Inventory
+          'inventory_mgmt': 'Stok Yönetimi',
+          'out_of_stock': 'Stok tükendi',
+          'low_stock': 'Az stok',
+
+          // Staff
+          'staff_report': 'Personel Raporu',
+          'staff_performance': 'Personel Performansı',
+
+          // QR
+          'qr_code': 'QR Kod',
+          'qr_preview': 'Menüyü Önizle',
         },
         'en_US': {
           'app_name': 'Adisyos',
@@ -355,6 +375,26 @@ class AppTranslations extends Translations {
           'payment_notification': 'Payment Received',
           'recent_activity': 'Recent Activity',
           'no_notifications': 'No notifications yet',
+
+          // Kitchen
+          'kitchen': 'Kitchen',
+          'kitchen_display': 'Kitchen Display',
+          'pending': 'Pending',
+          'preparing': 'Preparing',
+          'ready': 'Ready',
+
+          // Inventory
+          'inventory_mgmt': 'Inventory',
+          'out_of_stock': 'Out of stock',
+          'low_stock': 'Low stock',
+
+          // Staff
+          'staff_report': 'Staff Report',
+          'staff_performance': 'Staff Performance',
+
+          // QR
+          'qr_code': 'QR Code',
+          'qr_preview': 'Preview Menu',
         },
       };
 }

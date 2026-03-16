@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:adisyos/views/table_detail_view.dart';
+import 'package:adisyos/views/public_menu_view.dart';
 import 'package:adisyos/services/table_service.dart';
 
 // Design tokens
@@ -115,6 +117,62 @@ class TablesView extends StatelessWidget {
     );
   }
 
+  void _showQrDialog(BuildContext context, int index) {
+    final tableName = TableService.to.tables[index]['name'] as String;
+    Get.dialog(
+      AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.qr_code_2_rounded, color: Colors.purple),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'QR — $tableName',
+                style: const TextStyle(fontSize: 16),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            QrImageView(
+              data: 'adisyos://menu?table=$tableName',
+              version: QrVersions.auto,
+              size: 200,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'adisyos://menu?table=$tableName',
+              style: const TextStyle(fontSize: 10, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Bu kodu masaya yerleştirerek müşterilerin menüyü görmesini sağlayabilirsiniz.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Get.back();
+              Get.to(() => PublicMenuView(tableName: tableName));
+            },
+            child: const Text('Menüyü Önizle'),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(),
+            child: const Text('Kapat'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showTableContextMenu(BuildContext context, int index, Offset position) {
     final tableName = TableService.to.tables[index]['name'] as String;
     showMenu(
@@ -137,6 +195,16 @@ class TablesView extends StatelessWidget {
           ),
         ),
         PopupMenuItem(
+          value: 'qr',
+          child: Row(
+            children: [
+              const Icon(Icons.qr_code_2_rounded, color: Colors.purple),
+              const SizedBox(width: 8),
+              const Text('QR Kod'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
           value: 'delete',
           child: Row(
             children: [
@@ -152,6 +220,8 @@ class TablesView extends StatelessWidget {
         _showDeleteConfirmation(index);
       } else if (value == 'edit') {
         _showEditTableDialog(index, tableName);
+      } else if (value == 'qr') {
+        _showQrDialog(context, index);
       }
     });
   }

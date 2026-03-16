@@ -80,6 +80,7 @@ class SalesHistoryService extends GetxService {
     required double subtotal,
     required double discount,
     required double total,
+    String staffEmail = '',
   }) {
     sales.add({
       'id': DateTime.now().millisecondsSinceEpoch.toString(),
@@ -89,6 +90,7 @@ class SalesHistoryService extends GetxService {
       'discount': discount,
       'total': total,
       'date': DateTime.now().toIso8601String(),
+      'staffEmail': staffEmail,
     });
     _save();
   }
