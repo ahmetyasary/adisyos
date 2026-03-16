@@ -239,7 +239,7 @@ class TableService extends GetxService {
   }
 
   // Record payment and clear the table
-  void recordPayment(int tableIndex) {
+  void recordPayment(int tableIndex, {String paymentMethod = 'cash'}) {
     final table = tables[tableIndex];
     final orders = List<Map<String, dynamic>>.from(
       table['orders'] as List<Map<String, dynamic>>,
@@ -256,6 +256,7 @@ class TableService extends GetxService {
       discount: discount,
       total: total,
       staffEmail: staffEmail,
+      paymentMethod: paymentMethod,
     );
 
     InventoryService.to.decrementForSale(orders);

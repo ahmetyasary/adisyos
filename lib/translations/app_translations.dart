@@ -198,6 +198,28 @@ class AppTranslations extends Translations {
           // QR
           'qr_code': 'QR Kod',
           'qr_preview': 'Menüyü Önizle',
+
+          // Payment methods
+          'pay_method': 'Ödeme Yöntemi',
+          'pay_cash': 'Nakit',
+          'pay_card': 'Kredi Kartı',
+          'pay_transfer': 'Havale',
+          'pay_breakdown': 'Ödeme Yöntemi Dağılımı',
+
+          // Shift management
+          'shift_mgmt': 'Vardiya Yönetimi',
+          'clock_in': 'Giriş Yap',
+          'clock_out': 'Çıkış Yap',
+          'start_break': 'Mola Başlat',
+          'end_break': 'Molayı Bitir',
+          'on_shift': 'Vardiyada',
+          'on_break': 'Molada',
+          'off_shift': 'Dışarıda',
+
+          // Dashboard
+          'dashboard': 'Canlı Dashboard',
+          'occupancy': 'Doluluk Oranı',
+          'active_tables': 'Aktif Masalar',
         },
         'en_US': {
           'app_name': 'Adisyos',
@@ -395,6 +417,28 @@ class AppTranslations extends Translations {
           // QR
           'qr_code': 'QR Code',
           'qr_preview': 'Preview Menu',
+
+          // Payment methods
+          'pay_method': 'Payment Method',
+          'pay_cash': 'Cash',
+          'pay_card': 'Card',
+          'pay_transfer': 'Transfer',
+          'pay_breakdown': 'Payment Method Breakdown',
+
+          // Shift management
+          'shift_mgmt': 'Shift Management',
+          'clock_in': 'Clock In',
+          'clock_out': 'Clock Out',
+          'start_break': 'Start Break',
+          'end_break': 'End Break',
+          'on_shift': 'On Shift',
+          'on_break': 'On Break',
+          'off_shift': 'Off Duty',
+
+          // Dashboard
+          'dashboard': 'Live Dashboard',
+          'occupancy': 'Occupancy Rate',
+          'active_tables': 'Active Tables',
         },
       };
 }

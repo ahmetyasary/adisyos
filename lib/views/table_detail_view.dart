@@ -1326,84 +1326,120 @@ class _TableDetailViewState extends State<TableDetailView> {
     final total = TableService.to.getTotal(widget.tableIndex);
     final discount = TableService.to.getDiscount(widget.tableIndex);
     final finalTotal = TableService.to.getTotalWithDiscount(widget.tableIndex);
+    String selectedMethod = 'cash';
 
     Get.dialog(
-      AlertDialog(
-        title: Text('pay_title'.tr),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${'table_label'.tr}: ${widget.tableName}',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('subtotal'.tr),
-                Text('₺${total.toStringAsFixed(2)}'),
-              ],
-            ),
-            if (discount > 0)
+      StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('pay_title'.tr),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${'table_label'.tr}: ${widget.tableName}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('discount'.tr),
+                  Text('subtotal'.tr),
+                  Text('₺${total.toStringAsFixed(2)}'),
+                ],
+              ),
+              if (discount > 0)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('discount'.tr),
+                    Text(
+                      '-₺${discount.toStringAsFixed(2)}',
+                      style: const TextStyle(color: AppTheme.warningColor),
+                    ),
+                  ],
+                ),
+              const Divider(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
                   Text(
-                    '-₺${discount.toStringAsFixed(2)}',
-                    style:
-                        const TextStyle(color: AppTheme.warningColor),
+                    'total'.tr,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                  Text(
+                    '₺${finalTotal.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.successColor,
+                    ),
                   ),
                 ],
               ),
-            const Divider(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'total'.tr,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-                Text(
-                  '₺${finalTotal.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.successColor,
+              const SizedBox(height: 16),
+              Text(
+                'pay_method'.tr,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  _PayMethodChip(
+                    label: 'pay_cash'.tr,
+                    icon: Icons.payments_rounded,
+                    value: 'cash',
+                    selected: selectedMethod == 'cash',
+                    onTap: () => setState(() => selectedMethod = 'cash'),
                   ),
-                ),
-              ],
+                  _PayMethodChip(
+                    label: 'pay_card'.tr,
+                    icon: Icons.credit_card_rounded,
+                    value: 'card',
+                    selected: selectedMethod == 'card',
+                    onTap: () => setState(() => selectedMethod = 'card'),
+                  ),
+                  _PayMethodChip(
+                    label: 'pay_transfer'.tr,
+                    icon: Icons.account_balance_rounded,
+                    value: 'transfer',
+                    selected: selectedMethod == 'transfer',
+                    onTap: () => setState(() => selectedMethod = 'transfer'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: Text('cancel'.tr),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.successColor,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                TableService.to.recordPayment(widget.tableIndex,
+                    paymentMethod: selectedMethod);
+                Get.back();
+                Get.back();
+                Get.snackbar(
+                  'success'.tr,
+                  'payment_received'.tr,
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: AppTheme.successColor,
+                  colorText: Colors.white,
+                );
+              },
+              child: Text('pay'.tr),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text('cancel'.tr),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.successColor,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              TableService.to.recordPayment(widget.tableIndex);
-              Get.back();
-              Get.back();
-              Get.snackbar(
-                'success'.tr,
-                'payment_received'.tr,
-                snackPosition: SnackPosition.BOTTOM,
-                backgroundColor: AppTheme.successColor,
-                colorText: Colors.white,
-              );
-            },
-            child: Text('pay'.tr),
-          ),
-        ],
       ),
     );
   }
@@ -1447,6 +1483,56 @@ class _ActionBtn extends StatelessWidget {
                 fontSize: 10,
                 color: color,
                 fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PayMethodChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final String value;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _PayMethodChip({
+    required this.label,
+    required this.icon,
+    required this.value,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFFF5A623);
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? accent : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: selected ? accent : const Color(0xFFEEEEEE), width: 1.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 16, color: selected ? Colors.white : const Color(0xFF9B9B9B)),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : const Color(0xFF1A1A2E),
               ),
             ),
           ],

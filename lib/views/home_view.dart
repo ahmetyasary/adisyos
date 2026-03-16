@@ -12,6 +12,8 @@ import 'package:adisyos/services/table_service.dart';
 import 'package:adisyos/views/kitchen_display_view.dart';
 import 'package:adisyos/views/inventory_management_view.dart';
 import 'package:adisyos/views/staff_report_view.dart';
+import 'package:adisyos/views/shift_management_view.dart';
+import 'package:adisyos/views/dashboard_view.dart';
 import 'package:adisyos/views/menu_management_view.dart';
 import 'package:adisyos/views/notifications_view.dart';
 import 'package:adisyos/views/reports_view.dart';
@@ -77,6 +79,8 @@ class _HomeViewState extends State<HomeView> {
       case 'kitchen':   Get.to(() => const KitchenDisplayView()); break;
       case 'inventory': Get.to(() => const InventoryManagementView()); break;
       case 'staff_report': Get.to(() => const StaffReportView()); break;
+      case 'shifts':    Get.to(() => const ShiftManagementView()); break;
+      case 'dashboard': Get.to(() => const DashboardView()); break;
     }
   }
 
@@ -170,6 +174,26 @@ class _HomeViewState extends State<HomeView> {
         'btnLabel': 'Raporu Gör',
         'icon':     Icons.leaderboard_rounded,
         'route':    'staff_report',
+        'active':   true,
+        'primary':  false,
+        'roles':    [AppRole.admin],
+      },
+      {
+        'title':    'Vardiya',
+        'subtitle': 'Giriş/çıkış ve mola takibi',
+        'btnLabel': 'Vardiyam',
+        'icon':     Icons.schedule_rounded,
+        'route':    'shifts',
+        'active':   true,
+        'primary':  false,
+        'roles':    [AppRole.admin, AppRole.staff],
+      },
+      {
+        'title':    'Dashboard',
+        'subtitle': 'Canlı doluluk ve satış takibi',
+        'btnLabel': 'Canlı İzle',
+        'icon':     Icons.dashboard_rounded,
+        'route':    'dashboard',
         'active':   true,
         'primary':  false,
         'roles':    [AppRole.admin],

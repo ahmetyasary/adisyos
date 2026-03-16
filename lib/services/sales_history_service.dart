@@ -81,6 +81,7 @@ class SalesHistoryService extends GetxService {
     required double discount,
     required double total,
     String staffEmail = '',
+    String paymentMethod = 'cash',
   }) {
     sales.add({
       'id': DateTime.now().millisecondsSinceEpoch.toString(),
@@ -91,8 +92,20 @@ class SalesHistoryService extends GetxService {
       'total': total,
       'date': DateTime.now().toIso8601String(),
       'staffEmail': staffEmail,
+      'paymentMethod': paymentMethod,
     });
     _save();
+  }
+
+  /// Returns a map of paymentMethod -> total for a given list of sales.
+  Map<String, double> getPaymentMethodTotals(
+      List<Map<String, dynamic>> salesList) {
+    final result = <String, double>{};
+    for (final sale in salesList) {
+      final method = (sale['paymentMethod'] as String?) ?? 'cash';
+      result[method] = (result[method] ?? 0.0) + (sale['total'] as double);
+    }
+    return result;
   }
 
   List<Map<String, dynamic>> getSalesForDate(DateTime date) {

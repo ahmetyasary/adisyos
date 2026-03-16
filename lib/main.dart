@@ -13,6 +13,7 @@ import 'package:adisyos/services/table_service.dart';
 import 'package:adisyos/services/sales_history_service.dart';
 import 'package:adisyos/services/kitchen_service.dart';
 import 'package:adisyos/services/inventory_service.dart';
+import 'package:adisyos/services/shift_service.dart';
 import 'package:adisyos/guards/auth_middleware.dart';
 // Clean architecture layers
 import 'package:adisyos/features/auth/data/datasources/supabase_auth_datasource.dart';
@@ -46,6 +47,7 @@ Future<void> main() async {
   Get.put(SalesHistoryService());
   Get.put(KitchenService());
   Get.put(InventoryService());
+  Get.put(ShiftService());
   Get.put(MenuService());
   Get.put(TableService());
 
@@ -73,6 +75,7 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'Adisyos',
       debugShowCheckedModeBanner: false,
+      scrollBehavior: _SmoothScrollBehavior(),
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
@@ -126,4 +129,19 @@ class MyApp extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Removes bounce/glow overscroll on all platforms.
+/// Uses ClampingScrollPhysics (hard stop at edges) everywhere.
+class _SmoothScrollBehavior extends ScrollBehavior {
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const ClampingScrollPhysics();
+
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) => child;
 }

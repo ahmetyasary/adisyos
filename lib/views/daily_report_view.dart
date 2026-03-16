@@ -99,6 +99,18 @@ class DailyReportView extends StatelessWidget {
                             child: _buildHourlyChart(hourlyTotals)),
                         const SizedBox(height: 24),
 
+                        // Payment method breakdown
+                        _SectionTitle(
+                            title: 'pay_breakdown'.tr,
+                            icon: Icons.pie_chart_rounded),
+                        const SizedBox(height: 12),
+                        _ContentCard(
+                            child: _buildPaymentBreakdown(
+                                SalesHistoryService.to
+                                    .getPaymentMethodTotals(sales),
+                                total)),
+                        const SizedBox(height: 24),
+
                         // Top items
                         if (topItems.isNotEmpty) ...[
                           _SectionTitle(
@@ -206,6 +218,68 @@ class DailyReportView extends StatelessWidget {
           barGroups: barGroups,
         ),
       ),
+    );
+  }
+
+  Widget _buildPaymentBreakdown(
+      Map<String, double> totals, double grandTotal) {
+    final methods = [
+      {'key': 'cash', 'label': 'pay_cash', 'icon': Icons.payments_rounded, 'color': const Color(0xFF52C97F)},
+      {'key': 'card', 'label': 'pay_card', 'icon': Icons.credit_card_rounded, 'color': const Color(0xFF5DADE2)},
+      {'key': 'transfer', 'label': 'pay_transfer', 'icon': Icons.account_balance_rounded, 'color': const Color(0xFFAB84F5)},
+    ];
+    return Column(
+      children: methods.map((m) {
+        final amount = totals[m['key'] as String] ?? 0.0;
+        final fraction = grandTotal > 0 ? amount / grandTotal : 0.0;
+        final color = m['color'] as Color;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(m['icon'] as IconData, color: color, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text((m['label'] as String).tr,
+                            style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: _textPrimary)),
+                        Text('₺${amount.toStringAsFixed(2)}',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: color)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    LinearProgressIndicator(
+                      value: fraction,
+                      backgroundColor: _border,
+                      color: color,
+                      minHeight: 6,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
