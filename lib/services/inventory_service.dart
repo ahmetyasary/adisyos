@@ -1,73 +1,38 @@
 import 'package:get/get.dart';
-import 'dart:convert';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class InventoryService extends GetxService {
   static InventoryService get to => Get.find();
 
-  /// itemName -> stock count. -1 = not tracked (unlimited).
+  /// itemName → stock count.  -1 = unlimited / not tracked.
   final RxMap<String, int> stock = <String, int>{}.obs;
-  late String _filePath;
+
+  final _db = Supabase.instance.client;
 
   static const int lowStockThreshold = 5;
 
   @override
   void onInit() {
     super.onInit();
-    _init();
+    _load();
   }
 
-  Future<void> _init() async {
-    if (!kIsWeb) {
-      final dir = await getApplicationDocumentsDirectory();
-      _filePath = '${dir.path}/inventory.json';
-    }
-    await _load();
-  }
+  // ── Load ────────────────────────────────────────────────────
 
   Future<void> _load() async {
     try {
-      if (kIsWeb) {
-        final prefs = await SharedPreferences.getInstance();
-        final str = prefs.getString('inventory');
-        if (str != null) {
-          final map = json.decode(str) as Map;
-          stock.assignAll(
-              map.map((k, v) => MapEntry(k as String, (v as num).toInt())));
-        }
-      } else {
-        final file = File(_filePath);
-        if (await file.exists()) {
-          final str = await file.readAsString();
-          final map = json.decode(str) as Map;
-          stock.assignAll(
-              map.map((k, v) => MapEntry(k as String, (v as num).toInt())));
-        }
-      }
+      final rows = await _db.from('inventory').select('item_name, stock');
+      stock.assignAll({
+        for (final r in rows) r['item_name'] as String: r['stock'] as int,
+      });
     } catch (e) {
-      if (kDebugMode) print('Error loading inventory: $e');
+      if (kDebugMode) print('[InventoryService] load error: $e');
     }
   }
 
-  Future<void> _save() async {
-    try {
-      final str = json.encode(stock);
-      if (kIsWeb) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('inventory', str);
-      } else {
-        final file = File(_filePath);
-        await file.writeAsString(str);
-      }
-    } catch (e) {
-      if (kDebugMode) print('Error saving inventory: $e');
-    }
-  }
+  // ── Queries ──────────────────────────────────────────────────
 
-  /// Returns stock level, or -1 if not tracked (unlimited).
   int getStock(String itemName) => stock[itemName] ?? -1;
 
   bool isTracked(String itemName) => stock.containsKey(itemName);
@@ -82,37 +47,70 @@ class InventoryService extends GetxService {
     return s != -1 && s <= 0;
   }
 
-  void setStock(String itemName, int count) {
+  List<MapEntry<String, int>> get lowStockItems {
+    return stock.entries
+        .where((e) => e.value >= 0 && e.value <= lowStockThreshold)
+        .toList()
+      ..sort((a, b) => a.value.compareTo(b.value));
+  }
+
+  // ── Mutations ────────────────────────────────────────────────
+
+  Future<void> setStock(String itemName, int count) async {
     stock[itemName] = count;
     stock.refresh();
-    _save();
+    try {
+      await _db.from('inventory').upsert(
+        {'item_name': itemName, 'stock': count, 'updated_at': DateTime.now().toIso8601String()},
+        onConflict: 'item_name',
+      );
+    } catch (e) {
+      if (kDebugMode) print('[InventoryService] setStock error: $e');
+    }
   }
 
-  void removeTracking(String itemName) {
+  Future<void> removeTracking(String itemName) async {
     stock.remove(itemName);
     stock.refresh();
-    _save();
+    try {
+      await _db.from('inventory').delete().eq('item_name', itemName);
+    } catch (e) {
+      if (kDebugMode) print('[InventoryService] removeTracking error: $e');
+    }
   }
 
-  /// Called when a sale is recorded — decrements tracked items.
-  void decrementForSale(List<Map<String, dynamic>> items) {
+  /// Called on sale checkout — decrements tracked items.
+  Future<void> decrementForSale(List<Map<String, dynamic>> items) async {
+    final updates = <String, int>{};
+
     for (final item in items) {
       final name = item['name'] as String;
       final qty = item['quantity'] as int;
       final current = getStock(name);
       if (current != -1) {
-        stock[name] = (current - qty).clamp(0, current);
+        final next = (current - qty).clamp(0, current);
+        stock[name] = next;
+        updates[name] = next;
       }
     }
-    stock.refresh();
-    _save();
-  }
 
-  List<MapEntry<String, int>> get lowStockItems {
-    final items = stock.entries
-        .where((e) => e.value >= 0 && e.value <= lowStockThreshold)
-        .toList()
-      ..sort((a, b) => a.value.compareTo(b.value));
-    return items;
+    if (updates.isEmpty) return;
+    stock.refresh();
+
+    try {
+      // Batch upsert
+      await _db.from('inventory').upsert(
+        updates.entries
+            .map((e) => {
+                  'item_name': e.key,
+                  'stock': e.value,
+                  'updated_at': DateTime.now().toIso8601String(),
+                })
+            .toList(),
+        onConflict: 'item_name',
+      );
+    } catch (e) {
+      if (kDebugMode) print('[InventoryService] decrementForSale error: $e');
+    }
   }
 }

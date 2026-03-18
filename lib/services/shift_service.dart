@@ -1,128 +1,156 @@
 import 'package:get/get.dart';
-import 'dart:convert';
-import 'dart:io';
-import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ShiftService extends GetxService {
   static ShiftService get to => Get.find();
 
   final RxList<Map<String, dynamic>> shifts = <Map<String, dynamic>>[].obs;
-  late String _filePath;
 
+  final _db = Supabase.instance.client;
   static final _dateFmt = DateFormat('yyyy-MM-dd');
 
   @override
   void onInit() {
     super.onInit();
-    _init();
+    _load();
   }
 
-  Future<void> _init() async {
-    if (!kIsWeb) {
-      final dir = await getApplicationDocumentsDirectory();
-      _filePath = '${dir.path}/shifts.json';
-    }
-    await _load();
-  }
+  // ── Load ────────────────────────────────────────────────────
 
   Future<void> _load() async {
     try {
-      if (kIsWeb) {
-        final prefs = await SharedPreferences.getInstance();
-        final str = prefs.getString('shifts');
-        if (str != null) {
-          final list = json.decode(str) as List;
-          shifts.assignAll(list.map(_parseShift));
-        }
-      } else {
-        final file = File(_filePath);
-        if (await file.exists()) {
-          final str = await file.readAsString();
-          final list = json.decode(str) as List;
-          shifts.assignAll(list.map(_parseShift));
-        }
-      }
+      final rows = await _db
+          .from('shifts')
+          .select('*, shift_breaks(*)')
+          .order('start_time', ascending: false);
+
+      shifts.assignAll(rows.map(_rowToShift).toList());
     } catch (e) {
-      if (kDebugMode) print('Error loading shifts: $e');
+      if (kDebugMode) print('[ShiftService] load error: $e');
     }
   }
 
-  Map<String, dynamic> _parseShift(dynamic e) {
-    final map = Map<String, dynamic>.from(e as Map);
-    map['breaks'] = List<Map<String, dynamic>>.from(
-      (map['breaks'] as List).map((b) => Map<String, dynamic>.from(b as Map)),
-    );
-    return map;
-  }
+  Map<String, dynamic> _rowToShift(Map<String, dynamic> row) => {
+        'id': row['id'] as String,
+        'staffEmail': row['staff_email'] as String,
+        'startTime': row['start_time'] as String,
+        'endTime': row['end_time'] as String?,
+        'date': (row['shift_date'] as String).substring(0, 10),
+        'breaks': (row['shift_breaks'] as List)
+            .map((b) => {
+                  'id': b['id'] as int,
+                  'start': b['start_time'] as String,
+                  'end': b['end_time'] as String?,
+                })
+            .toList(),
+      };
 
-  Future<void> _save() async {
-    try {
-      final str = json.encode(shifts);
-      if (kIsWeb) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('shifts', str);
-      } else {
-        final file = File(_filePath);
-        await file.writeAsString(str);
-      }
-    } catch (e) {
-      if (kDebugMode) print('Error saving shifts: $e');
-    }
-  }
+  // ── Shift actions ────────────────────────────────────────────
 
-  // ── Shift actions ─────────────────────────────────────────
-
-  void clockIn(String staffEmail) {
+  Future<void> clockIn(String staffEmail) async {
     if (isClockedIn(staffEmail)) return;
-    shifts.add({
-      'id': DateTime.now().millisecondsSinceEpoch.toString(),
-      'staffEmail': staffEmail,
-      'startTime': DateTime.now().toIso8601String(),
-      'endTime': null,
-      'breaks': <Map<String, dynamic>>[],
-      'date': _dateFmt.format(DateTime.now()),
-    });
-    _save();
+    try {
+      final now = DateTime.now();
+      final row = await _db
+          .from('shifts')
+          .insert({
+            'staff_email': staffEmail,
+            'start_time': now.toIso8601String(),
+            'shift_date': _dateFmt.format(now),
+          })
+          .select()
+          .single();
+
+      shifts.insert(0, {
+        'id': row['id'] as String,
+        'staffEmail': staffEmail,
+        'startTime': row['start_time'] as String,
+        'endTime': null,
+        'date': _dateFmt.format(now),
+        'breaks': <Map<String, dynamic>>[],
+      });
+    } catch (e) {
+      if (kDebugMode) print('[ShiftService] clockIn error: $e');
+    }
   }
 
-  void clockOut(String staffEmail) {
+  Future<void> clockOut(String staffEmail) async {
     final idx = _activeIdx(staffEmail);
     if (idx == -1) return;
-    if (isOnBreak(staffEmail)) endBreak(staffEmail);
-    shifts[idx]['endTime'] = DateTime.now().toIso8601String();
+    if (isOnBreak(staffEmail)) await endBreak(staffEmail);
+
+    final shiftId = shifts[idx]['id'] as String;
+    final now = DateTime.now().toIso8601String();
+    shifts[idx]['endTime'] = now;
     shifts.refresh();
-    _save();
+
+    try {
+      await _db
+          .from('shifts')
+          .update({'end_time': now})
+          .eq('id', shiftId);
+    } catch (e) {
+      if (kDebugMode) print('[ShiftService] clockOut error: $e');
+    }
   }
 
-  void startBreak(String staffEmail) {
+  Future<void> startBreak(String staffEmail) async {
     final idx = _activeIdx(staffEmail);
     if (idx == -1 || isOnBreak(staffEmail)) return;
-    final breaks =
-        List<Map<String, dynamic>>.from(shifts[idx]['breaks'] as List);
-    breaks.add({'start': DateTime.now().toIso8601String(), 'end': null});
-    shifts[idx]['breaks'] = breaks;
-    shifts.refresh();
-    _save();
+
+    final shiftId = shifts[idx]['id'] as String;
+    final now = DateTime.now().toIso8601String();
+
+    try {
+      final row = await _db
+          .from('shift_breaks')
+          .insert({'shift_id': shiftId, 'start_time': now})
+          .select()
+          .single();
+
+      final breaks =
+          List<Map<String, dynamic>>.from(shifts[idx]['breaks'] as List);
+      breaks.add({
+        'id': row['id'] as int,
+        'start': now,
+        'end': null,
+      });
+      shifts[idx]['breaks'] = breaks;
+      shifts.refresh();
+    } catch (e) {
+      if (kDebugMode) print('[ShiftService] startBreak error: $e');
+    }
   }
 
-  void endBreak(String staffEmail) {
+  Future<void> endBreak(String staffEmail) async {
     final idx = _activeIdx(staffEmail);
     if (idx == -1) return;
+
     final breaks =
         List<Map<String, dynamic>>.from(shifts[idx]['breaks'] as List);
     final bi = breaks.indexWhere((b) => b['end'] == null);
     if (bi == -1) return;
-    breaks[bi] = Map<String, dynamic>.from(breaks[bi])
-      ..['end'] = DateTime.now().toIso8601String();
+
+    final breakId = breaks[bi]['id'] as int;
+    final now = DateTime.now().toIso8601String();
+
+    breaks[bi] = Map<String, dynamic>.from(breaks[bi])..['end'] = now;
     shifts[idx]['breaks'] = breaks;
     shifts.refresh();
-    _save();
+
+    try {
+      await _db
+          .from('shift_breaks')
+          .update({'end_time': now})
+          .eq('id', breakId);
+    } catch (e) {
+      if (kDebugMode) print('[ShiftService] endBreak error: $e');
+    }
   }
 
-  // ── Queries ───────────────────────────────────────────────
+  // ── Queries ──────────────────────────────────────────────────
 
   int _activeIdx(String staffEmail) => shifts.indexWhere(
       (s) => s['staffEmail'] == staffEmail && s['endTime'] == null);
@@ -132,8 +160,7 @@ class ShiftService extends GetxService {
   bool isOnBreak(String staffEmail) {
     final idx = _activeIdx(staffEmail);
     if (idx == -1) return false;
-    return (shifts[idx]['breaks'] as List)
-        .any((b) => (b as Map)['end'] == null);
+    return (shifts[idx]['breaks'] as List).any((b) => (b as Map)['end'] == null);
   }
 
   Map<String, dynamic>? getActiveShift(String staffEmail) {
@@ -146,12 +173,12 @@ class ShiftService extends GetxService {
     return shifts.where((s) => s['date'] == d).toList();
   }
 
-  /// Net work minutes (total time minus break time).
+  // ── Duration helpers ─────────────────────────────────────────
+
   int getWorkMinutes(Map<String, dynamic> shift) {
     final start = DateTime.parse(shift['startTime'] as String);
     final endStr = shift['endTime'] as String?;
-    final end =
-        endStr != null ? DateTime.parse(endStr) : DateTime.now();
+    final end = endStr != null ? DateTime.parse(endStr) : DateTime.now();
     int total = end.difference(start).inMinutes;
     for (final b in (shift['breaks'] as List)) {
       final bm = b as Map;

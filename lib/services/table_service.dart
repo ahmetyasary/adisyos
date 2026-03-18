@@ -1,9 +1,6 @@
 import 'package:get/get.dart';
-import 'dart:convert';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:adisyos/services/sales_history_service.dart';
 import 'package:adisyos/services/kitchen_service.dart';
 import 'package:adisyos/services/inventory_service.dart';
@@ -13,233 +10,332 @@ class TableService extends GetxService {
   static TableService get to => Get.find();
 
   final RxList<Map<String, dynamic>> tables = <Map<String, dynamic>>[].obs;
-  late final String _tablesFilePath;
+
+  final _db = Supabase.instance.client;
+  RealtimeChannel? _channel;
 
   @override
   void onInit() {
     super.onInit();
-    _initTablesFile();
+    _init();
   }
 
-  Future<void> _initTablesFile() async {
-    if (!kIsWeb) {
-      final directory = await getApplicationDocumentsDirectory();
-      _tablesFilePath = '${directory.path}/tables.json';
-    }
-    await _loadTables();
+  @override
+  void onClose() {
+    if (_channel != null) _db.removeChannel(_channel!);
+    super.onClose();
   }
 
-  Future<void> _loadTables() async {
+  Future<void> _init() async {
+    await _load();
+    _subscribeRealtime();
+  }
+
+  // ── Load ────────────────────────────────────────────────────
+
+  Future<void> _load() async {
     try {
-      if (kIsWeb) {
-        final prefs = await SharedPreferences.getInstance();
-        final jsonString = prefs.getString('tables');
-        if (jsonString != null) {
-          final List<dynamic> jsonList = json.decode(jsonString);
-          tables.assignAll(jsonList.map((item) {
-            final Map<String, dynamic> table =
-                Map<String, dynamic>.from(item as Map);
-            table['orders'] = List<Map<String, dynamic>>.from(
-              (table['orders'] as List)
-                  .map((order) => Map<String, dynamic>.from(order as Map)),
-            );
-            table['staffEmail'] ??= '';
-            return table;
-          }));
-        }
-      } else {
-        final file = File(_tablesFilePath);
-        if (await file.exists()) {
-          final jsonString = await file.readAsString();
-          final List<dynamic> jsonList = json.decode(jsonString);
-          tables.assignAll(jsonList.map((item) {
-            final Map<String, dynamic> table =
-                Map<String, dynamic>.from(item as Map);
-            table['orders'] = List<Map<String, dynamic>>.from(
-              (table['orders'] as List)
-                  .map((order) => Map<String, dynamic>.from(order as Map)),
-            );
-            table['staffEmail'] ??= '';
-            return table;
-          }));
-        }
-      }
+      final rows = await _db
+          .from('tables')
+          .select('*, orders(*)')
+          .order('id');
+
+      tables.assignAll(rows.map(_rowToTable).toList());
     } catch (e) {
-      if (kDebugMode) {
-        print('Error loading tables: $e');
-      }
+      if (kDebugMode) print('[TableService] load error: $e');
     }
   }
 
-  Future<void> _saveTables() async {
+  Map<String, dynamic> _rowToTable(Map<String, dynamic> row) => {
+        'id': row['id'] as int,
+        'name': row['name'] as String,
+        'isOccupied': row['is_occupied'] as bool,
+        'total': (row['total'] as num).toDouble(),
+        'discount': (row['discount'] as num).toDouble(),
+        'staffEmail': (row['staff_email'] as String?) ?? '',
+        'orders': (row['orders'] as List)
+            .map((o) => {
+                  'id': o['id'] as int,
+                  'name': o['name'] as String,
+                  'quantity': o['quantity'] as int,
+                  'price': (o['price'] as num).toDouble(),
+                })
+            .toList(),
+      };
+
+  // ── Realtime ─────────────────────────────────────────────────
+
+  void _subscribeRealtime() {
+    _channel = _db
+        .channel('tables_and_orders')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'tables',
+          callback: (_) => _load(),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'orders',
+          callback: (_) => _load(),
+        )
+        .subscribe();
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────
+
+  int _id(int tableIndex) => tables[tableIndex]['id'] as int;
+
+  Future<void> _syncTableHeader(int tableIndex) async {
+    final t = tables[tableIndex];
+    await _db.from('tables').update({
+      'is_occupied': t['isOccupied'] as bool,
+      'total': t['total'] as double,
+      'discount': t['discount'] as double,
+      'staff_email': t['staffEmail'] as String,
+    }).eq('id', _id(tableIndex));
+  }
+
+  void _assignStaff(int tableIndex) {
+    if ((tables[tableIndex]['staffEmail'] as String).isNotEmpty) return;
     try {
-      final jsonString = json.encode(tables);
-      if (kIsWeb) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('tables', jsonString);
-      } else {
-        final file = File(_tablesFilePath);
-        await file.writeAsString(jsonString);
-      }
+      final email = AuthController.to.user.value?.email ?? '';
+      if (email.isNotEmpty) tables[tableIndex]['staffEmail'] = email;
+    } catch (_) {}
+  }
+
+  // ── Table CRUD ───────────────────────────────────────────────
+
+  Future<void> addTable(String name) async {
+    try {
+      final row = await _db
+          .from('tables')
+          .insert({
+            'name': name,
+            'is_occupied': false,
+            'total': 0.0,
+            'discount': 0.0,
+            'staff_email': '',
+          })
+          .select()
+          .single();
+
+      tables.add({
+        'id': row['id'] as int,
+        'name': name,
+        'isOccupied': false,
+        'total': 0.0,
+        'discount': 0.0,
+        'staffEmail': '',
+        'orders': <Map<String, dynamic>>[],
+      });
     } catch (e) {
-      if (kDebugMode) {
-        print('Error saving tables: $e');
-      }
+      if (kDebugMode) print('[TableService] addTable error: $e');
     }
   }
 
-  void addTable(String name) {
-    tables.add({
-      'name': name,
-      'isOccupied': false,
-      'orders': <Map<String, dynamic>>[],
-      'total': 0.0,
-      'discount': 0.0,
-      'staffEmail': '',
-    });
-    _saveTables();
-  }
-
-  void removeTable(int index) {
-    KitchenService.to.removeTicketsForTable(index);
+  Future<void> removeTable(int index) async {
+    final tableId = _id(index);
+    await KitchenService.to.removeTicketsForTable(tableId);
     tables.removeAt(index);
-    _saveTables();
+    try {
+      // orders cascade-delete via FK
+      await _db.from('tables').delete().eq('id', tableId);
+    } catch (e) {
+      if (kDebugMode) print('[TableService] removeTable error: $e');
+    }
   }
 
-  void updateTableName(int index, String newName) {
+  Future<void> updateTableName(int index, String newName) async {
     tables[index]['name'] = newName;
     tables.refresh();
-    _saveTables();
+    try {
+      await _db.from('tables').update({'name': newName}).eq('id', _id(index));
+    } catch (e) {
+      if (kDebugMode) print('[TableService] updateTableName error: $e');
+    }
   }
 
-  void toggleTableStatus(int index) {
-    tables[index]['isOccupied'] = !tables[index]['isOccupied'];
+  Future<void> toggleTableStatus(int index) async {
+    tables[index]['isOccupied'] = !(tables[index]['isOccupied'] as bool);
     tables.refresh();
-    _saveTables();
+    try {
+      await _db.from('tables').update({
+        'is_occupied': tables[index]['isOccupied'] as bool,
+      }).eq('id', _id(index));
+    } catch (e) {
+      if (kDebugMode) print('[TableService] toggleTableStatus error: $e');
+    }
   }
 
-  void _updateTableStatus(int tableIndex) {
-    final orders = tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
+  void _setOccupied(int tableIndex) {
+    final orders = tables[tableIndex]['orders'] as List;
     tables[tableIndex]['isOccupied'] = orders.isNotEmpty;
     tables.refresh();
-    _saveTables();
   }
 
-  void addOrder(int tableIndex, String name, double price) {
+  // ── Order mutations ──────────────────────────────────────────
+
+  Future<void> addOrder(int tableIndex, String name, double price) async {
+    final tableId = _id(tableIndex);
     final orders = tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
-    final existingOrderIndex =
-        orders.indexWhere((order) => order['name'] == name);
+    final existingIdx = orders.indexWhere((o) => o['name'] == name);
 
-    if (existingOrderIndex != -1) {
-      orders[existingOrderIndex]['quantity'] =
-          (orders[existingOrderIndex]['quantity'] as int) + 1;
-    } else {
-      orders.add({
-        'name': name,
-        'quantity': 1,
-        'price': price,
-      });
-    }
+    if (existingIdx != -1) {
+      final newQty = (orders[existingIdx]['quantity'] as int) + 1;
+      final orderId = orders[existingIdx]['id'] as int;
+      orders[existingIdx]['quantity'] = newQty;
+      tables[tableIndex]['total'] =
+          (tables[tableIndex]['total'] as double) + price;
 
-    tables[tableIndex]['total'] =
-        (tables[tableIndex]['total'] as double) + price;
+      _assignStaff(tableIndex);
+      _setOccupied(tableIndex);
 
-    // Assign staff to table on first order
-    if ((tables[tableIndex]['staffEmail'] as String? ?? '').isEmpty) {
+      KitchenService.to.addOrUpdateTicket(
+        tableId: tableId,
+        tableName: tables[tableIndex]['name'] as String,
+        itemName: name,
+        quantity: newQty,
+      );
+
       try {
-        final email = AuthController.to.user.value?.email ?? '';
-        if (email.isNotEmpty) tables[tableIndex]['staffEmail'] = email;
-      } catch (_) {}
+        await _db.from('orders').update({'quantity': newQty}).eq('id', orderId);
+        await _syncTableHeader(tableIndex);
+      } catch (e) {
+        if (kDebugMode) print('[TableService] addOrder (update) error: $e');
+      }
+    } else {
+      // Optimistic: placeholder id = -1 until insert resolves
+      orders.add({'id': -1, 'name': name, 'quantity': 1, 'price': price});
+      tables[tableIndex]['total'] =
+          (tables[tableIndex]['total'] as double) + price;
+
+      _assignStaff(tableIndex);
+      _setOccupied(tableIndex);
+
+      KitchenService.to.addOrUpdateTicket(
+        tableId: tableId,
+        tableName: tables[tableIndex]['name'] as String,
+        itemName: name,
+        quantity: 1,
+      );
+
+      try {
+        final row = await _db
+            .from('orders')
+            .insert({'table_id': tableId, 'name': name, 'quantity': 1, 'price': price})
+            .select()
+            .single();
+
+        // Patch the placeholder with the real id
+        final idx = orders.indexWhere((o) => o['name'] == name && o['id'] == -1);
+        if (idx != -1) orders[idx]['id'] = row['id'] as int;
+
+        await _syncTableHeader(tableIndex);
+      } catch (e) {
+        if (kDebugMode) print('[TableService] addOrder (insert) error: $e');
+      }
     }
-
-    // Update kitchen ticket
-    final newQty = existingOrderIndex != -1
-        ? orders[existingOrderIndex]['quantity'] as int
-        : 1;
-    KitchenService.to.addOrUpdateTicket(
-      tableIndex: tableIndex,
-      tableName: tables[tableIndex]['name'] as String,
-      itemName: name,
-      quantity: newQty,
-    );
-
-    _updateTableStatus(tableIndex);
   }
 
-  void removeOrder(int tableIndex, int orderIndex) {
+  Future<void> removeOrder(int tableIndex, int orderIndex) async {
     final orders = tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
     if (orderIndex >= orders.length) return;
+
     final order = orders[orderIndex];
+    final orderId = order['id'] as int;
     final price = order['price'] as double;
-    final quantity = order['quantity'] as int;
+    final qty = order['quantity'] as int;
     final name = order['name'] as String;
 
-    final currentTotal = tables[tableIndex]['total'] as double;
-    tables[tableIndex]['total'] = (currentTotal - (price * quantity))
-        .clamp(0.0, double.infinity);
+    tables[tableIndex]['total'] =
+        ((tables[tableIndex]['total'] as double) - price * qty)
+            .clamp(0.0, double.infinity);
 
-    // If discount exceeds new total, reset discount
     final newTotal = tables[tableIndex]['total'] as double;
-    final discount = (tables[tableIndex]['discount'] ?? 0.0) as double;
-    if (discount > newTotal) {
+    if ((tables[tableIndex]['discount'] as double) > newTotal) {
       tables[tableIndex]['discount'] = 0.0;
     }
 
-    KitchenService.to.removeTicketForItem(tableIndex, name);
+    await KitchenService.to.removeTicketForItem(tableId: _id(tableIndex), itemName: name);
     orders.removeAt(orderIndex);
-    _updateTableStatus(tableIndex);
+    _setOccupied(tableIndex);
+
+    try {
+      await _db.from('orders').delete().eq('id', orderId);
+      await _syncTableHeader(tableIndex);
+    } catch (e) {
+      if (kDebugMode) print('[TableService] removeOrder error: $e');
+    }
   }
 
-  void decrementOrder(int tableIndex, int orderIndex) {
+  Future<void> decrementOrder(int tableIndex, int orderIndex) async {
     final orders = tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
     if (orderIndex >= orders.length) return;
-    final order = orders[orderIndex];
-    final price = order['price'] as double;
-    final quantity = order['quantity'] as int;
-    final name = order['name'] as String;
 
-    if (quantity <= 1) {
-      KitchenService.to.removeTicketForItem(tableIndex, name);
-      removeOrder(tableIndex, orderIndex);
+    final order = orders[orderIndex];
+    final qty = order['quantity'] as int;
+    final price = order['price'] as double;
+    final name = order['name'] as String;
+    final orderId = order['id'] as int;
+
+    if (qty <= 1) {
+      await KitchenService.to.removeTicketForItem(tableId: _id(tableIndex), itemName: name);
+      await removeOrder(tableIndex, orderIndex);
       return;
     }
 
-    orders[orderIndex]['quantity'] = quantity - 1;
+    orders[orderIndex]['quantity'] = qty - 1;
     tables[tableIndex]['total'] =
         ((tables[tableIndex]['total'] as double) - price)
             .clamp(0.0, double.infinity);
 
+    _setOccupied(tableIndex);
+
     KitchenService.to.addOrUpdateTicket(
-      tableIndex: tableIndex,
+      tableId: _id(tableIndex),
       tableName: tables[tableIndex]['name'] as String,
       itemName: name,
-      quantity: quantity - 1,
+      quantity: qty - 1,
     );
 
-    _updateTableStatus(tableIndex);
+    try {
+      await _db
+          .from('orders')
+          .update({'quantity': qty - 1})
+          .eq('id', orderId);
+      await _syncTableHeader(tableIndex);
+    } catch (e) {
+      if (kDebugMode) print('[TableService] decrementOrder error: $e');
+    }
   }
 
-  List<Map<String, dynamic>> getOrders(int tableIndex) {
-    return tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
-  }
+  // ── Clear / Payment ──────────────────────────────────────────
 
-  double getTotal(int tableIndex) {
-    return tables[tableIndex]['total'] as double;
-  }
+  Future<void> clearTable(int tableIndex) async {
+    final tableId = _id(tableIndex);
+    await KitchenService.to.removeTicketsForTable(tableId);
 
-  void clearTable(int tableIndex) {
-    KitchenService.to.removeTicketsForTable(tableIndex);
     tables[tableIndex]['orders'] = <Map<String, dynamic>>[];
     tables[tableIndex]['total'] = 0.0;
     tables[tableIndex]['isOccupied'] = false;
     tables[tableIndex]['discount'] = 0.0;
     tables[tableIndex]['staffEmail'] = '';
     tables.refresh();
-    _saveTables();
+
+    try {
+      await _db.from('orders').delete().eq('table_id', tableId);
+      await _syncTableHeader(tableIndex);
+    } catch (e) {
+      if (kDebugMode) print('[TableService] clearTable error: $e');
+    }
   }
 
-  // Record payment and clear the table
-  void recordPayment(int tableIndex, {String paymentMethod = 'cash'}) {
+  Future<void> recordPayment(
+    int tableIndex, {
+    String paymentMethod = 'cash',
+  }) async {
     final table = tables[tableIndex];
     final orders = List<Map<String, dynamic>>.from(
       table['orders'] as List<Map<String, dynamic>>,
@@ -249,7 +345,7 @@ class TableService extends GetxService {
     final total = (subtotal - discount).clamp(0.0, double.infinity);
     final staffEmail = (table['staffEmail'] as String? ?? '');
 
-    SalesHistoryService.to.recordSale(
+    await SalesHistoryService.to.recordSale(
       tableName: table['name'] as String,
       items: orders,
       subtotal: subtotal,
@@ -259,18 +355,26 @@ class TableService extends GetxService {
       paymentMethod: paymentMethod,
     );
 
-    InventoryService.to.decrementForSale(orders);
-
-    clearTable(tableIndex);
+    await InventoryService.to.decrementForSale(orders);
+    await clearTable(tableIndex);
   }
 
-  void applyDiscount(int tableIndex, double discountPercentage) {
+  // ── Discount ─────────────────────────────────────────────────
+
+  Future<void> applyDiscount(int tableIndex, double discountPercentage) async {
     final currentTotal = tables[tableIndex]['total'] as double;
     final clamped = discountPercentage.clamp(0.0, 100.0);
     final discountAmount = currentTotal * (clamped / 100);
     tables[tableIndex]['discount'] = discountAmount;
     tables.refresh();
-    _saveTables();
+
+    try {
+      await _db.from('tables').update({
+        'discount': discountAmount,
+      }).eq('id', _id(tableIndex));
+    } catch (e) {
+      if (kDebugMode) print('[TableService] applyDiscount error: $e');
+    }
   }
 
   double getTotalWithDiscount(int tableIndex) {
@@ -279,90 +383,165 @@ class TableService extends GetxService {
     return (total - discount).clamp(0.0, double.infinity);
   }
 
-  double getDiscount(int tableIndex) {
-    return (tables[tableIndex]['discount'] ?? 0.0) as double;
-  }
+  double getDiscount(int tableIndex) =>
+      (tables[tableIndex]['discount'] ?? 0.0) as double;
 
-  // Move a single order item to another table
-  void moveOrderToTable(int fromTableIndex, int toTableIndex, int orderIndex) {
+  List<Map<String, dynamic>> getOrders(int tableIndex) =>
+      tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
+
+  double getTotal(int tableIndex) =>
+      tables[tableIndex]['total'] as double;
+
+  // ── Move orders between tables ────────────────────────────────
+
+  Future<void> moveOrderToTable(
+    int fromTableIndex,
+    int toTableIndex,
+    int orderIndex,
+  ) async {
     final srcOrders = getOrders(fromTableIndex);
     if (orderIndex >= srcOrders.length) return;
 
     final order = srcOrders[orderIndex];
     final name = order['name'] as String;
     final price = order['price'] as double;
-    final quantity = order['quantity'] as int;
+    final qty = order['quantity'] as int;
+    final srcOrderId = order['id'] as int;
+    final destTableId = _id(toTableIndex);
 
     final destOrders = getOrders(toTableIndex);
     final existingIdx = destOrders.indexWhere((o) => o['name'] == name);
+
     if (existingIdx != -1) {
-      destOrders[existingIdx]['quantity'] =
-          (destOrders[existingIdx]['quantity'] as int) + quantity;
+      final newQty = (destOrders[existingIdx]['quantity'] as int) + qty;
+      final destOrderId = destOrders[existingIdx]['id'] as int;
+      destOrders[existingIdx]['quantity'] = newQty;
+
+      KitchenService.to.addOrUpdateTicket(
+        tableId: destTableId,
+        tableName: tables[toTableIndex]['name'] as String,
+        itemName: name,
+        quantity: newQty,
+      );
+
+      try {
+        await _db.from('orders').update({'quantity': newQty}).eq('id', destOrderId);
+      } catch (e) {
+        if (kDebugMode) print('[TableService] moveOrder dest-update error: $e');
+      }
     } else {
-      destOrders.add({'name': name, 'quantity': quantity, 'price': price});
+      destOrders.add({'id': -1, 'name': name, 'quantity': qty, 'price': price});
+
+      KitchenService.to.addOrUpdateTicket(
+        tableId: destTableId,
+        tableName: tables[toTableIndex]['name'] as String,
+        itemName: name,
+        quantity: qty,
+      );
+
+      try {
+        // Re-parent the order row
+        await _db.from('orders').update({'table_id': destTableId}).eq('id', srcOrderId);
+        final idx = destOrders.indexWhere((o) => o['name'] == name && o['id'] == -1);
+        if (idx != -1) destOrders[idx]['id'] = srcOrderId;
+      } catch (e) {
+        if (kDebugMode) print('[TableService] moveOrder reparent error: $e');
+      }
     }
 
     tables[toTableIndex]['total'] =
-        (tables[toTableIndex]['total'] as double) + (price * quantity);
+        (tables[toTableIndex]['total'] as double) + price * qty;
     tables[toTableIndex]['isOccupied'] = true;
 
     tables[fromTableIndex]['total'] =
-        ((tables[fromTableIndex]['total'] as double) - (price * quantity))
+        ((tables[fromTableIndex]['total'] as double) - price * qty)
             .clamp(0.0, double.infinity);
     srcOrders.removeAt(orderIndex);
     tables[fromTableIndex]['isOccupied'] = srcOrders.isNotEmpty;
 
-    final newSrcTotal = tables[fromTableIndex]['total'] as double;
     final srcDiscount = (tables[fromTableIndex]['discount'] ?? 0.0) as double;
-    if (srcDiscount > newSrcTotal) {
+    if (srcDiscount > (tables[fromTableIndex]['total'] as double)) {
       tables[fromTableIndex]['discount'] = 0.0;
     }
 
-    // Sync kitchen tickets
-    KitchenService.to.removeTicketForItem(fromTableIndex, name);
-    KitchenService.to.addOrUpdateTicket(
-      tableIndex: toTableIndex,
-      tableName: tables[toTableIndex]['name'] as String,
+    await KitchenService.to.removeTicketForItem(
+      tableId: _id(fromTableIndex),
       itemName: name,
-      quantity: existingIdx != -1
-          ? destOrders[existingIdx]['quantity'] as int
-          : quantity,
     );
 
     tables.refresh();
-    _saveTables();
+
+    try {
+      await _syncTableHeader(fromTableIndex);
+      await _syncTableHeader(toTableIndex);
+    } catch (e) {
+      if (kDebugMode) print('[TableService] moveOrder sync error: $e');
+    }
   }
 
-  // Move all orders from one table to another
-  void moveAllOrdersToTable(int fromTableIndex, int toTableIndex) {
+  Future<void> moveAllOrdersToTable(
+    int fromTableIndex,
+    int toTableIndex,
+  ) async {
     final srcOrders =
         List<Map<String, dynamic>>.from(getOrders(fromTableIndex));
     final destOrders = getOrders(toTableIndex);
+    final destTableId = _id(toTableIndex);
     double addedTotal = 0.0;
 
     for (final order in srcOrders) {
       final name = order['name'] as String;
       final price = order['price'] as double;
-      final quantity = order['quantity'] as int;
-      addedTotal += price * quantity;
+      final qty = order['quantity'] as int;
+      final srcOrderId = order['id'] as int;
+      addedTotal += price * qty;
 
       final existingIdx = destOrders.indexWhere((o) => o['name'] == name);
       if (existingIdx != -1) {
-        destOrders[existingIdx]['quantity'] =
-            (destOrders[existingIdx]['quantity'] as int) + quantity;
+        final newQty = (destOrders[existingIdx]['quantity'] as int) + qty;
+        final destOrderId = destOrders[existingIdx]['id'] as int;
+        destOrders[existingIdx]['quantity'] = newQty;
+
+        KitchenService.to.addOrUpdateTicket(
+          tableId: destTableId,
+          tableName: tables[toTableIndex]['name'] as String,
+          itemName: name,
+          quantity: newQty,
+        );
+
+        try {
+          await _db
+              .from('orders')
+              .update({'quantity': newQty})
+              .eq('id', destOrderId);
+          // Delete the source duplicate
+          await _db.from('orders').delete().eq('id', srcOrderId);
+        } catch (e) {
+          if (kDebugMode) print('[TableService] moveAll merge error: $e');
+        }
       } else {
-        destOrders.add({'name': name, 'quantity': quantity, 'price': price});
+        destOrders.add({'id': srcOrderId, 'name': name, 'quantity': qty, 'price': price});
+
+        KitchenService.to.addOrUpdateTicket(
+          tableId: destTableId,
+          tableName: tables[toTableIndex]['name'] as String,
+          itemName: name,
+          quantity: qty,
+        );
+
+        try {
+          await _db
+              .from('orders')
+              .update({'table_id': destTableId})
+              .eq('id', srcOrderId);
+        } catch (e) {
+          if (kDebugMode) print('[TableService] moveAll reparent error: $e');
+        }
       }
 
-      KitchenService.to.removeTicketForItem(fromTableIndex, name);
-      final destQty = existingIdx != -1
-          ? destOrders[existingIdx]['quantity'] as int
-          : quantity;
-      KitchenService.to.addOrUpdateTicket(
-        tableIndex: toTableIndex,
-        tableName: tables[toTableIndex]['name'] as String,
+      await KitchenService.to.removeTicketForItem(
+        tableId: _id(fromTableIndex),
         itemName: name,
-        quantity: destQty,
       );
     }
 
@@ -377,6 +556,12 @@ class TableService extends GetxService {
     tables[fromTableIndex]['staffEmail'] = '';
 
     tables.refresh();
-    _saveTables();
+
+    try {
+      await _syncTableHeader(fromTableIndex);
+      await _syncTableHeader(toTableIndex);
+    } catch (e) {
+      if (kDebugMode) print('[TableService] moveAll sync error: $e');
+    }
   }
 }

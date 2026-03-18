@@ -8,12 +8,12 @@ import 'package:adisyos/themes/app_theme.dart';
 import 'package:adisyos/translations/app_translations.dart';
 import 'package:adisyos/views/home_view.dart';
 import 'package:adisyos/views/auth_screen.dart';
-import 'package:adisyos/services/menu_service.dart';
-import 'package:adisyos/services/table_service.dart';
 import 'package:adisyos/services/sales_history_service.dart';
 import 'package:adisyos/services/kitchen_service.dart';
 import 'package:adisyos/services/inventory_service.dart';
 import 'package:adisyos/services/shift_service.dart';
+import 'package:adisyos/services/menu_service.dart';
+import 'package:adisyos/services/table_service.dart';
 import 'package:adisyos/guards/auth_middleware.dart';
 // Clean architecture layers
 import 'package:adisyos/features/auth/data/datasources/supabase_auth_datasource.dart';

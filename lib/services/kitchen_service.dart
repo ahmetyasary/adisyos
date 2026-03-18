@@ -1,15 +1,14 @@
 import 'package:get/get.dart';
-import 'dart:convert';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class KitchenService extends GetxService {
   static KitchenService get to => Get.find();
 
   final RxList<Map<String, dynamic>> tickets = <Map<String, dynamic>>[].obs;
-  late String _filePath;
+
+  final _db = Supabase.instance.client;
+  RealtimeChannel? _channel;
 
   @override
   void onInit() {
@@ -17,109 +16,165 @@ class KitchenService extends GetxService {
     _init();
   }
 
-  Future<void> _init() async {
-    if (!kIsWeb) {
-      final dir = await getApplicationDocumentsDirectory();
-      _filePath = '${dir.path}/kitchen_tickets.json';
-    }
-    await _load();
+  @override
+  void onClose() {
+    if (_channel != null) _db.removeChannel(_channel!);
+    super.onClose();
   }
+
+  Future<void> _init() async {
+    await _load();
+    _subscribeRealtime();
+  }
+
+  // ── Load ────────────────────────────────────────────────────
 
   Future<void> _load() async {
     try {
-      if (kIsWeb) {
-        final prefs = await SharedPreferences.getInstance();
-        final str = prefs.getString('kitchen_tickets');
-        if (str != null) {
-          final list = json.decode(str) as List;
-          tickets.assignAll(list.map((e) => Map<String, dynamic>.from(e as Map)));
-        }
-      } else {
-        final file = File(_filePath);
-        if (await file.exists()) {
-          final str = await file.readAsString();
-          final list = json.decode(str) as List;
-          tickets.assignAll(list.map((e) => Map<String, dynamic>.from(e as Map)));
-        }
-      }
+      final rows = await _db
+          .from('kitchen_tickets')
+          .select()
+          .order('ordered_at');
+
+      tickets.assignAll(rows.map(_rowToTicket).toList());
     } catch (e) {
-      if (kDebugMode) print('Error loading kitchen tickets: $e');
+      if (kDebugMode) print('[KitchenService] load error: $e');
     }
   }
 
-  Future<void> _save() async {
-    try {
-      final str = json.encode(tickets);
-      if (kIsWeb) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('kitchen_tickets', str);
-      } else {
-        final file = File(_filePath);
-        await file.writeAsString(str);
-      }
-    } catch (e) {
-      if (kDebugMode) print('Error saving kitchen tickets: $e');
-    }
+  Map<String, dynamic> _rowToTicket(Map<String, dynamic> row) => {
+        'id': row['id'] as String,
+        'tableId': row['table_id'] as int?,
+        'tableName': row['table_name'] as String,
+        'itemName': row['item_name'] as String,
+        'quantity': row['quantity'] as int,
+        'status': row['status'] as String,
+        'orderedAt': row['ordered_at'] as String,
+      };
+
+  // ── Realtime subscription ────────────────────────────────────
+
+  void _subscribeRealtime() {
+    _channel = _db
+        .channel('kitchen_tickets_changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'kitchen_tickets',
+          callback: (_) => _load(),
+        )
+        .subscribe();
   }
 
-  void addOrUpdateTicket({
-    required int tableIndex,
+  // ── Mutations ────────────────────────────────────────────────
+
+  Future<void> addOrUpdateTicket({
+    required int tableId,
     required String tableName,
     required String itemName,
     required int quantity,
-  }) {
-    final idx = tickets.indexWhere(
-      (t) =>
-          t['tableIndex'] == tableIndex &&
-          t['itemName'] == itemName &&
-          t['status'] != 'ready',
-    );
-    if (idx != -1) {
-      tickets[idx]['quantity'] = quantity;
-      tickets.refresh();
-    } else {
-      tickets.add({
-        'id': '${tableIndex}_${itemName}_${DateTime.now().millisecondsSinceEpoch}',
-        'tableIndex': tableIndex,
-        'tableName': tableName,
-        'itemName': itemName,
-        'quantity': quantity,
-        'status': 'pending',
-        'orderedAt': DateTime.now().toIso8601String(),
-      });
+  }) async {
+    try {
+      final existingIdx = tickets.indexWhere(
+        (t) =>
+            t['tableId'] == tableId &&
+            t['itemName'] == itemName &&
+            t['status'] != 'ready',
+      );
+
+      if (existingIdx != -1) {
+        final ticketId = tickets[existingIdx]['id'] as String;
+        tickets[existingIdx]['quantity'] = quantity;
+        tickets.refresh();
+        await _db
+            .from('kitchen_tickets')
+            .update({'quantity': quantity})
+            .eq('id', ticketId);
+      } else {
+        final row = await _db
+            .from('kitchen_tickets')
+            .insert({
+              'table_id': tableId,
+              'table_name': tableName,
+              'item_name': itemName,
+              'quantity': quantity,
+              'status': 'pending',
+            })
+            .select()
+            .single();
+
+        tickets.add(_rowToTicket(row));
+      }
+    } catch (e) {
+      if (kDebugMode) print('[KitchenService] addOrUpdateTicket error: $e');
     }
-    _save();
   }
 
-  void advanceStatus(String ticketId) {
+  Future<void> advanceStatus(String ticketId) async {
     final idx = tickets.indexWhere((t) => t['id'] == ticketId);
     if (idx == -1) return;
+
     final current = tickets[idx]['status'] as String;
-    if (current == 'pending') {
-      tickets[idx]['status'] = 'preparing';
-    } else if (current == 'preparing') {
-      tickets[idx]['status'] = 'ready';
-    }
+    final next = current == 'pending'
+        ? 'preparing'
+        : current == 'preparing'
+            ? 'ready'
+            : null;
+    if (next == null) return;
+
+    tickets[idx]['status'] = next;
     tickets.refresh();
-    _save();
+
+    try {
+      await _db
+          .from('kitchen_tickets')
+          .update({'status': next})
+          .eq('id', ticketId);
+    } catch (e) {
+      if (kDebugMode) print('[KitchenService] advanceStatus error: $e');
+    }
   }
 
-  void removeTicketsForTable(int tableIndex) {
-    tickets.removeWhere((t) => t['tableIndex'] == tableIndex);
-    _save();
+  Future<void> removeTicketsForTable(int tableId) async {
+    tickets.removeWhere((t) => t['tableId'] == tableId);
+    try {
+      await _db
+          .from('kitchen_tickets')
+          .delete()
+          .eq('table_id', tableId);
+    } catch (e) {
+      if (kDebugMode) print('[KitchenService] removeTicketsForTable error: $e');
+    }
   }
 
-  void removeTicketForItem(int tableIndex, String itemName) {
+  Future<void> removeTicketForItem({
+    required int tableId,
+    required String itemName,
+  }) async {
     tickets.removeWhere(
-      (t) => t['tableIndex'] == tableIndex && t['itemName'] == itemName,
+      (t) => t['tableId'] == tableId && t['itemName'] == itemName,
     );
-    _save();
+    try {
+      await _db
+          .from('kitchen_tickets')
+          .delete()
+          .eq('table_id', tableId)
+          .eq('item_name', itemName);
+    } catch (e) {
+      if (kDebugMode) print('[KitchenService] removeTicketForItem error: $e');
+    }
   }
 
-  void clearReadyTickets() {
+  Future<void> clearReadyTickets() async {
     tickets.removeWhere((t) => t['status'] == 'ready');
-    _save();
+    try {
+      await _db.from('kitchen_tickets').delete().eq('status', 'ready');
+    } catch (e) {
+      if (kDebugMode) print('[KitchenService] clearReadyTickets error: $e');
+    }
   }
+
+  // ── Computed lists ───────────────────────────────────────────
 
   List<Map<String, dynamic>> get pendingTickets =>
       tickets.where((t) => t['status'] == 'pending').toList();

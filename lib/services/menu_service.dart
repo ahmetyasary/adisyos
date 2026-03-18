@@ -1,147 +1,174 @@
 import 'package:get/get.dart';
-import 'dart:convert';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MenuService extends GetxService {
   static MenuService get to => Get.find();
 
   final RxList<Map<String, dynamic>> menus = <Map<String, dynamic>>[].obs;
-  late final String _menusFilePath;
+
+  final _db = Supabase.instance.client;
 
   @override
   void onInit() {
     super.onInit();
-    _initMenusFile();
+    _loadMenus();
   }
 
-  Future<void> _initMenusFile() async {
-    if (!kIsWeb) {
-      final directory = await getApplicationDocumentsDirectory();
-      _menusFilePath = '${directory.path}/menus.json';
-    }
-    await _loadMenus();
-  }
+  // ── Load ────────────────────────────────────────────────────
 
   Future<void> _loadMenus() async {
     try {
-      if (kIsWeb) {
-        final prefs = await SharedPreferences.getInstance();
-        final jsonString = prefs.getString('menus');
-        if (jsonString != null) {
-          final List<dynamic> jsonList = json.decode(jsonString);
-          menus.assignAll(jsonList.map((item) {
-            final Map<String, dynamic> menu = Map<String, dynamic>.from(item as Map);
-            menu['items'] = List<Map<String, dynamic>>.from(
-                menu['items'].map((i) => Map<String, dynamic>.from(i as Map)));
-            return menu;
-          }));
-        } else {
-          _loadDefaults();
-          await _saveMenus();
-        }
-      } else {
-        final file = File(_menusFilePath);
-        if (await file.exists()) {
-          final jsonString = await file.readAsString();
-          final List<dynamic> jsonList = json.decode(jsonString);
-          menus.assignAll(jsonList.map((item) {
-            final Map<String, dynamic> menu = Map<String, dynamic>.from(item as Map);
-            menu['items'] = List<Map<String, dynamic>>.from(
-                menu['items'].map((i) => Map<String, dynamic>.from(i as Map)));
-            return menu;
-          }));
-        } else {
-          _loadDefaults();
-          await _saveMenus();
-        }
-      }
+      final rows = await _db
+          .from('menus')
+          .select('id, name, menu_items(id, name, price)')
+          .order('id');
+
+      menus.assignAll(rows.map(_rowToMenu).toList());
+
+      if (menus.isEmpty) await _seedDefaults();
     } catch (e) {
-      if (kDebugMode) {
-        print('Error loading menus: $e');
+      if (kDebugMode) print('[MenuService] load error: $e');
+    }
+  }
+
+  Map<String, dynamic> _rowToMenu(Map<String, dynamic> row) => {
+        'id': row['id'] as int,
+        'name': row['name'] as String,
+        'items': (row['menu_items'] as List)
+            .map((i) => {
+                  'id': i['id'] as int,
+                  'name': i['name'] as String,
+                  'price': (i['price'] as num).toDouble(),
+                })
+            .toList(),
+      };
+
+  // ── Seed defaults (first run) ────────────────────────────────
+
+  Future<void> _seedDefaults() async {
+    await addMenu('İçecekler');
+    await addMenu('Tatlılar');
+
+    final icIdx = menus.indexWhere((m) => m['name'] == 'İçecekler');
+    if (icIdx != -1) {
+      for (final item in [
+        ('Americano', 30.0),
+        ('Caffe Latte', 36.0),
+        ('Caramel Latte', 40.0),
+        ('Espresso', 25.0),
+      ]) {
+        await addMenuItem(icIdx, item.$1, item.$2);
+      }
+    }
+
+    final ttIdx = menus.indexWhere((m) => m['name'] == 'Tatlılar');
+    if (ttIdx != -1) {
+      for (final item in [
+        ('Cookie', 25.0),
+        ('Tiramisu', 45.0),
+        ('Banana Bread', 35.0),
+      ]) {
+        await addMenuItem(ttIdx, item.$1, item.$2);
       }
     }
   }
 
-  void _loadDefaults() {
-    menus.assignAll([
-      {
-        'name': 'İçecekler',
-        'items': [
-          {'name': 'Americano', 'price': 30.0},
-          {'name': 'Caffe Latte', 'price': 36.0},
-          {'name': 'Caramel Latte', 'price': 40.0},
-          {'name': 'Espresso', 'price': 25.0},
-        ]
-      },
-      {
-        'name': 'Tatlılar',
-        'items': [
-          {'name': 'Cookie', 'price': 25.0},
-          {'name': 'Tiramisu', 'price': 45.0},
-          {'name': 'Banana Bread', 'price': 35.0},
-        ]
-      },
-    ]);
-  }
+  // ── Mutations ────────────────────────────────────────────────
 
-  Future<void> _saveMenus() async {
+  Future<void> addMenu(String name) async {
     try {
-      final jsonString = json.encode(menus);
-      if (kIsWeb) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('menus', jsonString);
-      } else {
-        final file = File(_menusFilePath);
-        await file.writeAsString(jsonString);
-      }
+      final row = await _db
+          .from('menus')
+          .insert({'name': name})
+          .select()
+          .single();
+
+      menus.add({
+        'id': row['id'] as int,
+        'name': name,
+        'items': <Map<String, dynamic>>[],
+      });
     } catch (e) {
-      if (kDebugMode) {
-        print('Error saving menus: $e');
-      }
+      if (kDebugMode) print('[MenuService] addMenu error: $e');
     }
   }
 
-  void addMenu(String name) {
-    menus.add({
-      'name': name,
-      'items': <Map<String, dynamic>>[],
-    });
-    _saveMenus();
-  }
-
-  void updateMenu(int index, String name) {
+  Future<void> updateMenu(int index, String name) async {
+    final id = menus[index]['id'] as int;
     menus[index]['name'] = name;
     menus.refresh();
-    _saveMenus();
+    try {
+      await _db.from('menus').update({'name': name}).eq('id', id);
+    } catch (e) {
+      if (kDebugMode) print('[MenuService] updateMenu error: $e');
+    }
   }
 
-  void addMenuItem(int menuIndex, String name, double price) {
-    (menus[menuIndex]['items'] as List).add({
-      'name': name,
-      'price': price,
-    });
-    menus.refresh();
-    _saveMenus();
-  }
-
-  void updateMenuItem(int menuIndex, int itemIndex, String name, double price) {
-    final items = menus[menuIndex]['items'] as List;
-    items[itemIndex] = {'name': name, 'price': price};
-    menus.refresh();
-    _saveMenus();
-  }
-
-  void removeMenu(int index) {
+  Future<void> removeMenu(int index) async {
+    final id = menus[index]['id'] as int;
     menus.removeAt(index);
-    _saveMenus();
+    try {
+      // menu_items cascade-delete via FK
+      await _db.from('menus').delete().eq('id', id);
+    } catch (e) {
+      if (kDebugMode) print('[MenuService] removeMenu error: $e');
+    }
   }
 
-  void removeMenuItem(int menuIndex, int itemIndex) {
-    (menus[menuIndex]['items'] as List).removeAt(itemIndex);
+  Future<void> addMenuItem(int menuIndex, String name, double price) async {
+    final menuId = menus[menuIndex]['id'] as int;
+    try {
+      final row = await _db
+          .from('menu_items')
+          .insert({'menu_id': menuId, 'name': name, 'price': price})
+          .select()
+          .single();
+
+      (menus[menuIndex]['items'] as List).add({
+        'id': row['id'] as int,
+        'name': name,
+        'price': price,
+      });
+      menus.refresh();
+    } catch (e) {
+      if (kDebugMode) print('[MenuService] addMenuItem error: $e');
+    }
+  }
+
+  Future<void> updateMenuItem(
+    int menuIndex,
+    int itemIndex,
+    String name,
+    double price,
+  ) async {
+    final item =
+        (menus[menuIndex]['items'] as List)[itemIndex] as Map<String, dynamic>;
+    final itemId = item['id'] as int;
+
+    item['name'] = name;
+    item['price'] = price;
     menus.refresh();
-    _saveMenus();
+
+    try {
+      await _db
+          .from('menu_items')
+          .update({'name': name, 'price': price})
+          .eq('id', itemId);
+    } catch (e) {
+      if (kDebugMode) print('[MenuService] updateMenuItem error: $e');
+    }
+  }
+
+  Future<void> removeMenuItem(int menuIndex, int itemIndex) async {
+    final items = menus[menuIndex]['items'] as List;
+    final itemId = (items[itemIndex] as Map<String, dynamic>)['id'] as int;
+    items.removeAt(itemIndex);
+    menus.refresh();
+    try {
+      await _db.from('menu_items').delete().eq('id', itemId);
+    } catch (e) {
+      if (kDebugMode) print('[MenuService] removeMenuItem error: $e');
+    }
   }
 }

@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 // Hide Supabase's AuthUser so our domain entity wins.
-import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser, AuthException;
 import 'package:adisyos/core/errors/auth_exception.dart';
 import 'package:adisyos/features/auth/domain/entities/auth_user.dart';
 import 'package:adisyos/features/auth/domain/usecases/login_usecase.dart';
