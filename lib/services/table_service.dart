@@ -207,7 +207,7 @@ class TableService extends GetxService {
       }
     } else {
       // Optimistic: placeholder id = -1 until insert resolves
-      orders.add({'id': -1, 'name': name, 'quantity': 1, 'price': price});
+      orders.add(<String, dynamic>{'id': -1, 'name': name, 'quantity': 1, 'price': price});
       tables[tableIndex]['total'] =
           (tables[tableIndex]['total'] as double) + price;
 
