@@ -895,25 +895,28 @@ class _TableDetailViewState extends State<TableDetailView> {
     Get.dialog(
       AlertDialog(
         title: Text('split_bill'.tr),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '${'total'.tr}: ₺${TableService.to.getTotalWithDiscount(widget.tableIndex).toStringAsFixed(2)}',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: peopleController,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: 'how_many_people'.tr,
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.people),
+        content: SizedBox(
+          width: 300,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${'total'.tr}: ₺${TableService.to.getTotalWithDiscount(widget.tableIndex).toStringAsFixed(2)}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              TextField(
+                controller: peopleController,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: 'how_many_people'.tr,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.people),
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -1017,26 +1020,29 @@ class _TableDetailViewState extends State<TableDetailView> {
     Get.dialog(
       AlertDialog(
         title: Text('apply_discount'.tr),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '${'total'.tr}: ₺${TableService.to.getTotal(widget.tableIndex).toStringAsFixed(2)}',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: discountController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: 'discount_percent'.tr,
-                border: const OutlineInputBorder(),
-                suffixText: '%',
+        content: SizedBox(
+          width: 300,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${'total'.tr}: ₺${TableService.to.getTotal(widget.tableIndex).toStringAsFixed(2)}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              TextField(
+                controller: discountController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: 'discount_percent'.tr,
+                  border: const OutlineInputBorder(),
+                  suffixText: '%',
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(

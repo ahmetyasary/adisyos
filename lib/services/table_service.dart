@@ -54,7 +54,7 @@ class TableService extends GetxService {
         'discount': (row['discount'] as num).toDouble(),
         'staffEmail': (row['staff_email'] as String?) ?? '',
         'orders': (row['orders'] as List)
-            .map((o) => {
+            .map((o) => <String, dynamic>{
                   'id': o['id'] as int,
                   'name': o['name'] as String,
                   'quantity': o['quantity'] as int,
