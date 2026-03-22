@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -27,6 +28,8 @@ import 'package:adisyos/features/auth/presentation/controller/auth_controller.da
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await dotenv.load(fileName: '.env.local');
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -35,9 +38,11 @@ Future<void> main() async {
     ),
   );
 
+  final supabaseUrl = _envOrDefine('SUPABASE_URL');
+  final supabaseAnonKey = _envOrDefine('SUPABASE_ANON_KEY');
   await Supabase.initialize(
-    url: const String.fromEnvironment('SUPABASE_URL'),
-    anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY'),
+    url: supabaseUrl,
+    anonKey: supabaseAnonKey,
   );
 
   _registerAuth();
@@ -52,6 +57,12 @@ Future<void> main() async {
   Get.put(TableService());
 
   runApp(const MyApp());
+}
+
+String _envOrDefine(String name) {
+  final fromFile = dotenv.env[name]?.trim();
+  if (fromFile != null && fromFile.isNotEmpty) return fromFile;
+  return String.fromEnvironment(name);
 }
 
 /// Wires the full clean-architecture auth graph.
