@@ -3,14 +3,14 @@ import 'package:get/get.dart';
 import 'package:adisyos/services/menu_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
 
-// ── Design tokens ──────────────────────────────────────────
-const _bg          = Color(0xFFF5F6FA);
+// ── Apple-inspired design tokens ──────────────────────────────
+const _bg          = Color(0xFFF2F2F7);
 const _card        = Colors.white;
-const _orange      = Color(0xFFF5A623);
-const _orangeLight = Color(0xFFFFF3E0);
-const _textPrimary = Color(0xFF1A1A2E);
-const _textSec     = Color(0xFF9B9B9B);
-const _border      = Color(0xFFEEEEEE);
+const _orange      = Color(0xFFFF9500);
+const _orangeLight = Color(0xFFFFF4E0);
+const _textPrimary = Color(0xFF1C1C1E);
+const _textSec     = Color(0xFF8E8E93);
+const _border      = Color(0xFFE5E5EA);
 
 class MenuManagementView extends StatelessWidget {
   const MenuManagementView({super.key});
@@ -266,15 +266,11 @@ class MenuManagementView extends StatelessWidget {
             // ── Page header ──────────────────────────────
             Container(
               height: 60,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: _card,
-                border: const Border(bottom: BorderSide(color: _border)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x0D000000),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
+                boxShadow: [
+                  BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
+                  BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
                 ],
               ),
               child: Row(
@@ -307,7 +303,7 @@ class MenuManagementView extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: const [
                             BoxShadow(
-                              color: Color(0x44F5A623),
+                              color: Color(0x44FF9500),
                               blurRadius: 8,
                               offset: Offset(0, 3),
                             ),
@@ -447,26 +443,12 @@ class _MenuCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: _card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 16,
-            offset: Offset(0, 6),
-          ),
-          BoxShadow(
-            color: Color(0x07000000),
-            blurRadius: 4,
-            offset: Offset(0, 1),
-          ),
-          BoxShadow(
-            color: Colors.white,
-            blurRadius: 0,
-            offset: Offset(0, -1),
-          ),
+        borderRadius: BorderRadius.all(Radius.circular(16)),
+        boxShadow: [
+          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
+          BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
         ],
       ),
       child: Column(
@@ -479,13 +461,25 @@ class _MenuCard extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
-                    color: _orangeLight,
-                    borderRadius: BorderRadius.circular(10),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color.lerp(_orange, Colors.white, 0.28)!, _orange],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _orange.withOpacity(0.28),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
                   child: const Icon(Icons.menu_book_rounded,
-                      size: 18, color: _orange),
+                      size: 18, color: Colors.white),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

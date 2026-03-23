@@ -6,18 +6,18 @@ import 'package:adisyos/services/shift_service.dart';
 import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
 import 'package:adisyos/models/app_role.dart';
 
-// ── Design tokens ──────────────────────────────────────────
-const _bg          = Color(0xFFF5F6FA);
+// ── Apple-inspired design tokens ──────────────────────────────
+const _bg          = Color(0xFFF2F2F7);
 const _card        = Colors.white;
-const _orange      = Color(0xFFF5A623);
-const _orangeLight = Color(0xFFFFF3E0);
-const _green       = Color(0xFF52C97F);
-const _greenLight  = Color(0xFFEAFAF1);
-const _red         = Color(0xFFE74C3C);
-const _blue        = Color(0xFF5DADE2);
-const _textPrimary = Color(0xFF1A1A2E);
-const _textSec     = Color(0xFF9B9B9B);
-const _border      = Color(0xFFEEEEEE);
+const _orange      = Color(0xFFFF9500);
+const _orangeLight = Color(0xFFFFF4E0);
+const _green       = Color(0xFF34C759);
+const _greenLight  = Color(0xFFE8FAF0);
+const _red         = Color(0xFFFF3B30);
+const _blue        = Color(0xFF007AFF);
+const _textPrimary = Color(0xFF1C1C1E);
+const _textSec     = Color(0xFF8E8E93);
+const _border      = Color(0xFFE5E5EA);
 
 class ShiftManagementView extends StatefulWidget {
   const ShiftManagementView({super.key});
@@ -116,10 +116,9 @@ class _Header extends StatelessWidget {
       height: 60,
       decoration: const BoxDecoration(
         color: _card,
-        border: Border(bottom: BorderSide(color: _border)),
         boxShadow: [
-          BoxShadow(
-              color: Color(0x0D000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
+          BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
         ],
       ),
       child: Row(
@@ -210,14 +209,25 @@ class _MyShiftCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: _orangeLight,
-                  borderRadius: BorderRadius.circular(13),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFFFBF4D), _orange],
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: _orange.withOpacity(0.25),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
                 child: Center(
                   child: Text(
                     email.isNotEmpty ? email[0].toUpperCase() : 'U',
                     style: const TextStyle(
-                        color: _orange,
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 18),
                   ),
@@ -487,15 +497,12 @@ class _ShiftRow extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: _card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _border),
-        boxShadow: const [
-          BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 8,
-              offset: Offset(0, 3)),
+        borderRadius: BorderRadius.all(Radius.circular(14)),
+        boxShadow: [
+          BoxShadow(color: Color(0x0A000000), blurRadius: 16, offset: Offset(0, 3)),
+          BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
         ],
       ),
       child: Row(
@@ -504,16 +511,22 @@ class _ShiftRow extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: isActive ? _greenLight : const Color(0xFFF5F5F5),
-              borderRadius: BorderRadius.circular(10),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isActive
+                    ? [Color.lerp(_green, Colors.white, 0.28)!, _green]
+                    : [const Color(0xFFBDBDBD), const Color(0xFF9E9E9E)],
+              ),
+              shape: BoxShape.circle,
             ),
             child: Center(
               child: Text(
                 staffEmail.isNotEmpty ? staffEmail[0].toUpperCase() : 'U',
-                style: TextStyle(
-                    color: isActive ? _green : _textSec,
+                style: const TextStyle(
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    fontSize: 15),
+                    fontSize: 14),
               ),
             ),
           ),

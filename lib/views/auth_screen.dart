@@ -8,14 +8,14 @@ import 'package:adisyos/models/app_role.dart';
 import 'package:adisyos/views/home_view.dart';
 import 'package:adisyos/views/tables_view.dart';
 
-// ── Design tokens (shared with rest of app) ───────────────────
-const _bg          = Color(0xFFF5F6FA);
+// ── Apple-inspired design tokens ──────────────────────────────
+const _bg          = Color(0xFFF2F2F7);
 const _card        = Colors.white;
-const _orange      = Color(0xFFF5A623);
-const _textPrimary = Color(0xFF1A1A2E);
-const _textSec     = Color(0xFF9B9B9B);
-const _border      = Color(0xFFEEEEEE);
-const _error       = Color(0xFFE74C3C);
+const _orange      = Color(0xFFFF9500);
+const _textPrimary = Color(0xFF1C1C1E);
+const _textSec     = Color(0xFF8E8E93);
+const _border      = Color(0xFFE5E5EA);
+const _error       = Color(0xFFFF3B30);
 
 // ─────────────────────────────────────────────────────────────
 // AuthScreen
@@ -228,19 +228,23 @@ class _BrandHero extends StatelessWidget {
       children: [
         // Icon badge
         Container(
-          width:  68,
-          height: 68,
+          width:  72,
+          height: 72,
           decoration: BoxDecoration(
-            color:  _orange,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFFFBF4D), _orange],
+            ),
             borderRadius: BorderRadius.circular(22),
             boxShadow: const [
               BoxShadow(
-                color:  Color(0x55F5A623),
-                blurRadius: 20,
-                offset: Offset(0, 8),
+                color:  Color(0x55FF9500),
+                blurRadius: 24,
+                offset: Offset(0, 10),
               ),
               BoxShadow(
-                color:  Color(0x22F5A623),
+                color:  Color(0x22FF9500),
                 blurRadius: 6,
                 offset: Offset(0, 2),
               ),
@@ -249,7 +253,7 @@ class _BrandHero extends StatelessWidget {
           child: const Icon(
             Icons.receipt_long_rounded,
             color: Colors.white,
-            size:  34,
+            size:  36,
           ),
         ),
         const SizedBox(height: 14),
@@ -587,12 +591,12 @@ class _LoginButton extends StatelessWidget {
                 ? []
                 : const [
                     BoxShadow(
-                      color:      Color(0x55F5A623),
+                      color:      Color(0x55FF9500),
                       blurRadius: 18,
                       offset:     Offset(0, 7),
                     ),
                     BoxShadow(
-                      color:      Color(0x22F5A623),
+                      color:      Color(0x22FF9500),
                       blurRadius: 5,
                       offset:     Offset(0, 2),
                     ),

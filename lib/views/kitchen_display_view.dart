@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:adisyos/services/kitchen_service.dart';
 
-const _bg = Color(0xFFF5F6FA);
-const _card = Colors.white;
-const _textPrimary = Color(0xFF1A1A2E);
-const _textSec = Color(0xFF9B9B9B);
-const _border = Color(0xFFEEEEEE);
-const _colPending = Color(0xFFF5A623);
-const _colPreparing = Color(0xFF5DADE2);
-const _colReady = Color(0xFF52C97F);
+// ── Apple-inspired design tokens ──────────────────────────────
+const _bg           = Color(0xFFF2F2F7);
+const _card         = Colors.white;
+const _textPrimary  = Color(0xFF1C1C1E);
+const _textSec      = Color(0xFF8E8E93);
+const _border       = Color(0xFFE5E5EA);
+const _colPending   = Color(0xFFFF9500);
+const _colPreparing = Color(0xFF007AFF);
+const _colReady     = Color(0xFF34C759);
 
 class KitchenDisplayView extends StatelessWidget {
   const KitchenDisplayView({super.key});
@@ -69,20 +70,28 @@ class KitchenDisplayView extends StatelessWidget {
   Widget _buildHeader() {
     return Container(
       height: 60,
-      color: _card,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: const BoxDecoration(
+        color: _card,
+        boxShadow: [
+          BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
+          BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
+        ],
+      ),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: _textPrimary),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                size: 18, color: _textPrimary),
             onPressed: () => Get.back(),
           ),
           const Text(
             'Mutfak Ekranı',
             style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: _textPrimary),
+              fontWeight: FontWeight.w700,
+              fontSize: 17,
+              color: _textPrimary,
+              letterSpacing: -0.3,
+            ),
           ),
           const Spacer(),
           Obx(() {
@@ -135,9 +144,8 @@ class _KitchenColumn extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
+        color: color.withOpacity(0.06),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Column(
         children: [
@@ -249,15 +257,12 @@ class _TicketCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: _card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        borderRadius: BorderRadius.all(Radius.circular(12)),
         boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2)),
+          BoxShadow(color: Color(0x0A000000), blurRadius: 16, offset: Offset(0, 3)),
+          BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
         ],
       ),
       child: Column(
@@ -305,7 +310,6 @@ class _TicketCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: _bg,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: _border),
                 ),
                 child: Text(
                   '${ticket['quantity']}x',

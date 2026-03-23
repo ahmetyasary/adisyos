@@ -10,14 +10,14 @@ import 'package:adisyos/services/table_service.dart';
 import 'package:adisyos/services/inventory_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
 
-// Design tokens
-const _bg = Color(0xFFF5F6FA);
-const _card = Colors.white;
-const _orange = Color(0xFFF5A623);
-const _textPrimary = Color(0xFF1A1A2E);
-const _textSecondary = Color(0xFF9B9B9B);
-const _border = Color(0xFFEEEEEE);
-const _menuItemBg = Color(0xFFFFF8EE);
+// ── Apple-inspired design tokens ──────────────────────────────
+const _bg            = Color(0xFFF2F2F7);
+const _card          = Colors.white;
+const _orange        = Color(0xFFFF9500);
+const _textPrimary   = Color(0xFF1C1C1E);
+const _textSecondary = Color(0xFF8E8E93);
+const _border        = Color(0xFFE5E5EA);
+const _menuItemBg    = Color(0xFFFFF4E0);
 
 class TableDetailView extends StatefulWidget {
   final int tableNumber;
@@ -89,22 +89,29 @@ class _TableDetailViewState extends State<TableDetailView> {
 
   Widget _buildTopBar(BuildContext context) {
     return Container(
-      color: _card,
       height: 60,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: const BoxDecoration(
+        color: _card,
+        boxShadow: [
+          BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
+          BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
+        ],
+      ),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: _textPrimary),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                size: 18, color: _textPrimary),
             onPressed: () => Get.back(),
           ),
           Text(
             widget.tableName,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: _textPrimary,
-                ),
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 17,
+              color: _textPrimary,
+              letterSpacing: -0.3,
+            ),
           ),
           const Spacer(),
           IconButton(
@@ -170,9 +177,9 @@ class _TableDetailViewState extends State<TableDetailView> {
       width: 88,
       decoration: const BoxDecoration(
         color: _card,
-        border: Border(
-          right: BorderSide(color: _border, width: 1),
-        ),
+        boxShadow: [
+          BoxShadow(color: Color(0x0A000000), blurRadius: 12, offset: Offset(2, 0)),
+        ],
       ),
       child: Column(
         children: [
@@ -207,13 +214,23 @@ class _TableDetailViewState extends State<TableDetailView> {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: _menuItemBg,
+                              gradient: isSelected
+                                  ? const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [Color(0xFFFFBF4D), _orange],
+                                    )
+                                  : null,
+                              color: isSelected ? null : _bg,
                               borderRadius: BorderRadius.circular(12),
+                              boxShadow: isSelected
+                                  ? [BoxShadow(color: _orange.withOpacity(0.28), blurRadius: 8, offset: const Offset(0, 3))]
+                                  : null,
                             ),
                             child: Icon(
                               Icons.restaurant_menu,
                               size: 20,
-                              color: isSelected ? _orange : _textSecondary,
+                              color: isSelected ? Colors.white : _textSecondary,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -248,7 +265,7 @@ class _TableDetailViewState extends State<TableDetailView> {
   Widget _buildHistoryButton() {
     return Container(
       decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: _border, width: 1)),
+        border: Border(top: BorderSide(color: Color(0xFFEEEEEE), width: 0.5)),
       ),
       child: GestureDetector(
         onTap: () {
@@ -455,10 +472,10 @@ class _TableDetailViewState extends State<TableDetailView> {
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: isOut
-                                ? const Color(0xFFFF6B6B)
+                                ? const Color(0xFFFF3B30)
                                 : isLow
                                     ? _orange
-                                    : const Color(0xFF52C97F),
+                                    : const Color(0xFF34C759),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -489,12 +506,9 @@ class _TableDetailViewState extends State<TableDetailView> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: dimmed
             ? []
-            : [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
+            : const [
+                BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
+                BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
               ],
       ),
       child: Column(
@@ -502,16 +516,20 @@ class _TableDetailViewState extends State<TableDetailView> {
         children: [
           Expanded(
             child: Container(
-              decoration: const BoxDecoration(
-                color: _menuItemBg,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFFBF4D), _orange],
+                ),
                 borderRadius:
-                    BorderRadius.vertical(top: Radius.circular(16)),
+                    const BorderRadius.vertical(top: Radius.circular(16)),
               ),
-              child: Center(
+              child: const Center(
                 child: Icon(
                   Icons.fastfood_rounded,
-                  size: 40,
-                  color: _orange.withOpacity(0.6),
+                  size: 36,
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -547,8 +565,15 @@ class _TableDetailViewState extends State<TableDetailView> {
                       width: 28,
                       height: 28,
                       decoration: BoxDecoration(
-                        color: _orange,
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFFFBF4D), _orange],
+                        ),
                         borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(color: _orange.withOpacity(0.35), blurRadius: 6, offset: const Offset(0, 2)),
+                        ],
                       ),
                       child: const Icon(Icons.add,
                           color: Colors.white, size: 16),
@@ -569,7 +594,9 @@ class _TableDetailViewState extends State<TableDetailView> {
       width: 300,
       decoration: const BoxDecoration(
         color: _card,
-        border: Border(left: BorderSide(color: _border, width: 1)),
+        boxShadow: [
+          BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(-2, 0)),
+        ],
       ),
       child: Column(
         children: [
@@ -1515,30 +1542,37 @@ class _PayMethodChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFFF5A623);
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? accent : Colors.white,
+          gradient: selected
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFFBF4D), _orange],
+                )
+              : null,
+          color: selected ? null : _bg,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-              color: selected ? accent : const Color(0xFFEEEEEE), width: 1.5),
+          boxShadow: selected
+              ? [BoxShadow(color: _orange.withOpacity(0.30), blurRadius: 8, offset: const Offset(0, 3))]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon,
-                size: 16, color: selected ? Colors.white : const Color(0xFF9B9B9B)),
+                size: 16, color: selected ? Colors.white : _textSecondary),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : const Color(0xFF1A1A2E),
+                color: selected ? Colors.white : _textPrimary,
               ),
             ),
           ],
@@ -1562,7 +1596,7 @@ class _QtyBtn extends StatelessWidget {
         width: 28,
         height: 28,
         decoration: BoxDecoration(
-          border: Border.all(color: _border, width: 1),
+          color: _bg,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, size: 14, color: _textSecondary),

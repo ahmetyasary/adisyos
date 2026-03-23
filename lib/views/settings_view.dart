@@ -3,13 +3,13 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:adisyos/themes/app_theme.dart';
 
-// ── Design tokens ──────────────────────────────────────────
-const _bg          = Color(0xFFF5F6FA);
+// ── Apple-inspired design tokens ──────────────────────────────
+const _bg          = Color(0xFFF2F2F7);
 const _card        = Colors.white;
-const _orange      = Color(0xFFF5A623);
-const _textPrimary = Color(0xFF1A1A2E);
-const _textSec     = Color(0xFF9B9B9B);
-const _border      = Color(0xFFEEEEEE);
+const _orange      = Color(0xFFFF9500);
+const _textPrimary = Color(0xFF1C1C1E);
+const _textSec     = Color(0xFF8E8E93);
+const _border      = Color(0xFFE5E5EA);
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -76,15 +76,11 @@ class _SettingsViewState extends State<SettingsView> {
             // ── Page header ──────────────────────────────
             Container(
               height: 60,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: _card,
-                border: const Border(bottom: BorderSide(color: _border)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x0D000000),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
+                boxShadow: [
+                  BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
+                  BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
                 ],
               ),
               child: Row(
@@ -188,7 +184,7 @@ class _SettingsViewState extends State<SettingsView> {
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: const [
                             BoxShadow(
-                              color: Color(0x44F5A623),
+                              color: Color(0x44FF9500),
                               blurRadius: 16,
                               offset: Offset(0, 6),
                             ),
@@ -266,26 +262,17 @@ class _SettingsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: _card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 16,
-            offset: Offset(0, 6),
-          ),
-          BoxShadow(
-            color: Color(0x07000000),
-            blurRadius: 4,
-            offset: Offset(0, 1),
-          ),
-          BoxShadow(
-            color: Colors.white,
-            blurRadius: 0,
-            offset: Offset(0, -1),
-          ),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+          bottomLeft: Radius.circular(16),
+          bottomRight: Radius.circular(16),
+        ),
+        boxShadow: [
+          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
+          BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
         ],
       ),
       child: Column(children: children),

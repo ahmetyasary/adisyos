@@ -5,14 +5,15 @@ import 'package:adisyos/views/table_detail_view.dart';
 import 'package:adisyos/views/public_menu_view.dart';
 import 'package:adisyos/services/table_service.dart';
 
-// Design tokens
-const _bg = Color(0xFFF5F6FA);
-const _card = Colors.white;
-const _orange = Color(0xFFF5A623);
-const _textPrimary = Color(0xFF1A1A2E);
-const _textSecondary = Color(0xFF9B9B9B);
-const _occupied = Color(0xFFFF6B6B);
-const _available = Color(0xFF52C97F);
+// ── Apple-inspired design tokens ──────────────────────────────
+const _bg            = Color(0xFFF2F2F7);
+const _card          = Colors.white;
+const _orange        = Color(0xFFFF9500);
+const _textPrimary   = Color(0xFF1C1C1E);
+const _textSecondary = Color(0xFF8E8E93);
+const _separator     = Color(0xFFE5E5EA);
+const _occupied      = Color(0xFFFF3B30);
+const _available     = Color(0xFF34C759);
 
 class TablesView extends StatelessWidget {
   const TablesView({super.key});
@@ -242,24 +243,33 @@ class TablesView extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            Container(
+              height: 60,
+              decoration: const BoxDecoration(
+                color: _card,
+                boxShadow: [
+                  BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
+                  BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
+                ],
+              ),
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: _textPrimary),
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                        size: 18, color: _textPrimary),
                     onPressed: () => Get.back(),
                   ),
-                  Expanded(
-                    child: Text(
-                      'tables'.tr,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 22,
-                            color: _textPrimary,
-                          ),
+                  Text(
+                    'tables'.tr,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: _textPrimary,
+                      letterSpacing: -0.3,
                     ),
                   ),
+                  const Spacer(),
+                  const SizedBox(width: 8),
                 ],
               ),
             ),
@@ -365,19 +375,10 @@ class TablesView extends StatelessWidget {
         decoration: BoxDecoration(
           color: _card,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
+          boxShadow: const [
+            BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
+            BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
           ],
-          border: Border.all(
-            color: isOccupied
-                ? _occupied.withOpacity(0.4)
-                : _available.withOpacity(0.3),
-            width: 1.5,
-          ),
         ),
         child: Stack(
           children: [
@@ -401,18 +402,30 @@ class TablesView extends StatelessWidget {
                 children: [
                   // Table icon
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: 52,
+                    height: 52,
                     decoration: BoxDecoration(
-                      color: isOccupied
-                          ? _occupied.withOpacity(0.1)
-                          : _available.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(14),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color.lerp(isOccupied ? _occupied : _available, Colors.white, 0.28)!,
+                          isOccupied ? _occupied : _available,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (isOccupied ? _occupied : _available).withOpacity(0.30),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.table_bar_rounded,
-                      color: isOccupied ? _occupied : _available,
-                      size: 28,
+                      color: Colors.white,
+                      size: 26,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -481,23 +494,16 @@ class _StatChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: color.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
           color: color,
         ),
       ),

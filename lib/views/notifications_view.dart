@@ -4,12 +4,12 @@ import 'package:intl/intl.dart';
 import 'package:adisyos/services/sales_history_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
 
-// ── Design tokens ──────────────────────────────────────────
-const _bg          = Color(0xFFF5F6FA);
+// ── Apple-inspired design tokens ──────────────────────────────
+const _bg          = Color(0xFFF2F2F7);
 const _card        = Colors.white;
-const _textPrimary = Color(0xFF1A1A2E);
-const _textSec     = Color(0xFF9B9B9B);
-const _border      = Color(0xFFEEEEEE);
+const _textPrimary = Color(0xFF1C1C1E);
+const _textSec     = Color(0xFF8E8E93);
+const _border      = Color(0xFFE5E5EA);
 
 class NotificationsView extends StatelessWidget {
   const NotificationsView({super.key});
@@ -85,15 +85,11 @@ class _PageHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 60,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: _card,
-        border: const Border(bottom: BorderSide(color: _border)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0D000000),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
+        boxShadow: [
+          BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
+          BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
         ],
       ),
       child: Row(
@@ -157,40 +153,41 @@ class _NotificationCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: _card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 14,
-            offset: Offset(0, 5),
-          ),
-          BoxShadow(
-            color: Color(0x07000000),
-            blurRadius: 4,
-            offset: Offset(0, 1),
-          ),
-          BoxShadow(
-            color: Colors.white,
-            blurRadius: 0,
-            offset: Offset(0, -1),
-          ),
+        borderRadius: BorderRadius.all(Radius.circular(14)),
+        boxShadow: [
+          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
+          BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
         ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: AppTheme.successColor.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color.lerp(AppTheme.successColor, Colors.white, 0.28)!,
+                  AppTheme.successColor,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(13),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.successColor.withOpacity(0.28),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
-            child: Icon(
+            child: const Icon(
               Icons.payment_rounded,
-              color: AppTheme.successColor,
+              color: Colors.white,
               size: 22,
             ),
           ),

@@ -6,14 +6,14 @@ import 'daily_report_view.dart';
 import 'monthly_report_view.dart';
 import 'yearly_report_view.dart';
 
-// ── Design tokens ──────────────────────────────────────────
-const _bg          = Color(0xFFF5F6FA);
+// ── Apple-inspired design tokens ──────────────────────────────
+const _bg          = Color(0xFFF2F2F7);
 const _card        = Colors.white;
-const _orange      = Color(0xFFF5A623);
-const _orangeLight = Color(0xFFFFF3E0);
-const _textPrimary = Color(0xFF1A1A2E);
-const _textSec     = Color(0xFF9B9B9B);
-const _border      = Color(0xFFEEEEEE);
+const _orange      = Color(0xFFFF9500);
+const _orangeLight = Color(0xFFFFF4E0);
+const _textPrimary = Color(0xFF1C1C1E);
+const _textSec     = Color(0xFF8E8E93);
+const _border      = Color(0xFFE5E5EA);
 
 class ReportsView extends StatelessWidget {
   const ReportsView({super.key});
@@ -132,15 +132,11 @@ class _PageHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 60,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: _card,
-        border: const Border(bottom: BorderSide(color: _border)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0D000000),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
+        boxShadow: [
+          BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
+          BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
         ],
       ),
       child: Row(
@@ -191,64 +187,42 @@ class _StatCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: _card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _border),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 16,
-            offset: Offset(0, 6),
-          ),
-          BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
-          BoxShadow(
-            color: Colors.white,
-            blurRadius: 0,
-            offset: Offset(0, -1),
-          ),
+          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
+          BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: accent, size: 16),
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color.lerp(accent, Colors.white, 0.28)!, accent],
               ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: _textSec,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+              borderRadius: BorderRadius.circular(11),
+              boxShadow: [BoxShadow(color: accent.withOpacity(0.28), blurRadius: 8, offset: const Offset(0, 3))],
+            ),
+            child: Icon(icon, color: Colors.white, size: 18),
           ),
           const SizedBox(height: 10),
           Text(
             value,
-            style: TextStyle(
+            style: const TextStyle(
               color: _textPrimary,
               fontSize: 20,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.4,
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            sub,
-            style: const TextStyle(color: _textSec, fontSize: 12),
-          ),
+          Text(label, style: const TextStyle(color: _textSec, fontSize: 11, fontWeight: FontWeight.w500)),
+          Text(sub,   style: const TextStyle(color: _textSec, fontSize: 11)),
         ],
       ),
     );
@@ -284,7 +258,6 @@ class _ReportTile extends StatelessWidget {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _border),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x12000000),
@@ -296,22 +269,23 @@ class _ReportTile extends StatelessWidget {
                 blurRadius: 5,
                 offset: Offset(0, 2),
               ),
-              BoxShadow(
-                color: Colors.white,
-                blurRadius: 0,
-                offset: Offset(0, -1),
-              ),
             ],
           ),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color.lerp(accent, Colors.white, 0.28)!, accent],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [BoxShadow(color: accent.withOpacity(0.30), blurRadius: 12, offset: const Offset(0, 5))],
                 ),
-                child: Icon(icon, color: accent, size: 26),
+                child: Icon(icon, color: Colors.white, size: 26),
               ),
               const SizedBox(width: 16),
               Expanded(

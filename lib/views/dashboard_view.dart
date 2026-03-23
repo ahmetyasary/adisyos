@@ -7,17 +7,17 @@ import 'package:adisyos/services/sales_history_service.dart';
 import 'package:adisyos/services/table_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
 
-// ── Design tokens ──────────────────────────────────────────
-const _bg          = Color(0xFFF5F6FA);
+// ── Apple-inspired design tokens ──────────────────────────────
+const _bg          = Color(0xFFF2F2F7);
 const _card        = Colors.white;
-const _orange      = Color(0xFFF5A623);
-const _orangeLight = Color(0xFFFFF3E0);
-const _green       = Color(0xFF52C97F);
-const _blue        = Color(0xFF5DADE2);
-const _purple      = Color(0xFFAB84F5);
-const _textPrimary = Color(0xFF1A1A2E);
-const _textSec     = Color(0xFF9B9B9B);
-const _border      = Color(0xFFEEEEEE);
+const _orange      = Color(0xFFFF9500);
+const _orangeLight = Color(0xFFFFF4E0);
+const _green       = Color(0xFF34C759);
+const _blue        = Color(0xFF007AFF);
+const _purple      = Color(0xFFAF52DE);
+const _textPrimary = Color(0xFF1C1C1E);
+const _textSec     = Color(0xFF8E8E93);
+const _border      = Color(0xFFE5E5EA);
 
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key});
@@ -205,10 +205,9 @@ class _Header extends StatelessWidget {
       height: 60,
       decoration: const BoxDecoration(
         color: _card,
-        border: Border(bottom: BorderSide(color: _border)),
         boxShadow: [
-          BoxShadow(
-              color: Color(0x0D000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
+          BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
         ],
       ),
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -298,27 +297,27 @@ class _KpiCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color.lerp(color, Colors.white, 0.25)!, color],
+              ),
+              borderRadius: BorderRadius.circular(13),
+              boxShadow: [BoxShadow(color: color.withOpacity(0.30), blurRadius: 10, offset: const Offset(0, 4))],
             ),
-            child: Icon(icon, color: color, size: 22),
+            child: Icon(icon, color: Colors.white, size: 22),
           ),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: const TextStyle(fontSize: 11, color: _textSec)),
+              Text(label, style: const TextStyle(fontSize: 11, color: _textSec, fontWeight: FontWeight.w500)),
               const SizedBox(height: 2),
-              Text(value,
-                  style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: _textPrimary)),
-              Text(sub,
-                  style: const TextStyle(fontSize: 11, color: _textSec)),
+              Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: _textPrimary, letterSpacing: -0.4)),
+              Text(sub,   style: const TextStyle(fontSize: 11, color: _textSec)),
             ],
           ),
         ],
@@ -683,19 +682,21 @@ class _PayTile extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color.lerp(color, Colors.white, 0.25)!, color],
+                  ),
                   borderRadius: BorderRadius.circular(10),
+                  boxShadow: [BoxShadow(color: color.withOpacity(0.28), blurRadius: 8, offset: const Offset(0, 3))],
                 ),
-                child: Icon(icon, color: color, size: 18),
+                child: Icon(icon, color: Colors.white, size: 18),
               ),
               const SizedBox(width: 8),
-              Text(label,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      color: _textPrimary)),
+              Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: _textPrimary)),
             ],
           ),
           const SizedBox(height: 10),
@@ -769,13 +770,10 @@ class _CardBox extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: _card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _border),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: const [
-          BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 12,
-              offset: Offset(0, 4)),
+          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
+          BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
         ],
       ),
       child: child,

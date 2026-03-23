@@ -3,11 +3,12 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:adisyos/services/sales_history_service.dart';
 
-const _bg = Color(0xFFF5F6FA);
-const _card = Colors.white;
-const _orange = Color(0xFFF5A623);
-const _textPrimary = Color(0xFF1A1A2E);
-const _textSec = Color(0xFF9B9B9B);
+// ── Apple-inspired design tokens ──────────────────────────────
+const _bg          = Color(0xFFF2F2F7);
+const _card        = Colors.white;
+const _orange      = Color(0xFFFF9500);
+const _textPrimary = Color(0xFF1C1C1E);
+const _textSec     = Color(0xFF8E8E93);
 
 class StaffReportView extends StatelessWidget {
   const StaffReportView({super.key});
@@ -54,21 +55,31 @@ class StaffReportView extends StatelessWidget {
           children: [
             Container(
               height: 60,
-              color: _card,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: const BoxDecoration(
+                color: _card,
+                boxShadow: [
+                  BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
+                  BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
+                ],
+              ),
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: _textPrimary),
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                        size: 18, color: _textPrimary),
                     onPressed: () => Get.back(),
                   ),
                   const Text(
                     'Personel Raporu',
                     style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: _textPrimary),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 17,
+                      color: _textPrimary,
+                      letterSpacing: -0.3,
+                    ),
                   ),
+                  const Spacer(),
+                  const SizedBox(width: 8),
                 ],
               ),
             ),
@@ -139,14 +150,12 @@ class _StaffCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: _card,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.all(Radius.circular(16)),
         boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4)),
+          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
+          BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
         ],
       ),
       child: Row(
@@ -156,16 +165,24 @@ class _StaffCard extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: medalColor.withOpacity(0.15),
+              gradient: rank <= 3
+                  ? LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color.lerp(medalColor, Colors.white, 0.28)!, medalColor],
+                    )
+                  : null,
+              color: rank > 3 ? medalColor.withOpacity(0.12) : null,
               shape: BoxShape.circle,
             ),
             child: Center(
               child: Text(
                 '$rank',
                 style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: medalColor,
-                    fontSize: 14),
+                  fontWeight: FontWeight.bold,
+                  color: rank <= 3 ? Colors.white : medalColor,
+                  fontSize: 13,
+                ),
               ),
             ),
           ),
@@ -175,14 +192,25 @@ class _StaffCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: _orange.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color.lerp(_orange, Colors.white, 0.28)!, _orange],
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: _orange.withOpacity(0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: Center(
               child: Text(
                 initial,
                 style: const TextStyle(
-                    color: _orange,
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 18),
               ),

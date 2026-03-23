@@ -3,15 +3,16 @@ import 'package:get/get.dart';
 import 'package:adisyos/services/menu_service.dart';
 import 'package:adisyos/services/inventory_service.dart';
 
-const _bg = Color(0xFFF5F6FA);
-const _card = Colors.white;
-const _orange = Color(0xFFF5A623);
-const _textPrimary = Color(0xFF1A1A2E);
-const _textSec = Color(0xFF9B9B9B);
-const _border = Color(0xFFEEEEEE);
-const _colLow = Color(0xFFF5A623);
-const _colOut = Color(0xFFFF6B6B);
-const _colOk = Color(0xFF52C97F);
+// ── Apple-inspired design tokens ──────────────────────────────
+const _bg          = Color(0xFFF2F2F7);
+const _card        = Colors.white;
+const _orange      = Color(0xFFFF9500);
+const _textPrimary = Color(0xFF1C1C1E);
+const _textSec     = Color(0xFF8E8E93);
+const _border      = Color(0xFFE5E5EA);
+const _colLow      = Color(0xFFFF9500);
+const _colOut      = Color(0xFFFF3B30);
+const _colOk       = Color(0xFF34C759);
 
 class InventoryManagementView extends StatelessWidget {
   const InventoryManagementView({super.key});
@@ -90,20 +91,28 @@ class InventoryManagementView extends StatelessWidget {
   Widget _buildHeader() {
     return Container(
       height: 60,
-      color: _card,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: const BoxDecoration(
+        color: _card,
+        boxShadow: [
+          BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
+          BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
+        ],
+      ),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: _textPrimary),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                size: 18, color: _textPrimary),
             onPressed: () => Get.back(),
           ),
           const Text(
             'Stok Yönetimi',
             style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: _textPrimary),
+              fontWeight: FontWeight.w700,
+              fontSize: 17,
+              color: _textPrimary,
+              letterSpacing: -0.3,
+            ),
           ),
           const Spacer(),
           Obx(() {
@@ -139,9 +148,8 @@ class InventoryManagementView extends StatelessWidget {
         margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: _colOut.withOpacity(0.07),
+          color: _colOut.withOpacity(0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _colOut.withOpacity(0.3)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -262,14 +270,12 @@ class _InventoryItemCard extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: _card,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: (isOut || isLow)
-                  ? statusColor.withOpacity(0.4)
-                  : _border,
-            ),
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+            boxShadow: [
+              BoxShadow(color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 2)),
+            ],
           ),
           child: Row(
             children: [
