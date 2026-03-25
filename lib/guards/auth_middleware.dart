@@ -1,7 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
 import 'package:adisyos/models/app_role.dart';
+
+/// Flip to true to skip authentication during development.
+/// Has no effect in release builds.
+const _kBypassAuth = true;
 
 // ── Named routes ──────────────────────────────────────────────
 
@@ -50,6 +55,7 @@ class AuthMiddleware extends GetMiddleware {
 
     // ── Not logged in → login screen ──────────────────────
     if (!auth.isAuthenticated) {
+      if (kDebugMode && _kBypassAuth) return null;
       return const RouteSettings(name: AppRoutes.login);
     }
 
