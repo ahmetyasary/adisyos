@@ -185,6 +185,7 @@ class _HomeViewState extends State<HomeView> {
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             _TopBar(
@@ -246,13 +247,6 @@ class _TopBar extends StatelessWidget {
             ),
           ),
 
-          // ── Quick nav ─────────────────────────────────
-          const SizedBox(width: 24),
-          Obx(() {
-            final role = AuthController.to.currentRole;
-            return _QuickNavBar(role: role, onNavigate: onNavigate);
-          }),
-
           const Spacer(),
 
           // ── Clock ─────────────────────────────────────
@@ -261,7 +255,7 @@ class _TopBar extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                DateFormat('HH:mm:ss').format(currentTime),
+                DateFormat('HH:mm').format(currentTime),
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -413,109 +407,6 @@ class _TopBarIconButtonState extends State<_TopBarIconButton> {
 }
 
 // ──────────────────────────────────────────────────────────────
-// _QuickNavBar
-// ──────────────────────────────────────────────────────────────
-
-class _QuickNavBar extends StatelessWidget {
-  const _QuickNavBar({required this.role, required this.onNavigate});
-
-  final AppRole? role;
-  final void Function(String) onNavigate;
-
-  List<Map<String, dynamic>> get _links {
-    if (role == AppRole.admin) {
-      return [
-        {'label': 'Masalar',   'route': 'tables',    'icon': Icons.table_bar_rounded},
-        {'label': 'Raporlar',  'route': 'reports',   'icon': Icons.bar_chart_rounded},
-        {'label': 'Menü',      'route': 'menu',      'icon': Icons.restaurant_menu_rounded},
-        {'label': 'Dashboard', 'route': 'dashboard', 'icon': Icons.dashboard_rounded},
-      ];
-    }
-    return [
-      {'label': 'Masalar', 'route': 'tables',  'icon': Icons.table_bar_rounded},
-      {'label': 'Mutfak',  'route': 'kitchen', 'icon': Icons.local_fire_department_rounded},
-      {'label': 'Vardiya', 'route': 'shifts',  'icon': Icons.schedule_rounded},
-    ];
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (role == null) return const SizedBox.shrink();
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: _links.map((link) {
-        return Padding(
-          padding: const EdgeInsets.only(right: 2),
-          child: _QuickNavChip(
-            label: link['label'] as String,
-            icon:  link['icon']  as IconData,
-            onTap: () => onNavigate(link['route'] as String),
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _QuickNavChip extends StatefulWidget {
-  const _QuickNavChip({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  State<_QuickNavChip> createState() => _QuickNavChipState();
-}
-
-class _QuickNavChipState extends State<_QuickNavChip> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit:  (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-          decoration: BoxDecoration(
-            color: _hovered ? _orange.withOpacity(0.10) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                widget.icon,
-                size: 14,
-                color: _hovered ? _orange : _labelSecondary,
-              ),
-              const SizedBox(width: 5),
-              Text(
-                widget.label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: _hovered ? FontWeight.w600 : FontWeight.w400,
-                  color: _hovered ? _orange : _labelSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ──────────────────────────────────────────────────────────────
 // _MainContent
 // ──────────────────────────────────────────────────────────────
 
@@ -576,10 +467,6 @@ class _StatsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final tables   = TableService.to.tables;
-      final occupied = tables.where((t) => t['isOccupied'] == true).length;
-      final total    = tables.length;
-
       final today = DateTime.now();
       final todaySales = SalesHistoryService.to.sales.where((s) {
         final ts = DateTime.tryParse(s['date'] as String? ?? '');
@@ -589,62 +476,113 @@ class _StatsRow extends StatelessWidget {
             ts.day   == today.day;
       }).fold<double>(0, (sum, s) => sum + ((s['total'] as num?)?.toDouble() ?? 0));
 
-      return LayoutBuilder(builder: (context, constraints) {
-        final isNarrow = constraints.maxWidth < 500;
-        if (isNarrow) {
-          return Column(children: [
-            _StatCard(
-              icon: Icons.table_bar_rounded,
-              iconColor: const Color(0xFF007AFF),
-              label: 'Toplam Masa',
-              value: '$total',
-            ),
-            const SizedBox(height: 12),
-            _StatCard(
-              icon: Icons.circle,
-              iconColor: const Color(0xFF34C759),
-              label: 'Dolu Masa',
-              value: '$occupied / $total',
-            ),
-            const SizedBox(height: 12),
-            _StatCard(
-              icon: Icons.payments_rounded,
-              iconColor: _orange,
-              label: 'Bugünkü Satış',
-              value: '₺${todaySales.toStringAsFixed(2)}',
-            ),
-          ]);
-        }
-        return Row(children: [
-          Expanded(
-            child: _StatCard(
-              icon: Icons.table_bar_rounded,
-              iconColor: const Color(0xFF007AFF),
-              label: 'Toplam Masa',
-              value: '$total',
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: _StatCard(
-              icon: Icons.radio_button_checked_rounded,
-              iconColor: const Color(0xFF34C759),
-              label: 'Dolu Masa',
-              value: '$occupied / $total',
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: _StatCard(
-              icon: Icons.payments_rounded,
-              iconColor: _orange,
-              label: 'Bugünkü Satış',
-              value: '₺${todaySales.toStringAsFixed(2)}',
-            ),
-          ),
-        ]);
-      });
+      return _SalesBanner(amount: todaySales);
     });
+  }
+}
+
+class _SalesBanner extends StatelessWidget {
+  const _SalesBanner({required this.amount});
+  final double amount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
+          BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Gradient icon
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color.lerp(_orange, Colors.white, 0.25)!,
+                  _orange,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x40FF9500),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.payments_rounded, color: Colors.white, size: 24),
+          ),
+          const SizedBox(width: 18),
+
+          // Label + amount
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Bugünkü Satış',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: _labelSecondary,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '₺${amount.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: _labelPrimary,
+                  letterSpacing: -0.8,
+                  height: 1.0,
+                ),
+              ),
+            ],
+          ),
+
+          const Spacer(),
+
+          // Subtle date label on the right
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Bugün',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: _labelSecondary,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                DateFormat('dd MMM, EEE', Get.locale?.languageCode).format(DateTime.now()),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: _labelPrimary,
+                  letterSpacing: 0.1,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -752,21 +690,31 @@ class _FeatureGrid extends StatelessWidget {
       const spacing = 14.0;
       final itemW   = (w - spacing * (cols - 1)) / cols;
 
-      return Wrap(
-        spacing: spacing,
-        runSpacing: spacing,
-        children: cards.map((card) {
-          return SizedBox(
-            width: itemW,
-            child: _FeatureCard(
-              card: card,
-              onTap: (card['active'] as bool)
-                  ? () => onNavigate(card['route'] as String)
-                  : null,
-            ),
-          );
-        }).toList(),
-      );
+      return Obx(() {
+        final tables   = TableService.to.tables;
+        final occupied = tables.where((t) => t['isOccupied'] == true).length;
+        final total    = tables.length;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: cards.map((card) {
+            final occupancyLabel = card['route'] == 'tables' && total > 0
+                ? '$occupied / $total Dolu'
+                : null;
+            return SizedBox(
+              width: itemW,
+              child: _FeatureCard(
+                card: card,
+                occupancyLabel: occupancyLabel,
+                onTap: (card['active'] as bool)
+                    ? () => onNavigate(card['route'] as String)
+                    : null,
+              ),
+            );
+          }).toList(),
+        );
+      });
     });
   }
 }
@@ -776,10 +724,11 @@ class _FeatureGrid extends StatelessWidget {
 // ──────────────────────────────────────────────────────────────
 
 class _FeatureCard extends StatefulWidget {
-  const _FeatureCard({required this.card, this.onTap});
+  const _FeatureCard({required this.card, this.onTap, this.occupancyLabel});
 
   final Map<String, dynamic> card;
   final VoidCallback? onTap;
+  final String? occupancyLabel;
 
   @override
   State<_FeatureCard> createState() => _FeatureCardState();
@@ -873,62 +822,92 @@ class _FeatureCardState extends State<_FeatureCard>
                       ]
                 : null,
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
             children: [
-              // ── App-icon style container ─────────────────
-              Container(
-                width: 62,
-                height: 62,
-                decoration: BoxDecoration(
-                  gradient: iconGradient,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: isActive
-                      ? [
-                          BoxShadow(
-                            color: color.withOpacity(0.30),
-                            blurRadius: 14,
-                            offset: const Offset(0, 5),
+              // ── Main content column ───────────────────────
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── App-icon style container ───────────────
+                  Container(
+                    width: 62,
+                    height: 62,
+                    decoration: BoxDecoration(
+                      gradient: iconGradient,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: isActive
+                          ? [
+                              BoxShadow(
+                                color: color.withOpacity(0.30),
+                                blurRadius: 14,
+                                offset: const Offset(0, 5),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Icon(icon, size: 30, color: Colors.white),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // ── Title ─────────────────────────────────
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: isActive ? titleColor : _labelSecondary,
+                      letterSpacing: -0.2,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+
+                  // ── Subtitle ──────────────────────────────
+                  Text(
+                    isActive ? subtitle : 'coming_soon'.tr,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: isActive
+                          ? subColor
+                          : _labelSecondary.withOpacity(0.55),
+                      height: 1.35,
+                      letterSpacing: 0.1,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+
+              // ── Occupancy badge — top-right ───────────────
+              if (widget.occupancyLabel != null)
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF34C759).withOpacity(0.13),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.circle, size: 7, color: Color(0xFF34C759)),
+                        const SizedBox(width: 5),
+                        Text(
+                          widget.occupancyLabel!,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF34C759),
                           ),
-                        ]
-                      : null,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                child: Icon(
-                  icon,
-                  size: 30,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // ── Title ────────────────────────────────────
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: isActive ? titleColor : _labelSecondary,
-                  letterSpacing: -0.2,
-                  height: 1.1,
-                ),
-              ),
-              const SizedBox(height: 4),
-
-              // ── Subtitle ─────────────────────────────────
-              Text(
-                isActive ? subtitle : 'coming_soon'.tr,
-                style: TextStyle(
-                  fontSize: 11.5,
-                  color: isActive
-                      ? subColor
-                      : _labelSecondary.withOpacity(0.55),
-                  height: 1.35,
-                  letterSpacing: 0.1,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
             ],
           ),
         ),
