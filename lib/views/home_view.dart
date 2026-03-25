@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
+import 'package:adisyos/services/settings_service.dart';
 import 'package:adisyos/models/app_role.dart';
 import 'package:adisyos/services/sales_history_service.dart';
 import 'package:adisyos/services/table_service.dart';
@@ -43,7 +42,6 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> {
   late Timer _timer;
   DateTime _currentTime = DateTime.now();
-  String _companyName = '';
 
   @override
   void initState() {
@@ -51,20 +49,12 @@ class _HomeViewState extends State<HomeView> {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() => _currentTime = DateTime.now());
     });
-    _loadCompanyName();
   }
 
   @override
   void dispose() {
     _timer.cancel();
     super.dispose();
-  }
-
-  Future<void> _loadCompanyName() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(() => _companyName = prefs.getString('companyName') ?? '');
-    }
   }
 
   void _navigate(String route) {
@@ -190,7 +180,6 @@ class _HomeViewState extends State<HomeView> {
           children: [
             _TopBar(
               currentTime: _currentTime,
-              companyName: _companyName,
               onNavigate: _navigate,
             ),
             Expanded(
@@ -200,7 +189,7 @@ class _HomeViewState extends State<HomeView> {
                 return _MainContent(cards: cards, onNavigate: _navigate);
               }),
             ),
-            _Footer(companyName: _companyName),
+            Obx(() => _Footer(companyName: SettingsService.to.companyName.value)),
           ],
         ),
       ),
@@ -215,12 +204,10 @@ class _HomeViewState extends State<HomeView> {
 class _TopBar extends StatelessWidget {
   const _TopBar({
     required this.currentTime,
-    required this.companyName,
     required this.onNavigate,
   });
 
   final DateTime currentTime;
-  final String companyName;
   final void Function(String) onNavigate;
 
   @override

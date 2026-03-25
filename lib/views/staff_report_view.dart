@@ -2,47 +2,95 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:adisyos/services/sales_history_service.dart';
+import 'package:adisyos/services/shift_service.dart';
+import 'package:adisyos/services/staff_service.dart';
 
-// ── Apple-inspired design tokens ──────────────────────────────
+// ── Design tokens ─────────────────────────────────────────────
 const _bg          = Color(0xFFF2F2F7);
 const _card        = Colors.white;
 const _orange      = Color(0xFFFF9500);
 const _textPrimary = Color(0xFF1C1C1E);
 const _textSec     = Color(0xFF8E8E93);
+const _green       = Color(0xFF34C759);
+const _blue        = Color(0xFF007AFF);
 
 class StaffReportView extends StatelessWidget {
   const StaffReportView({super.key});
 
-  Map<String, Map<String, dynamic>> _buildStaffStats() {
-    final sales = SalesHistoryService.to.sales;
-    final Map<String, Map<String, dynamic>> stats = {};
+  // Build combined stats: sales + hours for each staff member.
+  List<Map<String, dynamic>> _buildStats() {
+    final profiles = StaffService.to.staffList;
+    final sales    = SalesHistoryService.to.sales;
+    final shifts   = ShiftService.to.shifts;
+    final today    = DateTime.now();
 
+    // Aggregate sales by staff identifier (name or email)
+    final Map<String, Map<String, dynamic>> salesMap = {};
     for (final sale in sales) {
-      final email = (sale['staffEmail'] as String? ?? '').isEmpty
+      final id = (sale['staffEmail'] as String? ?? '').isEmpty
           ? 'Bilinmiyor'
           : sale['staffEmail'] as String;
-
-      if (!stats.containsKey(email)) {
-        stats[email] = {
-          'email': email,
-          'total': 0.0,
-          'count': 0,
-          'lastSale': sale['date'] as String,
-        };
-      }
-
-      stats[email]!['total'] =
-          (stats[email]!['total'] as double) + ((sale['total'] as num).toDouble());
-      stats[email]!['count'] = (stats[email]!['count'] as int) + 1;
-
-      final saleDate = DateTime.parse(sale['date'] as String);
-      final lastDate = DateTime.parse(stats[email]!['lastSale'] as String);
-      if (saleDate.isAfter(lastDate)) {
-        stats[email]!['lastSale'] = sale['date'] as String;
+      salesMap.putIfAbsent(id, () => {'total': 0.0, 'count': 0, 'lastSale': null});
+      salesMap[id]!['total'] =
+          (salesMap[id]!['total'] as double) + ((sale['total'] as num).toDouble());
+      salesMap[id]!['count'] = (salesMap[id]!['count'] as int) + 1;
+      final saleDate = DateTime.tryParse(sale['date'] as String);
+      if (saleDate != null) {
+        final last = salesMap[id]!['lastSale'] as DateTime?;
+        if (last == null || saleDate.isAfter(last)) {
+          salesMap[id]!['lastSale'] = saleDate;
+        }
       }
     }
 
-    return stats;
+    // Calculate today's work minutes per staff identifier
+    final Map<String, int> hoursMap = {};
+    for (final shift in shifts) {
+      final id = shift['staffEmail'] as String? ?? '';
+      if (id.isEmpty) continue;
+      final shiftDate = DateTime.tryParse(shift['date'] as String? ?? '');
+      if (shiftDate == null) continue;
+      if (shiftDate.year != today.year ||
+          shiftDate.month != today.month ||
+          shiftDate.day != today.day) continue;
+      hoursMap[id] = (hoursMap[id] ?? 0) + ShiftService.to.getWorkMinutes(shift);
+    }
+
+    // Build result list — start with known profiles
+    final seen = <String>{};
+    final result = <Map<String, dynamic>>[];
+
+    for (final profile in profiles) {
+      final name = profile['name'] as String;
+      seen.add(name);
+      final s = salesMap[name];
+      result.add({
+        'name': name,
+        'isProfile': true,
+        'total': s?['total'] as double? ?? 0.0,
+        'count': s?['count'] as int? ?? 0,
+        'lastSale': s?['lastSale'] as DateTime?,
+        'todayMinutes': hoursMap[name] ?? 0,
+      });
+    }
+
+    // Add any legacy email-based staff not in profiles
+    for (final entry in salesMap.entries) {
+      if (!seen.contains(entry.key)) {
+        result.add({
+          'name': entry.key,
+          'isProfile': false,
+          'total': entry.value['total'] as double,
+          'count': entry.value['count'] as int,
+          'lastSale': entry.value['lastSale'] as DateTime?,
+          'todayMinutes': hoursMap[entry.key] ?? 0,
+        });
+      }
+    }
+
+    result.sort(
+        (a, b) => (b['total'] as double).compareTo(a['total'] as double));
+    return result;
   }
 
   @override
@@ -51,15 +99,17 @@ class StaffReportView extends StatelessWidget {
       backgroundColor: _bg,
       body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Header ─────────────────────────────────────
             Container(
               height: 60,
               decoration: const BoxDecoration(
                 color: _card,
                 boxShadow: [
-                  BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
-                  BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
+                  BoxShadow(
+                      color: Color(0x0C000000),
+                      blurRadius: 16,
+                      offset: Offset(0, 2)),
                 ],
               ),
               child: Row(
@@ -83,35 +133,36 @@ class StaffReportView extends StatelessWidget {
                 ],
               ),
             ),
+
+            // ── Content ────────────────────────────────────
             Expanded(
               child: Obx(() {
-                final stats = _buildStaffStats();
+                // Access all reactive sources so Obx rebuilds on changes
+                StaffService.to.staffList.length;
+                SalesHistoryService.to.sales.length;
+                ShiftService.to.shifts.length;
+
+                final stats = _buildStats();
+
                 if (stats.isEmpty) {
-                  return Center(
+                  return const Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.people_outline,
-                            size: 48, color: _textSec),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Henüz satış verisi yok',
-                          style: TextStyle(color: _textSec, fontSize: 16),
-                        ),
+                        Icon(Icons.people_outline, size: 48, color: _textSec),
+                        SizedBox(height: 12),
+                        Text('Henüz personel eklenmedi',
+                            style: TextStyle(color: _textSec, fontSize: 16)),
                       ],
                     ),
                   );
                 }
 
-                final sorted = stats.values.toList()
-                  ..sort((a, b) => (b['total'] as double)
-                      .compareTo(a['total'] as double));
-
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: sorted.length,
-                  itemBuilder: (context, i) =>
-                      _StaffCard(staff: sorted[i], rank: i + 1),
+                  itemCount: stats.length,
+                  itemBuilder: (_, i) =>
+                      _StaffCard(stats: stats[i], rank: i + 1),
                 );
               }),
             ),
@@ -122,22 +173,32 @@ class StaffReportView extends StatelessWidget {
   }
 }
 
-// ─── Staff Card ───────────────────────────────────────────────────────────────
+// ── Staff Card ────────────────────────────────────────────────
 
 class _StaffCard extends StatelessWidget {
-  const _StaffCard({required this.staff, required this.rank});
+  const _StaffCard({required this.stats, required this.rank});
 
-  final Map<String, dynamic> staff;
+  final Map<String, dynamic> stats;
   final int rank;
 
   @override
   Widget build(BuildContext context) {
-    final email = staff['email'] as String;
-    final total = staff['total'] as double;
-    final count = staff['count'] as int;
-    final lastSale = DateTime.tryParse(staff['lastSale'] as String);
-    final initial =
-        (email != 'Bilinmiyor' && email.isNotEmpty) ? email[0].toUpperCase() : '?';
+    final name         = stats['name'] as String;
+    final total        = stats['total'] as double;
+    final count        = stats['count'] as int;
+    final lastSale     = stats['lastSale'] as DateTime?;
+    final todayMinutes = stats['todayMinutes'] as int;
+    final isProfile    = stats['isProfile'] as bool;
+
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+
+    // Color based on name hash
+    final avatarColors = [
+      _orange, _blue, _green,
+      const Color(0xFFAF52DE), const Color(0xFF30B0C7), const Color(0xFF5856D6),
+    ];
+    final avatarColor =
+        avatarColors[name.codeUnits.fold(0, (a, b) => a + b) % avatarColors.length];
 
     final medalColor = rank == 1
         ? const Color(0xFFFFD700)
@@ -152,24 +213,29 @@ class _StaffCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
         color: _card,
-        borderRadius: BorderRadius.all(Radius.circular(16)),
+        borderRadius: BorderRadius.all(Radius.circular(18)),
         boxShadow: [
-          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
-          BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
+          BoxShadow(
+              color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
+          BoxShadow(
+              color: Color(0x05000000), blurRadius: 5, offset: Offset(0, 1)),
         ],
       ),
       child: Row(
         children: [
           // Rank badge
           Container(
-            width: 32,
-            height: 32,
+            width: 30,
+            height: 30,
             decoration: BoxDecoration(
               gradient: rank <= 3
                   ? LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color.lerp(medalColor, Colors.white, 0.28)!, medalColor],
+                      colors: [
+                        Color.lerp(medalColor, Colors.white, 0.28)!,
+                        medalColor
+                      ],
                     )
                   : null,
               color: rank > 3 ? medalColor.withOpacity(0.12) : null,
@@ -181,26 +247,30 @@ class _StaffCard extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: rank <= 3 ? Colors.white : medalColor,
-                  fontSize: 13,
+                  fontSize: 12,
                 ),
               ),
             ),
           ),
           const SizedBox(width: 12),
+
           // Avatar
           Container(
-            width: 44,
-            height: 44,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color.lerp(_orange, Colors.white, 0.28)!, _orange],
+                colors: [
+                  Color.lerp(avatarColor, Colors.white, 0.28)!,
+                  avatarColor
+                ],
               ),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: _orange.withOpacity(0.25),
+                  color: avatarColor.withOpacity(0.28),
                   blurRadius: 8,
                   offset: const Offset(0, 3),
                 ),
@@ -217,29 +287,79 @@ class _StaffCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          // Info
+
+          // Name + meta
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  email == 'Bilinmiyor'
-                      ? email
-                      : email.split('@').first,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: _textPrimary),
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: _textPrimary),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (!isProfile)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _textSec.withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: const Text('eski',
+                            style:
+                                TextStyle(fontSize: 10, color: _textSec)),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '$count işlem · ${lastSale != null ? DateFormat('dd/MM/yyyy').format(lastSale) : '-'}',
-                  style: const TextStyle(fontSize: 12, color: _textSec),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    if (count > 0)
+                      Text(
+                        '$count işlem',
+                        style: const TextStyle(fontSize: 12, color: _textSec),
+                      ),
+                    if (count > 0 && lastSale != null)
+                      const Text(' · ',
+                          style:
+                              TextStyle(fontSize: 12, color: _textSec)),
+                    if (lastSale != null)
+                      Text(
+                        DateFormat('dd/MM/yyyy').format(lastSale),
+                        style: const TextStyle(
+                            fontSize: 12, color: _textSec),
+                      ),
+                  ],
                 ),
+                if (todayMinutes > 0) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      const Icon(Icons.schedule_rounded,
+                          size: 11, color: _green),
+                      const SizedBox(width: 3),
+                      Text(
+                        'Bugün: ${ShiftService.to.formatDuration(todayMinutes)}',
+                        style: const TextStyle(
+                            fontSize: 11,
+                            color: _green,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
+
           // Revenue
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,

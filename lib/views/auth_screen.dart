@@ -4,9 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:adisyos/core/errors/auth_exception.dart';
 import 'package:adisyos/features/auth/domain/entities/auth_user.dart';
 import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
-import 'package:adisyos/models/app_role.dart';
-import 'package:adisyos/views/home_view.dart';
-import 'package:adisyos/views/tables_view.dart';
+import 'package:adisyos/views/pin_screen.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _bg          = Color(0xFFF2F2F7);
@@ -97,12 +95,11 @@ class _AuthScreenState extends State<AuthScreen>
     }
   }
 
-  void _navigateByRole(AppRole role) {
-    if (role == AppRole.admin) {
-      Get.offAll(() => const HomeView());
-    } else {
-      Get.offAll(() => const TablesView());
-    }
+  void _navigateByRole(_) {
+    // After any successful login the device goes to the PIN screen.
+    // Staff pick their profile and enter their PIN there.
+    // Admins can tap "Yönetici Girişi" on the PIN screen to reach HomeView.
+    Get.offAll(() => const PinScreen());
   }
 
   String _friendlyError(String raw) {

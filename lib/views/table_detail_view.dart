@@ -4,10 +4,10 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:adisyos/services/menu_service.dart';
 import 'package:adisyos/services/table_service.dart';
 import 'package:adisyos/services/inventory_service.dart';
+import 'package:adisyos/services/settings_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
@@ -1131,9 +1131,9 @@ class _TableDetailViewState extends State<TableDetailView> {
         TableService.to.getTotalWithDiscount(widget.tableIndex);
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final companyName =
-          prefs.getString('companyName') ?? 'Adisyos';
+      final companyName = SettingsService.to.companyName.value.isNotEmpty
+          ? SettingsService.to.companyName.value
+          : 'Adisyos';
 
       final regularFont = await PdfGoogleFonts.notoSansRegular();
       final boldFont = await PdfGoogleFonts.notoSansBold();

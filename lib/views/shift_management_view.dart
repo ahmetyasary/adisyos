@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:adisyos/services/shift_service.dart';
+import 'package:adisyos/services/staff_service.dart';
 import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
 import 'package:adisyos/models/app_role.dart';
 
@@ -44,7 +45,9 @@ class _ShiftManagementViewState extends State<ShiftManagementView> {
     super.dispose();
   }
 
-  String get _email => AuthController.to.user.value?.email ?? '';
+  String get _email => StaffService.to.currentStaffIdentifier.isNotEmpty
+      ? StaffService.to.currentStaffIdentifier
+      : AuthController.to.user.value?.email ?? '';
   AppRole? get _role => AuthController.to.currentRole;
 
   @override

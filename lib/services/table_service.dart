@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:adisyos/services/sales_history_service.dart';
 import 'package:adisyos/services/kitchen_service.dart';
 import 'package:adisyos/services/inventory_service.dart';
-import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
+import 'package:adisyos/services/staff_service.dart';
 
 class TableService extends GetxService {
   static TableService get to => Get.find();
@@ -100,24 +100,26 @@ class TableService extends GetxService {
   void _assignStaff(int tableIndex) {
     if ((tables[tableIndex]['staffEmail'] as String).isNotEmpty) return;
     try {
-      final email = AuthController.to.user.value?.email ?? '';
-      if (email.isNotEmpty) tables[tableIndex]['staffEmail'] = email;
+      final name = StaffService.to.currentStaffIdentifier;
+      if (name.isNotEmpty) tables[tableIndex]['staffEmail'] = name;
     } catch (_) {}
   }
 
   // ── Table CRUD ───────────────────────────────────────────────
 
-  Future<void> addTable(String name) async {
+  Future<void> addTable(String name, {String? sectionId}) async {
     try {
+      final insertPayload = <String, dynamic>{
+        'name': name,
+        'is_occupied': false,
+        'total': 0.0,
+        'discount': 0.0,
+        'staff_email': '',
+        if (sectionId != null) 'section_id': sectionId,
+      };
       final row = await _db
           .from('tables')
-          .insert({
-            'name': name,
-            'is_occupied': false,
-            'total': 0.0,
-            'discount': 0.0,
-            'staff_email': '',
-          })
+          .insert(insertPayload)
           .select()
           .single();
 
@@ -128,6 +130,7 @@ class TableService extends GetxService {
         'total': 0.0,
         'discount': 0.0,
         'staffEmail': '',
+        'sectionId': sectionId,
         'orders': <Map<String, dynamic>>[],
       });
     } catch (e) {
