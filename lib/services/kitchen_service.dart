@@ -13,6 +13,9 @@ class KitchenService extends GetxService {
   @override
   void onInit() {
     super.onInit();
+    _db.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn) _load();
+    });
     _init();
   }
 

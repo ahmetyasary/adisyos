@@ -184,6 +184,19 @@ class _TablesViewState extends State<TablesView> {
     });
   }
 
+  // ── Helpers ───────────────────────────────────────────────────
+
+  IconData _getSectionIcon(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('bahçe') || lower.contains('garden')) return Icons.yard_outlined;
+    if (lower.contains('teras') || lower.contains('terrace')) return Icons.deck_outlined;
+    if (lower.contains('salon') || lower.contains('iç')) return Icons.chair_alt_outlined;
+    if (lower.contains('bar')) return Icons.local_bar_outlined;
+    if (lower.contains('paket') || lower.contains('gel')) return Icons.takeout_dining_outlined;
+    if (lower.contains('vip') || lower.contains('özel')) return Icons.star_border_rounded;
+    return Icons.label_outline_rounded;
+  }
+
   // ── Build ────────────────────────────────────────────────────
 
   @override
@@ -198,6 +211,7 @@ class _TablesViewState extends State<TablesView> {
         child: const Icon(Icons.add),
       ),
       body: SafeArea(
+        bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -244,46 +258,48 @@ class _TablesViewState extends State<TablesView> {
               final free     = total - occupied;
               final sections = SectionService.to.sections;
 
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Stat boxes
-                    _StatBox(label: 'TOPLAM', value: '$total', valueColor: _textPrimary),
-                    const SizedBox(width: 8),
-                    _StatBox(label: 'DOLU',   value: '$occupied', valueColor: _occupied),
-                    const SizedBox(width: 8),
-                    _StatBox(label: 'BOŞ',    value: '$free',     valueColor: _available),
-
-                    // Section pills flush to the right
-                    if (sections.isNotEmpty) ...[
-                      const Spacer(),
-                      Flexible(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Obx(() => Row(
-                            children: [
-                              _SectionPill(
-                                label: 'Tümü',
-                                selected: _selectedSectionId.value == null,
-                                onTap: () => _selectedSectionId.value = null,
-                              ),
-                              ...sections.map((s) => Padding(
-                                    padding: const EdgeInsets.only(left: 8),
-                                    child: _SectionPill(
-                                      label: s['name'] as String,
-                                      selected: _selectedSectionId.value == s['id'],
-                                      onTap: () => _selectedSectionId.value = s['id'] as String,
-                                    ),
-                                  )),
-                            ],
-                          )),
-                        ),
-                      ),
-                    ],
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: Row(
+                      children: [
+                        Expanded(child: _StatBox(label: 'TOPLAM', value: '$total', valueColor: _textPrimary)),
+                        const SizedBox(width: 12),
+                        Expanded(child: _StatBox(label: 'DOLU',   value: '$occupied', valueColor: _occupied)),
+                        const SizedBox(width: 12),
+                        Expanded(child: _StatBox(label: 'BOŞ',    value: '$free',     valueColor: _available)),
+                      ],
+                    ),
+                  ),
+                  if (sections.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Obx(() => Row(
+                        children: [
+                          _SectionPill(
+                            label: 'Tümü',
+                            icon: Icons.dashboard_rounded,
+                            selected: _selectedSectionId.value == null,
+                            onTap: () => _selectedSectionId.value = null,
+                          ),
+                          ...sections.map((s) => Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: _SectionPill(
+                                  label: s['name'] as String,
+                                  icon: _getSectionIcon(s['name'] as String),
+                                  selected: _selectedSectionId.value == s['id'],
+                                  onTap: () => _selectedSectionId.value = s['id'] as String,
+                                ),
+                              )),
+                        ],
+                      )),
+                    ),
                   ],
-                ),
+                ],
               );
             }),
 
@@ -294,9 +310,22 @@ class _TablesViewState extends State<TablesView> {
               child: Obx(() {
                 final allTables = TableService.to.tables;
                 final sectionId = _selectedSectionId.value;
-                final tables    = sectionId == null
-                    ? allTables
-                    : allTables.where((t) => t['sectionId'] == sectionId).toList();
+                
+                List<Map<String, dynamic>> tables = allTables;
+
+                if (sectionId != null) {
+                  final sections = SectionService.to.sections;
+                  final selectedSection = sections.firstWhere((s) => s['id'] == sectionId, orElse: () => {});
+                  final sectionName = selectedSection.isNotEmpty ? (selectedSection['name'] as String).toLowerCase() : '';
+
+                  tables = allTables.where((t) {
+                    final tSectionId = t['sectionId'];
+                    final tName = (t['name'] as String).toLowerCase();
+
+                    // Match by exact sectionId OR if the table's name contains the section's name
+                    return tSectionId == sectionId || (sectionName.isNotEmpty && tName.contains(sectionName));
+                  }).toList();
+                }
 
                 if (allTables.isEmpty) {
                   return Center(
@@ -328,14 +357,14 @@ class _TablesViewState extends State<TablesView> {
 
                 return LayoutBuilder(builder: (context, constraints) {
                   final cols = constraints.maxWidth < 500 ? 2
-                      : constraints.maxWidth < 800 ? 3 : 4;
+                      : constraints.maxWidth < 700 ? 4 : 6;
                   return GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, MediaQuery.of(context).padding.bottom + 88),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: cols,
                       crossAxisSpacing: 14,
                       mainAxisSpacing: 14,
-                      childAspectRatio: 0.78,
+                      childAspectRatio: 0.95,
                     ),
                     itemCount: tables.length,
                     itemBuilder: (context, i) {
@@ -404,8 +433,14 @@ class _SectionPill extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  const _SectionPill(
-      {required this.label, required this.selected, required this.onTap});
+  final IconData? icon;
+
+  const _SectionPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -413,7 +448,7 @@ class _SectionPill extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: selected ? _orange : _card,
           borderRadius: BorderRadius.circular(20),
@@ -431,13 +466,26 @@ class _SectionPill extends StatelessWidget {
                       offset: Offset(0, 2))
                 ],
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : _textSecondary,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 16,
+                color: selected ? Colors.white : _textSecondary,
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : _textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -463,117 +511,149 @@ class _TableCard extends StatelessWidget {
     final isOccupied = table['isOccupied'] as bool;
     final total      = (table['total'] as num?)?.toDouble() ?? 0.0;
     final statusColor = isOccupied ? _occupied : _available;
-    final iconBg      = isOccupied
-        ? _occupied.withOpacity(0.10)
-        : _available.withOpacity(0.10);
+
+    // Parse name (e.g. "BAHÇE 2" -> prefix: "BAHÇE", mainText: "2")
+    final parts = name.split(' ');
+    final String prefix;
+    final String mainText;
+    if (parts.length > 1) {
+      mainText = parts.last;
+      prefix = parts.sublist(0, parts.length - 1).join(' ');
+    } else {
+      prefix = '';
+      mainText = name;
+    }
 
     return GestureDetector(
       onTap: onTap,
       onLongPressStart: (d) => onLongPress(d.globalPosition),
       child: Container(
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: _card,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: const [
-            BoxShadow(color: Color(0x0A000000), blurRadius: 16, offset: Offset(0, 4)),
-            BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
+            BoxShadow(color: Color(0x08000000), blurRadius: 10, offset: Offset(0, 4)),
           ],
         ),
-        child: Stack(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Status dot top-right
-            Positioned(
-              top: 12,
-              right: 12,
-              child: Container(
-                width: 9,
-                height: 9,
-                decoration: BoxDecoration(
-                  color: statusColor,
-                  shape: BoxShape.circle,
+            // Top Section
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (prefix.isNotEmpty) ...[
+                        Text(
+                          prefix,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: _textSecondary,
+                            letterSpacing: 0.8,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                      ],
+                      Text(
+                        mainText,
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          color: _textPrimary,
+                          height: 1.1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+                if (isOccupied)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.people_alt_rounded, size: 18, color: statusColor),
+                  ),
+              ],
             ),
 
-            Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Icon area
-                  Expanded(
-                    child: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: iconBg,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.table_bar_rounded,
-                          size: 38,
-                          color: statusColor,
+            const Spacer(),
+
+            // Bottom Section
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Table name
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: _textPrimary,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-
-                  // Status badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      isOccupied ? 'Dolu' : 'Boş',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: statusColor,
-                      ),
-                    ),
-                  ),
-
-                  // Hesap label (only when occupied)
-                  if (isOccupied) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Text('HESAP  ',
-                            style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
-                                color: _textSecondary)),
-                        Expanded(
-                          child: Text(
-                            '₺${total.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: _orange,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                        child: Text(
+                          isOccupied ? 'DOLU' : 'BOŞ',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: statusColor,
+                            letterSpacing: 0.5,
                           ),
                         ),
-                      ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (isOccupied)
+                        Text(
+                          '₺${total.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: _textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      else
+                        const Text(
+                          'Müsait',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: _textSecondary,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // Action Button
+                GestureDetector(
+                  onTapDown: (d) => onLongPress(d.globalPosition),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: isOccupied ? null : BoxDecoration(
+                      color: _textSecondary.withOpacity(0.15),
+                      shape: BoxShape.circle,
                     ),
-                  ],
-                ],
-              ),
+                    child: Icon(
+                      isOccupied ? Icons.more_vert_rounded : Icons.add_rounded,
+                      size: 20,
+                      color: isOccupied ? _textSecondary : _textPrimary,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

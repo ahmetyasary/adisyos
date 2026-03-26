@@ -17,7 +17,6 @@ const _orange        = Color(0xFFFF9500);
 const _textPrimary   = Color(0xFF1C1C1E);
 const _textSecondary = Color(0xFF8E8E93);
 const _border        = Color(0xFFE5E5EA);
-const _menuItemBg    = Color(0xFFFFF4E0);
 
 class TableDetailView extends StatefulWidget {
   final int tableNumber;
@@ -60,30 +59,526 @@ class _TableDetailViewState extends State<TableDetailView> {
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
-        child: Column(
-          children: [
-            // Top bar
-            _buildTopBar(context),
-            // Main content
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Category sidebar
-                  _buildCategorySidebar(),
-                  // Menu section
-                  Expanded(
-                    flex: 3,
-                    child: _buildMenuSection(),
+        bottom: false,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = constraints.maxWidth < 650;
+            return Column(
+              children: [
+                // Top bar
+                _buildTopBar(context),
+                // Main content
+                Expanded(
+                  child: isMobile
+                      ? _buildMobileLayout(context)
+                      : Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildCategorySidebar(),
+                            Expanded(flex: 3, child: _buildMenuSection()),
+                            _buildOrderPanel(context, width: 300),
+                          ],
+                        ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // ── Mobile layout: sidebar + list on top, full-width checkout below ──
+  Widget _buildMobileLayout(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildMobileCategorySidebar(context),
+              Expanded(child: _buildMobileOrderTop(context)),
+            ],
+          ),
+        ),
+        _buildMobileCheckoutBottom(context),
+      ],
+    );
+  }
+
+  Widget _buildMobileOrderTop(BuildContext context) {
+    return Container(
+      color: _card,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Sipariş Detayı',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: _textPrimary,
+                      ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  // Order panel
-                  _buildOrderPanel(context),
+                  child: Text(
+                    widget.tableName,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: _orange,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(color: _border, height: 1),
+          Expanded(
+            child: Obx(() {
+              final orders = TableService.to.getOrders(widget.tableIndex);
+              if (orders.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.shopping_cart_outlined, size: 40, color: _textSecondary),
+                      const SizedBox(height: 10),
+                      Text('no_orders_yet'.tr,
+                          style: const TextStyle(color: _textSecondary, fontSize: 13),
+                          textAlign: TextAlign.center),
+                    ],
+                  ),
+                );
+              }
+              return ListView.builder(
+                itemCount: orders.length,
+                itemBuilder: (context, index) {
+                  final order = orders[index];
+                  final name = order['name'] as String;
+                  final quantity = order['quantity'] as int;
+                  final price = order['price'] as double;
+                  final lineTotal = price * quantity;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    child: Row(
+                      children: [
+                        _QtyBtn(
+                          icon: Icons.remove,
+                          onTap: () => TableService.to.decrementOrder(widget.tableIndex, index),
+                        ),
+                        const SizedBox(width: 4),
+                        Text('${quantity}x',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _textPrimary)),
+                        const SizedBox(width: 4),
+                        _QtyBtn(
+                          icon: Icons.add,
+                          onTap: () => TableService.to.addOrder(widget.tableIndex, name, price),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(name,
+                              style: const TextStyle(fontSize: 12, color: _textPrimary),
+                              overflow: TextOverflow.ellipsis),
+                        ),
+                        Text('₺${lineTotal.toStringAsFixed(2)}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _textPrimary)),
+                        GestureDetector(
+                          onTap: () => TableService.to.removeOrder(widget.tableIndex, index),
+                          child: const Padding(
+                            padding: EdgeInsets.all(4),
+                            child: Icon(Icons.delete_outline, size: 16, color: _textSecondary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileCheckoutBottom(BuildContext context) {
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+    return Container(
+      color: _card,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Divider(color: _border, height: 1),
+          Obx(() {
+            final subtotal = TableService.to.getTotal(widget.tableIndex);
+            final discount = TableService.to.getDiscount(widget.tableIndex);
+            final finalTotal = TableService.to.getTotalWithDiscount(widget.tableIndex);
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Column(
+                children: [
+                  _SummaryRow(
+                    label: 'Ara Toplam',
+                    value: '₺${subtotal.toStringAsFixed(2)}',
+                  ),
+                  if (discount > 0)
+                    _SummaryRow(
+                      label: 'İskonto',
+                      value: '-₺${discount.toStringAsFixed(2)}',
+                      valueColor: _orange,
+                    ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Toplam',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: _textPrimary,
+                              )),
+                      Text('₺${finalTotal.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 20, color: _orange)),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _ActionBtn(icon: Icons.add_circle_outline, label: 'new'.tr,      color: AppTheme.accentColor,          onTap: _handleNewOrder),
+                  _ActionBtn(icon: Icons.call_split,         label: 'split'.tr,    color: AppTheme.infoColor,            onTap: _handleSplit),
+                  _ActionBtn(icon: Icons.discount,           label: 'discount'.tr, color: AppTheme.warningColor,         onTap: _handleDiscount),
+                  _ActionBtn(icon: Icons.print,              label: 'print'.tr,    color: const Color(0xFF616161),       onTap: _handlePrint),
+                  _ActionBtn(icon: Icons.compare_arrows,     label: 'move'.tr,     color: AppTheme.accentColor,          onTap: _handleMove),
                 ],
               ),
             ),
-          ],
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomPad),
+            child: SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _orange,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                onPressed: _handlePayment,
+                child: const Text('Ödeme Al',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.5)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileCategorySidebar(BuildContext context) {
+    return Container(
+      width: 72,
+      decoration: const BoxDecoration(
+        color: _card,
+        boxShadow: [
+          BoxShadow(color: Color(0x0A000000), blurRadius: 12, offset: Offset(2, 0)),
+        ],
+      ),
+      child: Obx(
+        () => ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          itemCount: MenuService.to.menus.length,
+          itemBuilder: (context, index) {
+            final menu = MenuService.to.menus[index];
+            return GestureDetector(
+              onTap: () {
+                setState(() => _selectedMenuIndex = index);
+                _showMenuBottomSheet(context, index);
+              },
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: index == _safeMenuIndex
+                      ? _orange.withOpacity(0.1)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: index == _safeMenuIndex
+                            ? const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFFFFBF4D), _orange],
+                              )
+                            : null,
+                        color: index == _safeMenuIndex ? null : _bg,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: index == _safeMenuIndex
+                            ? [BoxShadow(color: _orange.withOpacity(0.28), blurRadius: 8, offset: const Offset(0, 3))]
+                            : null,
+                      ),
+                      child: Icon(
+                        Icons.restaurant_menu,
+                        size: 20,
+                        color: index == _safeMenuIndex ? Colors.white : _textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      menu['name'] as String,
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: index == _safeMenuIndex ? _orange : _textSecondary,
+                        fontWeight: index == _safeMenuIndex ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       ),
+    );
+  }
+
+  void _showMenuBottomSheet(BuildContext context, int categoryIndex) {
+    final menus = MenuService.to.menus;
+    if (menus.isEmpty) return;
+    final categoryName = menus[categoryIndex]['name'] as String;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        String localSearch = '';
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final items = localSearch.isEmpty
+                ? List<Map<String, dynamic>>.from(
+                    (menus[categoryIndex]['items'] as List)
+                        .map((i) => i as Map<String, dynamic>))
+                : () {
+                    final results = <Map<String, dynamic>>[];
+                    for (final menu in menus) {
+                      for (final item in (menu['items'] as List)) {
+                        final m = item as Map<String, dynamic>;
+                        if ((m['name'] as String).toLowerCase().contains(localSearch)) {
+                          results.add(m);
+                        }
+                      }
+                    }
+                    return results;
+                  }();
+
+            return DraggableScrollableSheet(
+              initialChildSize: 0.88,
+              minChildSize: 0.45,
+              maxChildSize: 0.97,
+              builder: (ctx, scrollController) => Container(
+                decoration: const BoxDecoration(
+                  color: _bg,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: Column(
+                  children: [
+                    // Drag handle
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10, bottom: 4),
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: _textSecondary.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.restaurant_menu, color: _orange, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            categoryName,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: _textPrimary,
+                            ),
+                          ),
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: () => Navigator.of(ctx).pop(),
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: _textSecondary.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close, size: 18, color: _textSecondary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Search bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: 'search_menu'.tr,
+                          hintStyle: const TextStyle(color: _textSecondary, fontSize: 14),
+                          prefixIcon: const Icon(Icons.search, color: _textSecondary, size: 20),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: const BorderSide(color: _orange, width: 1.5),
+                          ),
+                        ),
+                        onChanged: (v) => setSheetState(() => localSearch = v.toLowerCase()),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Items grid
+                    Expanded(
+                      child: items.isEmpty
+                          ? Center(
+                              child: Text(
+                                localSearch.isNotEmpty ? 'Sonuç bulunamadı' : 'no_menu_defined'.tr,
+                                style: const TextStyle(color: _textSecondary, fontSize: 15),
+                              ),
+                            )
+                          : GridView.builder(
+                              controller: scrollController,
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                childAspectRatio: 0.78,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                              ),
+                              itemCount: items.length,
+                              itemBuilder: (ctx, i) {
+                                final item = items[i];
+                                final name = item['name'] as String;
+                                final isOut = InventoryService.to.isOutOfStock(name);
+                                final isLow = InventoryService.to.isLowStock(name);
+                                final isTracked = InventoryService.to.isTracked(name);
+                                final stockVal = InventoryService.to.getStock(name);
+                                return InkWell(
+                                  onTap: () {
+                                    if (isOut) {
+                                      Get.snackbar(
+                                        'warning'.tr,
+                                        '$name stokta yok!',
+                                        snackPosition: SnackPosition.BOTTOM,
+                                        backgroundColor: AppTheme.warningColor,
+                                        colorText: Colors.white,
+                                      );
+                                      return;
+                                    }
+                                    TableService.to.addOrder(
+                                      widget.tableIndex,
+                                      name,
+                                      item['price'] as double,
+                                    );
+                                    Get.snackbar(
+                                      '',
+                                      '$name eklendi',
+                                      snackPosition: SnackPosition.BOTTOM,
+                                      backgroundColor: const Color(0xFF34C759),
+                                      colorText: Colors.white,
+                                      duration: const Duration(milliseconds: 800),
+                                      margin: const EdgeInsets.all(12),
+                                    );
+                                  },
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Stack(
+                                    children: [
+                                      _buildMenuCard(
+                                        name,
+                                        '₺${(item['price'] as double).toStringAsFixed(2)}',
+                                        dimmed: isOut,
+                                      ),
+                                      if (isTracked)
+                                        Positioned(
+                                          top: 6,
+                                          right: 6,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: isOut
+                                                  ? const Color(0xFFFF3B30)
+                                                  : isLow
+                                                      ? _orange
+                                                      : const Color(0xFF34C759),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              isOut ? 'Bitti' : '$stockVal',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -255,53 +750,7 @@ class _TableDetailViewState extends State<TableDetailView> {
               ),
             ),
           ),
-          // History button at the bottom of sidebar
-          _buildHistoryButton(),
         ],
-      ),
-    );
-  }
-
-  Widget _buildHistoryButton() {
-    return Container(
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0xFFEEEEEE), width: 0.5)),
-      ),
-      child: GestureDetector(
-        onTap: () {
-          // History action placeholder
-        },
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-          decoration: BoxDecoration(
-            color: _menuItemBg,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Column(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: _orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.history, size: 20, color: _orange),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Geçmiş',
-                style: TextStyle(
-                  fontSize: 9,
-                  color: _orange,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -589,9 +1038,9 @@ class _TableDetailViewState extends State<TableDetailView> {
     );
   }
 
-  Widget _buildOrderPanel(BuildContext context) {
+  Widget _buildOrderPanel(BuildContext context, {double? width}) {
     return Container(
-      width: 300,
+      width: width,
       decoration: const BoxDecoration(
         color: _card,
         boxShadow: [

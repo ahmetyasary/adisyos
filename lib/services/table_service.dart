@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -13,15 +14,21 @@ class TableService extends GetxService {
 
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
+  Timer? _debounce;
+  int _loadSeq = 0;
 
   @override
   void onInit() {
     super.onInit();
+    _db.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn) _load();
+    });
     _init();
   }
 
   @override
   void onClose() {
+    _debounce?.cancel();
     if (_channel != null) _db.removeChannel(_channel!);
     super.onClose();
   }
@@ -31,15 +38,22 @@ class TableService extends GetxService {
     _subscribeRealtime();
   }
 
+  void _debouncedLoad() {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () => _load());
+  }
+
   // ── Load ────────────────────────────────────────────────────
 
   Future<void> _load() async {
+    final seq = ++_loadSeq;
     try {
       final rows = await _db
           .from('tables')
           .select('*, orders(*)')
           .order('id');
 
+      if (seq != _loadSeq) return;
       tables.assignAll(rows.map(_rowToTable).toList());
     } catch (e) {
       if (kDebugMode) print('[TableService] load error: $e');
@@ -53,6 +67,7 @@ class TableService extends GetxService {
         'total': (row['total'] as num).toDouble(),
         'discount': (row['discount'] as num).toDouble(),
         'staffEmail': (row['staff_email'] as String?) ?? '',
+        'sectionId': row['section_id'] as String?,
         'orders': (row['orders'] as List)
             .map((o) => <String, dynamic>{
                   'id': o['id'] as int,
@@ -72,13 +87,13 @@ class TableService extends GetxService {
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'tables',
-          callback: (_) => _load(),
+          callback: (_) => _debouncedLoad(),
         )
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'orders',
-          callback: (_) => _load(),
+          callback: (_) => _debouncedLoad(),
         )
         .subscribe();
   }

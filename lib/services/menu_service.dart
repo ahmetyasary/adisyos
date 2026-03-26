@@ -8,11 +8,40 @@ class MenuService extends GetxService {
   final RxList<Map<String, dynamic>> menus = <Map<String, dynamic>>[].obs;
 
   final _db = Supabase.instance.client;
+  RealtimeChannel? _channel;
 
   @override
   void onInit() {
     super.onInit();
+    _db.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn) _loadMenus();
+    });
     _loadMenus();
+    _subscribeRealtime();
+  }
+
+  @override
+  void onClose() {
+    _channel?.unsubscribe();
+    super.onClose();
+  }
+
+  void _subscribeRealtime() {
+    _channel = _db
+        .channel('menu_changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'menus',
+          callback: (_) => _loadMenus(),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'menu_items',
+          callback: (_) => _loadMenus(),
+        )
+        .subscribe();
   }
 
   // ── Load ────────────────────────────────────────────────────

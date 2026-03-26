@@ -8,11 +8,34 @@ class SettingsService extends GetxService {
   final RxString companyName = ''.obs;
 
   final _db = Supabase.instance.client;
+  RealtimeChannel? _channel;
 
   @override
   void onInit() {
     super.onInit();
+    _db.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn) _load();
+    });
     _load();
+    _subscribeRealtime();
+  }
+
+  @override
+  void onClose() {
+    _channel?.unsubscribe();
+    super.onClose();
+  }
+
+  void _subscribeRealtime() {
+    _channel = _db
+        .channel('settings_changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'app_settings',
+          callback: (_) => _load(),
+        )
+        .subscribe();
   }
 
   Future<void> _load() async {

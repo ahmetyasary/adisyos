@@ -8,11 +8,40 @@ class SalesHistoryService extends GetxService {
   final RxList<Map<String, dynamic>> sales = <Map<String, dynamic>>[].obs;
 
   final _db = Supabase.instance.client;
+  RealtimeChannel? _channel;
 
   @override
   void onInit() {
     super.onInit();
+    _db.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn) _load();
+    });
     _load();
+    _subscribeRealtime();
+  }
+
+  @override
+  void onClose() {
+    _channel?.unsubscribe();
+    super.onClose();
+  }
+
+  void _subscribeRealtime() {
+    _channel = _db
+        .channel('sales_changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'sales',
+          callback: (_) => _load(),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'sale_items',
+          callback: (_) => _load(),
+        )
+        .subscribe();
   }
 
   // ── Load ────────────────────────────────────────────────────

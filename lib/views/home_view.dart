@@ -127,10 +127,11 @@ class _HomeViewState extends State<HomeView> {
       {
         'title':   'Personel',
         'subtitle':'Performans ve puantaj',
-        'icon':    Icons.leaderboard_rounded,
+        'icon':    Icons.people_rounded,
         'color':   const Color(0xFF5856D6), // iOS Indigo
         'route':   'staff_report',
         'active':  true,
+        'hidden':  false,
         'primary': false,
         'roles':   [AppRole.admin],
       },
@@ -141,6 +142,7 @@ class _HomeViewState extends State<HomeView> {
         'color':   const Color(0xFF30B0C7), // Teal
         'route':   'shifts',
         'active':  true,
+        'hidden':  true,
         'primary': false,
         'roles':   [AppRole.admin, AppRole.staff],
       },
@@ -151,23 +153,17 @@ class _HomeViewState extends State<HomeView> {
         'color':   const Color(0xFF3A3A3C), // Dark charcoal
         'route':   'dashboard',
         'active':  true,
-        'primary': false,
-        'roles':   [AppRole.admin],
-      },
-      {
-        'title':   'staff'.tr,
-        'subtitle':'Personel hesapları ve roller',
-        'icon':    Icons.people_rounded,
-        'color':   _labelSecondary,
-        'route':   'staff',
-        'active':  false,
+        'hidden':  false,
         'primary': false,
         'roles':   [AppRole.admin],
       },
     ];
 
     if (role == null) return [];
-    return all.where((c) => (c['roles'] as List<AppRole>).contains(role)).toList();
+    return all.where((c) =>
+      (c['roles'] as List<AppRole>).contains(role) &&
+      (c['hidden'] as bool? ?? false) == false,
+    ).toList();
   }
 
   @override
@@ -237,113 +233,28 @@ class _TopBar extends StatelessWidget {
           const Spacer(),
 
           // ── Clock ─────────────────────────────────────
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                DateFormat('HH:mm').format(currentTime),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: _labelPrimary,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              Text(
-                DateFormat('dd MMM, EEE', Get.locale?.languageCode)
-                    .format(currentTime),
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: _labelSecondary,
-                  letterSpacing: 0.1,
-                ),
-              ),
-            ],
+          Text(
+            DateFormat('HH:mm').format(currentTime),
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: _labelPrimary,
+              letterSpacing: 0.5,
+            ),
           ),
 
-          const SizedBox(width: 20),
+          const SizedBox(width: 12),
 
-          // ── User info + action icons ───────────────────
-          Obx(() {
-            final user      = AuthController.to.user.value;
-            final email     = user?.email ?? '';
-            final roleLabel = user?.role.name ?? '';
-            final initial   = email.isNotEmpty ? email[0].toUpperCase() : 'U';
-
-            return Row(
-              children: [
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      email.split('@').first,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: _labelPrimary,
-                        letterSpacing: -0.1,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      roleLabel,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: _labelSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 10),
-
-                // Avatar — circular with gradient
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFFFFB340), Color(0xFFFF9500)],
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x3DFF9500),
-                        blurRadius: 8,
-                        offset: Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      initial,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-
-                _TopBarIconButton(
-                  icon: Icons.notifications_none_rounded,
-                  onTap: () => onNavigate('notifications'),
-                ),
-                const SizedBox(width: 6),
-
-                _TopBarIconButton(
-                  icon: Icons.settings_outlined,
-                  onTap: () => onNavigate('settings'),
-                ),
-              ],
-            );
-          }),
+          // ── Action icons ───────────────────────────────
+          _TopBarIconButton(
+            icon: Icons.notifications_none_rounded,
+            onTap: () => onNavigate('notifications'),
+          ),
+          const SizedBox(width: 6),
+          _TopBarIconButton(
+            icon: Icons.settings_outlined,
+            onTap: () => onNavigate('settings'),
+          ),
         ],
       ),
     );
@@ -687,7 +598,7 @@ class _FeatureGrid extends StatelessWidget {
           runSpacing: spacing,
           children: cards.map((card) {
             final occupancyLabel = card['route'] == 'tables' && total > 0
-                ? '$occupied / $total Dolu'
+                ? '$occupied/$total'
                 : null;
             return SizedBox(
               width: itemW,
@@ -811,7 +722,7 @@ class _FeatureCardState extends State<_FeatureCard>
           ),
           child: Stack(
             children: [
-              // ── Main content column ───────────────────────
+              const SizedBox(width: double.infinity),
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -916,21 +827,14 @@ class _Footer extends StatelessWidget {
     final name = companyName.isNotEmpty ? companyName : 'Şirket Adınızı Giriniz';
 
     return Container(
-      height: 42,
       decoration: const BoxDecoration(
         color: _card,
         border: Border(top: BorderSide(color: _separator, width: 0.5)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Row(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.support_agent_outlined, size: 13, color: _labelSecondary),
-          const SizedBox(width: 5),
-          Text(
-            'customer_service'.tr,
-            style: const TextStyle(fontSize: 11, color: _labelSecondary),
-          ),
-          const Spacer(),
           Text(
             name,
             style: const TextStyle(
@@ -941,10 +845,30 @@ class _Footer extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const Spacer(),
-          const Text(
-            'Adisyos v0.1 Beta · by Smartlogy',
-            style: TextStyle(fontSize: 11, color: _labelSecondary),
+          const SizedBox(height: 2),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.support_agent_outlined, size: 12, color: _labelSecondary),
+                  const SizedBox(width: 4),
+                  Text(
+                    'customer_service'.tr,
+                    style: const TextStyle(fontSize: 10, color: _labelSecondary),
+                  ),
+                ],
+              ),
+              const Text(
+                '  ·  ',
+                style: TextStyle(fontSize: 10, color: _labelSecondary),
+              ),
+              const Text(
+                'Adisyos v0.1 Beta · by Smartlogy',
+                style: TextStyle(fontSize: 10, color: _labelSecondary),
+              ),
+            ],
           ),
         ],
       ),

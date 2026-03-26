@@ -9,6 +9,7 @@ class StaffService extends GetxService {
   final Rx<Map<String, dynamic>?> currentStaff = Rx(null);
 
   final _db = Supabase.instance.client;
+  RealtimeChannel? _channel;
 
   bool get hasActiveStaff => currentStaff.value != null;
   String get currentStaffIdentifier =>
@@ -17,7 +18,29 @@ class StaffService extends GetxService {
   @override
   void onInit() {
     super.onInit();
+    _db.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn) load();
+    });
     load();
+    _subscribeRealtime();
+  }
+
+  @override
+  void onClose() {
+    _channel?.unsubscribe();
+    super.onClose();
+  }
+
+  void _subscribeRealtime() {
+    _channel = _db
+        .channel('staff_changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'staff_profiles',
+          callback: (_) => load(),
+        )
+        .subscribe();
   }
 
   Future<void> load() async {

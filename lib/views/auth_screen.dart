@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -43,14 +42,6 @@ class _AuthScreenState extends State<AuthScreen>
   @override
   void initState() {
     super.initState();
-
-    // ── Debug bypass ────────────────────────────────────────
-    if (kDebugMode) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Get.offAll(() => const PinScreen());
-      });
-    }
-    // ────────────────────────────────────────────────────────
 
     _fadeCtrl = AnimationController(
       vsync: this,

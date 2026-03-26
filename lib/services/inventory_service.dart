@@ -9,13 +9,36 @@ class InventoryService extends GetxService {
   final RxMap<String, int> stock = <String, int>{}.obs;
 
   final _db = Supabase.instance.client;
+  RealtimeChannel? _channel;
 
   static const int lowStockThreshold = 5;
 
   @override
   void onInit() {
     super.onInit();
+    _db.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn) _load();
+    });
     _load();
+    _subscribeRealtime();
+  }
+
+  @override
+  void onClose() {
+    _channel?.unsubscribe();
+    super.onClose();
+  }
+
+  void _subscribeRealtime() {
+    _channel = _db
+        .channel('inventory_changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'inventory',
+          callback: (_) => _load(),
+        )
+        .subscribe();
   }
 
   // ── Load ────────────────────────────────────────────────────

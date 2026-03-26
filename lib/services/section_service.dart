@@ -8,11 +8,34 @@ class SectionService extends GetxService {
   final RxList<Map<String, dynamic>> sections = <Map<String, dynamic>>[].obs;
 
   final _db = Supabase.instance.client;
+  RealtimeChannel? _channel;
 
   @override
   void onInit() {
     super.onInit();
+    _db.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn) load();
+    });
     load();
+    _subscribeRealtime();
+  }
+
+  @override
+  void onClose() {
+    _channel?.unsubscribe();
+    super.onClose();
+  }
+
+  void _subscribeRealtime() {
+    _channel = _db
+        .channel('sections_changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'sections',
+          callback: (_) => load(),
+        )
+        .subscribe();
   }
 
   Future<void> load() async {
