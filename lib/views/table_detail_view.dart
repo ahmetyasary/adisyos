@@ -107,7 +107,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                           children: [
                             _buildCategorySidebar(),
                             Expanded(flex: 3, child: _buildMenuSection()),
-                            _buildOrderPanel(context, width: 300),
+                            _buildOrderPanel(context, width: 440),
                           ],
                         ),
                 ),
@@ -119,52 +119,216 @@ class _TableDetailViewState extends State<TableDetailView> {
     );
   }
 
-  // ── Mobile layout: sidebar + list on top, full-width checkout below ──
+  // ── Mobile layout: horizontal category tabs + full-width order + checkout ──
   Widget _buildMobileLayout(BuildContext context) {
     return Column(
       children: [
-        Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildMobileCategorySidebar(context),
-              Expanded(child: _buildMobileOrderTop(context)),
-            ],
-          ),
-        ),
+        _buildMobileHorizontalCategories(context),
+        const Divider(color: _border, height: 1),
+        Expanded(child: _buildMobileOrderTop(context)),
         _buildMobileCheckoutBottom(context),
       ],
     );
   }
 
-  Widget _buildMobileOrderTop(BuildContext context) {
+  Widget _buildMobileHorizontalCategories(BuildContext context) {
     return Container(
+      height: 52,
       color: _card,
+      child: Obx(() {
+        // Observe icon changes so the bar rebuilds when icons update.
+        final _ = MenuService.to.menuIcons.length;
+        final menus = MenuService.to.menus;
+        return ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          itemCount: menus.length,
+          itemBuilder: (_, index) {
+            final menu = menus[index];
+            final iconKey = MenuService.to.getMenuIcon(menu['id'] as int);
+            final isActive = index == _safeMenuIndex;
+            return GestureDetector(
+              onTap: () {
+                setState(() => _selectedMenuIndex = index);
+                _showMenuBottomSheet(context, index);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: isActive ? _orange : _bg,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: isActive
+                      ? [BoxShadow(color: _orange.withOpacity(0.30), blurRadius: 8, offset: const Offset(0, 2))]
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _menuIconData(iconKey),
+                      size: 14,
+                      color: isActive ? Colors.white : _textSecondary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      menu['name'] as String,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                        color: isActive ? Colors.white : _textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      }),
+    );
+  }
+
+  void _confirmDelete(String itemName, int index) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF3B30).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.delete_outline_rounded,
+                    size: 26, color: Color(0xFFFF3B30)),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Siparişi Kaldır',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1C1C1E),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '"$itemName" siparişten kaldırılsın mı?',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF8E8E93),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Get.back(),
+                      child: Container(
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF2F2F7),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Text(
+                          'İptal',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1C1C1E),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        Get.back();
+                        TableService.to.removeOrder(widget.tableIndex, index);
+                      },
+                      child: Container(
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF3B30),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Text(
+                          'Kaldır',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileOrderTop(BuildContext context) {
+    return ColoredBox(
+      color: _bg,
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
+          // ── Header card ──
+          Container(
+            margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: const [
+                BoxShadow(color: Color(0x08000000), blurRadius: 16, offset: Offset(0, 4)),
+              ],
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
+                const Text(
                   'Sipariş Detayı',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: _textPrimary,
-                      ),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1C1C1E),
+                    letterSpacing: -0.3,
+                  ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
-                    color: _orange.withOpacity(0.1),
+                    color: _orange.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     widget.tableName,
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       color: _orange,
                       fontWeight: FontWeight.bold,
                     ),
@@ -173,7 +337,7 @@ class _TableDetailViewState extends State<TableDetailView> {
               ],
             ),
           ),
-          const Divider(color: _border, height: 1),
+          // ── Order items ──
           Expanded(
             child: Obx(() {
               final orders = TableService.to.getOrders(widget.tableIndex);
@@ -182,52 +346,123 @@ class _TableDetailViewState extends State<TableDetailView> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.shopping_cart_outlined, size: 40, color: _textSecondary),
-                      const SizedBox(height: 10),
+                      const Icon(Icons.shopping_cart_outlined,
+                          size: 44, color: _textSecondary),
+                      const SizedBox(height: 12),
                       Text('no_orders_yet'.tr,
-                          style: const TextStyle(color: _textSecondary, fontSize: 13),
+                          style: const TextStyle(
+                              color: _textSecondary, fontSize: 14),
                           textAlign: TextAlign.center),
                     ],
                   ),
                 );
               }
               return ListView.builder(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
                 itemCount: orders.length,
                 itemBuilder: (context, index) {
                   final order = orders[index];
-                  final name = order['name'] as String;
+                  final name     = order['name']     as String;
                   final quantity = order['quantity'] as int;
-                  final price = order['price'] as double;
+                  final price    = order['price']    as double;
                   final lineTotal = price * quantity;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  return Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0x07000000), blurRadius: 12, offset: Offset(0, 3)),
+                      ],
+                    ),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        _QtyBtn(
-                          icon: Icons.remove,
-                          onTap: () => TableService.to.decrementOrder(widget.tableIndex, index),
+                        // ── Qty pill ──
+                        Container(
+                          decoration: BoxDecoration(
+                            color: _bg,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              GestureDetector(
+                                onTap: () => TableService.to
+                                    .decrementOrder(widget.tableIndex, index),
+                                child: const SizedBox(
+                                  width: 38,
+                                  height: 42,
+                                  child: Icon(Icons.remove_rounded,
+                                      size: 16, color: _textSecondary),
+                                ),
+                              ),
+                              SizedBox(
+                                width: 28,
+                                child: Text(
+                                  '$quantity',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1C1C1E),
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => TableService.to
+                                    .addOrder(widget.tableIndex, name, price),
+                                child: const SizedBox(
+                                  width: 38,
+                                  height: 42,
+                                  child: Icon(Icons.add_rounded,
+                                      size: 16, color: _textSecondary),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(width: 4),
-                        Text('${quantity}x',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _textPrimary)),
-                        const SizedBox(width: 4),
-                        _QtyBtn(
-                          icon: Icons.add,
-                          onTap: () => TableService.to.addOrder(widget.tableIndex, name, price),
-                        ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 12),
+                        // ── Name ──
                         Expanded(
-                          child: Text(name,
-                              style: const TextStyle(fontSize: 12, color: _textPrimary),
-                              overflow: TextOverflow.ellipsis),
+                          child: Text(
+                            name,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1C1C1E),
+                              letterSpacing: -0.2,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        Text('₺${lineTotal.toStringAsFixed(2)}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _textPrimary)),
+                        const SizedBox(width: 8),
+                        // ── Price ──
+                        Text(
+                          '₺${lineTotal.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: _orange,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // ── Delete ──
                         GestureDetector(
-                          onTap: () => TableService.to.removeOrder(widget.tableIndex, index),
-                          child: const Padding(
-                            padding: EdgeInsets.all(4),
-                            child: Icon(Icons.delete_outline, size: 16, color: _textSecondary),
+                          onTap: () => _confirmDelete(name, index),
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF3B30).withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.delete_outline_rounded,
+                                size: 18, color: Color(0xFFFF3B30)),
                           ),
                         ),
                       ],
@@ -245,17 +480,22 @@ class _TableDetailViewState extends State<TableDetailView> {
   Widget _buildMobileCheckoutBottom(BuildContext context) {
     final bottomPad = MediaQuery.of(context).padding.bottom;
     return Container(
-      color: _card,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(color: Color(0x0E000000), blurRadius: 20, offset: Offset(0, -4)),
+        ],
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Divider(color: _border, height: 1),
+          // ── Totals ──
           Obx(() {
-            final subtotal = TableService.to.getTotal(widget.tableIndex);
-            final discount = TableService.to.getDiscount(widget.tableIndex);
+            final subtotal   = TableService.to.getTotal(widget.tableIndex);
+            final discount   = TableService.to.getDiscount(widget.tableIndex);
             final finalTotal = TableService.to.getTotalWithDiscount(widget.tableIndex);
             return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
               child: Column(
                 children: [
                   _SummaryRow(
@@ -268,55 +508,72 @@ class _TableDetailViewState extends State<TableDetailView> {
                       value: '-₺${discount.toStringAsFixed(2)}',
                       valueColor: _orange,
                     ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Toplam',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: _textPrimary,
-                              )),
-                      Text('₺${finalTotal.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 20, color: _orange)),
+                      const Text(
+                        'Toplam',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: Color(0xFF1C1C1E),
+                        ),
+                      ),
+                      Text(
+                        '₺${finalTotal.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 22,
+                          color: _orange,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
                     ],
                   ),
                 ],
               ),
             );
           }),
+          // ── Action buttons — evenly spread ──
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _ActionBtn(icon: Icons.add_circle_outline, label: 'new'.tr,      color: AppTheme.accentColor,          onTap: _handleNewOrder),
-                  _ActionBtn(icon: Icons.call_split,         label: 'split'.tr,    color: AppTheme.infoColor,            onTap: _handleSplit),
-                  _ActionBtn(icon: Icons.discount,           label: 'discount'.tr, color: AppTheme.warningColor,         onTap: _handleDiscount),
-                  _ActionBtn(icon: Icons.print,              label: 'print'.tr,    color: const Color(0xFF616161),       onTap: _handlePrint),
-                  _ActionBtn(icon: Icons.compare_arrows,     label: 'move'.tr,     color: AppTheme.accentColor,          onTap: _handleMove),
-                ],
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _ActionBtn(icon: Icons.add_circle_outline, label: 'new'.tr,      color: AppTheme.accentColor,    onTap: _handleNewOrder),
+                _ActionBtn(icon: Icons.call_split,         label: 'split'.tr,    color: AppTheme.infoColor,      onTap: _handleSplit),
+                _ActionBtn(icon: Icons.discount,           label: 'discount'.tr, color: AppTheme.warningColor,   onTap: _handleDiscount),
+                _ActionBtn(icon: Icons.print,              label: 'print'.tr,    color: const Color(0xFF616161), onTap: _handlePrint),
+                _ActionBtn(icon: Icons.compare_arrows,     label: 'move'.tr,     color: AppTheme.accentColor,    onTap: _handleMove),
+              ],
             ),
           ),
+          // ── Payment button ──
           Padding(
-            padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomPad),
+            padding: EdgeInsets.fromLTRB(16, 4, 16, 16 + bottomPad),
             child: SizedBox(
               width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
+              height: 56,
+              child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _orange,
                   foregroundColor: Colors.white,
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18)),
                 ),
                 onPressed: _handlePayment,
-                child: const Text('Ödeme Al',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.5)),
+                icon: const Icon(Icons.payments_outlined, size: 22),
+                label: const Text(
+                  'Ödeme Al',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                    letterSpacing: 0.3,
+                  ),
+                ),
               ),
             ),
           ),
@@ -409,19 +666,21 @@ class _TableDetailViewState extends State<TableDetailView> {
   void _showMenuBottomSheet(BuildContext context, int categoryIndex) {
     final menus = MenuService.to.menus;
     if (menus.isEmpty) return;
-    final categoryName = menus[categoryIndex]['name'] as String;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
+        int selectedCategory = categoryIndex;
         String localSearch = '';
+        final searchCtrl = TextEditingController();
+
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
             final items = localSearch.isEmpty
                 ? List<Map<String, dynamic>>.from(
-                    (menus[categoryIndex]['items'] as List)
+                    (menus[selectedCategory]['items'] as List)
                         .map((i) => i as Map<String, dynamic>))
                 : () {
                     final results = <Map<String, dynamic>>[];
@@ -461,13 +720,18 @@ class _TableDetailViewState extends State<TableDetailView> {
                     ),
                     // Header
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.fromLTRB(16, 4, 12, 4),
                       child: Row(
                         children: [
-                          Icon(_menuIconData(MenuService.to.getMenuIcon(menus[categoryIndex]['id'] as int)), color: _orange, size: 20),
+                          Icon(
+                            _menuIconData(MenuService.to.getMenuIcon(
+                                menus[selectedCategory]['id'] as int)),
+                            color: _orange,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Text(
-                            categoryName,
+                            menus[selectedCategory]['name'] as String,
                             style: const TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
@@ -489,10 +753,55 @@ class _TableDetailViewState extends State<TableDetailView> {
                         ],
                       ),
                     ),
+                    // ── Horizontal category tabs ──
+                    SizedBox(
+                      height: 40,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        itemCount: menus.length,
+                        itemBuilder: (_, i) {
+                          final isActive = i == selectedCategory;
+                          return GestureDetector(
+                            onTap: () {
+                              if (i == selectedCategory) return;
+                              searchCtrl.clear();
+                              setSheetState(() {
+                                selectedCategory = i;
+                                localSearch = '';
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                              decoration: BoxDecoration(
+                                color: isActive ? _orange : Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: isActive
+                                    ? [BoxShadow(color: _orange.withOpacity(0.30), blurRadius: 8, offset: const Offset(0, 2))]
+                                    : [const BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 1))],
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                menus[i]['name'] as String,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                                  color: isActive ? Colors.white : _textSecondary,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 6),
                     // Search bar
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       child: TextField(
+                        controller: searchCtrl,
                         decoration: InputDecoration(
                           hintText: 'search_menu'.tr,
                           hintStyle: const TextStyle(color: _textSecondary, fontSize: 14),
@@ -531,9 +840,9 @@ class _TableDetailViewState extends State<TableDetailView> {
                               padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
                               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 3,
-                                childAspectRatio: 0.78,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
+                                childAspectRatio: 0.65,
+                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 10,
                               ),
                               itemCount: items.length,
                               itemBuilder: (ctx, i) {
@@ -907,16 +1216,16 @@ class _TableDetailViewState extends State<TableDetailView> {
         builder: (context, constraints) {
           final crossAxisCount = constraints.maxWidth < 300
               ? 2
-              : constraints.maxWidth < 500
+              : constraints.maxWidth < 420
                   ? 3
                   : 4;
           return GridView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              childAspectRatio: 0.78,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
+              childAspectRatio: 0.82,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
             ),
             itemCount: items.length,
             itemBuilder: (context, index) {
@@ -993,84 +1302,109 @@ class _TableDetailViewState extends State<TableDetailView> {
     return Opacity(
       opacity: dimmed ? 0.45 : 1.0,
       child: Container(
-      decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: dimmed
-            ? []
-            : const [
-                BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
-                BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
-              ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: hasImage
-                ? ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
-                      errorBuilder: (_, __, ___) => _cardGradient(),
-                    ),
-                  )
-                : _cardGradient(),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: _textPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Row(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: dimmed
+              ? []
+              : [
+                  BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 24, spreadRadius: 0, offset: const Offset(0, 6)),
+                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, spreadRadius: 0, offset: const Offset(0, 2)),
+                ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image — ~60% of card height, proportional
+            Expanded(
+              flex: 10,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                child: hasImage
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        loadingBuilder: (_, child, progress) =>
+                            progress == null ? child : _cardGradient(),
+                        errorBuilder: (_, __, ___) => _cardGradient(),
+                      )
+                    : _cardGradient(),
+              ),
+            ),
+            // Info — ~40% of card height
+            Expanded(
+              flex: 7,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Compact layout for narrow cards (phone 3-col ~111px wide)
+                  final isCompact = constraints.maxWidth < 140;
+                  final btnSize  = isCompact ? 24.0 : 30.0;
+                  final btnRadius = isCompact ? 8.0  : 10.0;
+                  final iconSize = isCompact ? 14.0  : 18.0;
+                  final priceSize = isCompact ? 13.0 : 15.0;
+                  final hPad    = isCompact ? 8.0   : 12.0;
+                  return Padding(
+                padding: EdgeInsets.fromLTRB(hPad, isCompact ? 6 : 8, isCompact ? 7 : 10, isCompact ? 8 : 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      price,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: _orange,
-                        fontWeight: FontWeight.bold,
+                      name,
+                      style: TextStyle(
+                        fontSize: isCompact ? 12.0 : 13.0,
+                        color: const Color(0xFF1C1C1E),
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.2,
+                        height: 1.25,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFFFFBF4D), _orange],
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: Text(
+                          price,
+                          style: TextStyle(
+                            fontSize: priceSize,
+                            color: _orange,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.3,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(color: _orange.withOpacity(0.35), blurRadius: 6, offset: const Offset(0, 2)),
-                        ],
-                      ),
-                      child: const Icon(Icons.add,
-                          color: Colors.white, size: 16),
+                        ),
+                        const SizedBox(width: 4),
+                        Container(
+                          width: btnSize,
+                          height: btnSize,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFFFFBF4D), _orange],
+                            ),
+                            borderRadius: BorderRadius.circular(btnRadius),
+                            boxShadow: [
+                              BoxShadow(color: _orange.withOpacity(0.40), blurRadius: 8, offset: const Offset(0, 3)),
+                            ],
+                          ),
+                          child: Icon(Icons.add_rounded, color: Colors.white, size: iconSize),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              );
+                },
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -1083,10 +1417,10 @@ class _TableDetailViewState extends State<TableDetailView> {
           end: Alignment.bottomRight,
           colors: [Color(0xFFFFBF4D), _orange],
         ),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: const Center(
-        child: Icon(Icons.fastfood_rounded, size: 36, color: Colors.white),
+      child: Center(
+        child: Icon(Icons.fastfood_rounded, size: 32, color: Colors.white.withOpacity(0.9)),
       ),
     );
   }
@@ -1160,8 +1494,10 @@ class _TableDetailViewState extends State<TableDetailView> {
                   ),
                 );
               }
-              return ListView.builder(
+              return ListView.separated(
                 itemCount: orders.length,
+                separatorBuilder: (_, __) =>
+                    const Divider(color: _border, height: 1, indent: 16, endIndent: 16),
                 itemBuilder: (context, index) {
                   final order = orders[index];
                   final name = order['name'] as String;
@@ -1170,62 +1506,93 @@ class _TableDetailViewState extends State<TableDetailView> {
                   final lineTotal = price * quantity;
                   return Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
+                        horizontal: 14, vertical: 12),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Qty controls
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _QtyBtn(
-                              icon: Icons.remove,
-                              onTap: () => TableService.to
-                                  .decrementOrder(widget.tableIndex, index),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${quantity}x',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: _textPrimary,
+                        // Qty pill — same as phone view
+                        Container(
+                          decoration: BoxDecoration(
+                            color: _bg,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              GestureDetector(
+                                onTap: () => TableService.to
+                                    .decrementOrder(widget.tableIndex, index),
+                                child: const SizedBox(
+                                  width: 38,
+                                  height: 42,
+                                  child: Icon(Icons.remove_rounded,
+                                      size: 16, color: _textSecondary),
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 6),
-                            _QtyBtn(
-                              icon: Icons.add,
-                              onTap: () => TableService.to
-                                  .addOrder(widget.tableIndex, name, price),
-                            ),
-                          ],
+                              SizedBox(
+                                width: 28,
+                                child: Text(
+                                  '$quantity',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1C1C1E),
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => TableService.to
+                                    .addOrder(widget.tableIndex, name, price),
+                                child: const SizedBox(
+                                  width: 38,
+                                  height: 42,
+                                  child: Icon(Icons.add_rounded,
+                                      size: 16, color: _textSecondary),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
+                        // Item name
                         Expanded(
                           child: Text(
                             name,
                             style: const TextStyle(
-                              fontSize: 13,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
                               color: _textPrimary,
+                              letterSpacing: -0.2,
                             ),
                             overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        // Price
                         Text(
                           '₺${lineTotal.toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: _textPrimary,
+                            fontSize: 15,
+                            color: _orange,
+                            letterSpacing: -0.3,
                           ),
                         ),
-                        const SizedBox(width: 2),
+                        // Delete button
+                        const SizedBox(width: 8),
                         GestureDetector(
-                          onTap: () => TableService.to
-                              .removeOrder(widget.tableIndex, index),
-                          child: const Padding(
-                            padding: EdgeInsets.all(4),
-                            child: Icon(Icons.delete_outline,
-                                size: 18, color: _textSecondary),
+                          onTap: () => _confirmDelete(name, index),
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF3B30).withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(11),
+                            ),
+                            child: const Icon(Icons.delete_outline_rounded,
+                                size: 20, color: Color(0xFFFF3B30)),
                           ),
                         ),
                       ],
@@ -2095,13 +2462,13 @@ class _QtyBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 28,
-        height: 28,
+        width: 36,
+        height: 36,
         decoration: BoxDecoration(
           color: _bg,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, size: 14, color: _textSecondary),
+        child: Icon(icon, size: 16, color: _textSecondary),
       ),
     );
   }
