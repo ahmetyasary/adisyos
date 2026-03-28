@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
 import 'package:adisyos/services/staff_service.dart';
+import 'package:adisyos/views/auth_screen.dart';
 import 'package:adisyos/views/home_view.dart';
 import 'package:adisyos/views/tables_view.dart';
 
@@ -103,7 +105,23 @@ class _StaffPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const SizedBox(height: 48),
+        // Full-logout button — top right
+        Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(0, 12, 16, 0),
+            child: IconButton(
+              icon: const Icon(Icons.logout_rounded, size: 20, color: _textSec),
+              tooltip: 'Hesaptan Çık',
+              onPressed: () async {
+                StaffService.to.clearCurrentStaff();
+                await AuthController.to.logout();
+                Get.offAll(() => const AuthScreen());
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
         // Brand
         Text(
           'adisyos',
@@ -183,43 +201,46 @@ class _StaffPicker extends StatelessWidget {
           }),
         ),
 
-        // Manager button
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-          child: GestureDetector(
-            onTap: () => Get.offAll(() => const HomeView()),
-            child: Container(
-              height: 52,
-              decoration: BoxDecoration(
-                color: _card,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _separator),
-                boxShadow: const [
-                  BoxShadow(
-                      color: Color(0x0A000000),
-                      blurRadius: 10,
-                      offset: Offset(0, 3)),
-                ],
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.admin_panel_settings_outlined,
-                      size: 18, color: _textSec),
-                  SizedBox(width: 8),
-                  Text(
-                    'Yönetici Girişi',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: _textSec,
+        // Manager button — only visible for admin accounts
+        Obx(() {
+          if (!AuthController.to.isAdmin) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+            child: GestureDetector(
+              onTap: () => Get.offAll(() => const HomeView()),
+              child: Container(
+                height: 52,
+                decoration: BoxDecoration(
+                  color: _card,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: _separator),
+                  boxShadow: const [
+                    BoxShadow(
+                        color: Color(0x0A000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 3)),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.admin_panel_settings_outlined,
+                        size: 18, color: _textSec),
+                    SizedBox(width: 8),
+                    Text(
+                      'Yönetici Girişi',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: _textSec,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        }),
       ],
     );
   }

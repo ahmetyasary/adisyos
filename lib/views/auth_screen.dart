@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:adisyos/core/errors/auth_exception.dart';
 import 'package:adisyos/features/auth/domain/entities/auth_user.dart';
 import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
@@ -34,6 +35,8 @@ class _AuthScreenState extends State<AuthScreen>
 
   bool    _obscurePassword = true;
   String? _errorMessage;
+  bool    _navigated = false;
+  Worker? _sessionWorker;
 
   late final AnimationController _fadeCtrl;
   late final Animation<double>   _fadeAnim;
@@ -54,26 +57,42 @@ class _AuthScreenState extends State<AuthScreen>
       end:   Offset.zero,
     ).animate(CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut));
 
+    // Pre-fill last used email.
+    _loadSavedEmail();
+
+    // Listen for session restore (async) so the app remembers credentials.
+    _sessionWorker = ever(AuthController.to.user, (AuthUser? u) {
+      if (u != null) _navigateByRole(u.role);
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = AuthController.to;
-      if (auth.isAuthenticated) {
-        if (auth.currentRole != null) {
-          _navigateByRole(auth.currentRole!);
-        } else {
-          ever(auth.user, (AuthUser? u) {
-            if (u != null) _navigateByRole(u.role);
-          });
-        }
-      }
+      if (auth.isAuthenticated) _navigateByRole(auth.currentRole!);
     });
   }
 
   @override
   void dispose() {
+    _sessionWorker?.dispose();
     _fadeCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
+  }
+
+  // ── Saved email ────────────────────────────────────────────
+
+  Future<void> _loadSavedEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString('last_login_email');
+    if (saved != null && saved.isNotEmpty && mounted) {
+      _emailCtrl.text = saved;
+    }
+  }
+
+  Future<void> _saveEmail(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('last_login_email', email);
   }
 
   // ── Login ──────────────────────────────────────────────────
@@ -83,10 +102,12 @@ class _AuthScreenState extends State<AuthScreen>
     setState(() => _errorMessage = null);
 
     try {
+      final email   = _emailCtrl.text.trim();
       final authUser = await AuthController.to.login(
-        email:    _emailCtrl.text.trim(),
+        email:    email,
         password: _passwordCtrl.text,
       );
+      await _saveEmail(email);
       _navigateByRole(authUser.role);
     } on AuthException catch (e) {
       setState(() => _errorMessage = e.messageKey.tr);
@@ -96,6 +117,8 @@ class _AuthScreenState extends State<AuthScreen>
   }
 
   void _navigateByRole(_) {
+    if (_navigated) return;
+    _navigated = true;
     // After any successful login the device goes to the PIN screen.
     // Staff pick their profile and enter their PIN there.
     // Admins can tap "Yönetici Girişi" on the PIN screen to reach HomeView.

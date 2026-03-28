@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:adisyos/views/pin_screen.dart';
 import 'package:adisyos/views/table_detail_view.dart';
 import 'package:adisyos/views/public_menu_view.dart';
 import 'package:adisyos/services/table_service.dart';
@@ -203,13 +204,16 @@ class _TablesViewState extends State<TablesView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg,
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddTableDialog,
-        backgroundColor: _orange,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: Obx(() {
+        if (StaffService.to.hasActiveStaff) return const SizedBox.shrink();
+        return FloatingActionButton(
+          onPressed: _showAddTableDialog,
+          backgroundColor: _orange,
+          foregroundColor: Colors.white,
+          elevation: 4,
+          child: const Icon(Icons.add),
+        );
+      }),
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -244,6 +248,19 @@ class _TablesViewState extends State<TablesView> {
                       child: Text(name,
                           style: const TextStyle(
                               fontSize: 12, color: _textSecondary)),
+                    );
+                  }),
+                  const Spacer(),
+                  Obx(() {
+                    if (!StaffService.to.hasActiveStaff) return const SizedBox.shrink();
+                    return IconButton(
+                      icon: const Icon(Icons.logout_rounded,
+                          size: 18, color: _textSecondary),
+                      tooltip: 'Çıkış',
+                      onPressed: () {
+                        StaffService.to.clearCurrentStaff();
+                        Get.offAll(() => const PinScreen());
+                      },
                     );
                   }),
                 ],

@@ -5,7 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
 import 'package:adisyos/services/settings_service.dart';
+import 'package:adisyos/services/staff_service.dart';
 import 'package:adisyos/models/app_role.dart';
+import 'package:adisyos/views/auth_screen.dart';
 import 'package:adisyos/services/sales_history_service.dart';
 import 'package:adisyos/services/table_service.dart';
 import 'package:adisyos/views/kitchen_display_view.dart';
@@ -254,6 +256,15 @@ class _TopBar extends StatelessWidget {
           _TopBarIconButton(
             icon: Icons.settings_outlined,
             onTap: () => onNavigate('settings'),
+          ),
+          const SizedBox(width: 6),
+          _TopBarIconButton(
+            icon: Icons.logout_rounded,
+            onTap: () async {
+              StaffService.to.clearCurrentStaff();
+              await AuthController.to.logout();
+              Get.offAll(() => const AuthScreen());
+            },
           ),
         ],
       ),

@@ -78,6 +78,10 @@ class TableService extends GetxService {
             .toList(),
       };
 
+  // ── Lifecycle refresh ────────────────────────────────────────
+
+  Future<void> refresh() => _load();
+
   // ── Realtime ─────────────────────────────────────────────────
 
   void _subscribeRealtime() {

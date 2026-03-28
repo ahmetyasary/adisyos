@@ -177,6 +177,10 @@ class KitchenService extends GetxService {
     }
   }
 
+  // ── Lifecycle refresh ────────────────────────────────────────
+
+  Future<void> refresh() => _load();
+
   // ── Computed lists ───────────────────────────────────────────
 
   List<Map<String, dynamic>> get pendingTickets =>

@@ -84,8 +84,42 @@ void _registerAuth() {
   ));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // App came back from background — refresh all services to catch
+      // any changes that arrived while realtime was disconnected.
+      SettingsService.to.refresh();
+      StaffService.to.load();
+      SectionService.to.load();
+      SalesHistoryService.to.refresh();
+      KitchenService.to.refresh();
+      InventoryService.to.refresh();
+      ShiftService.to.refresh();
+      MenuService.to.refresh();
+      TableService.to.refresh();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

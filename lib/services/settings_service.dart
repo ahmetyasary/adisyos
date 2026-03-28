@@ -38,6 +38,10 @@ class SettingsService extends GetxService {
         .subscribe();
   }
 
+  // ── Lifecycle refresh ────────────────────────────────────────
+
+  Future<void> refresh() => _load();
+
   Future<void> _load() async {
     try {
       final rows = await _db.from('app_settings').select();

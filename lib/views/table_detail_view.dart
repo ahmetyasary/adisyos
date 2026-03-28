@@ -18,6 +18,37 @@ const _textPrimary   = Color(0xFF1C1C1E);
 const _textSecondary = Color(0xFF8E8E93);
 const _border        = Color(0xFFE5E5EA);
 
+// ── Menu icon key → IconData ──────────────────────────────────
+IconData _menuIconData(String key) {
+  const map = <String, IconData>{
+    'restaurant_menu': Icons.restaurant_menu_rounded,
+    'local_cafe':      Icons.local_cafe_rounded,
+    'coffee':          Icons.coffee_rounded,
+    'free_breakfast':  Icons.free_breakfast_rounded,
+    'food_beverage':   Icons.emoji_food_beverage_rounded,
+    'water_drop':      Icons.water_drop_rounded,
+    'local_bar':       Icons.local_bar_rounded,
+    'wine_bar':        Icons.wine_bar_rounded,
+    'sports_bar':      Icons.sports_bar_rounded,
+    'liquor':          Icons.liquor_rounded,
+    'local_pizza':     Icons.local_pizza_rounded,
+    'fastfood':        Icons.fastfood_rounded,
+    'lunch_dining':    Icons.lunch_dining_rounded,
+    'dinner_dining':   Icons.dinner_dining_rounded,
+    'breakfast_dining':Icons.breakfast_dining_rounded,
+    'ramen_dining':    Icons.ramen_dining_rounded,
+    'kebab_dining':    Icons.kebab_dining_rounded,
+    'rice_bowl':       Icons.rice_bowl_rounded,
+    'set_meal':        Icons.set_meal_rounded,
+    'bakery_dining':   Icons.bakery_dining_rounded,
+    'cake':            Icons.cake_rounded,
+    'icecream':        Icons.icecream_rounded,
+    'egg':             Icons.egg_rounded,
+    'eco':             Icons.eco_rounded,
+  };
+  return map[key] ?? Icons.restaurant_menu_rounded;
+}
+
 class TableDetailView extends StatefulWidget {
   final int tableNumber;
   final String tableName;
@@ -304,11 +335,15 @@ class _TableDetailViewState extends State<TableDetailView> {
         ],
       ),
       child: Obx(
-        () => ListView.builder(
+        () {
+          // Touch menuIcons so this Obx rebuilds when icons change.
+          final _ = MenuService.to.menuIcons.length;
+          return ListView.builder(
           padding: const EdgeInsets.symmetric(vertical: 8),
           itemCount: MenuService.to.menus.length,
           itemBuilder: (context, index) {
             final menu = MenuService.to.menus[index];
+            final iconKey = MenuService.to.getMenuIcon(menu['id'] as int);
             return GestureDetector(
               onTap: () {
                 setState(() => _selectedMenuIndex = index);
@@ -343,7 +378,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                             : null,
                       ),
                       child: Icon(
-                        Icons.restaurant_menu,
+                        _menuIconData(iconKey),
                         size: 20,
                         color: index == _safeMenuIndex ? Colors.white : _textSecondary,
                       ),
@@ -365,7 +400,8 @@ class _TableDetailViewState extends State<TableDetailView> {
               ),
             );
           },
-        ),
+        );
+        },
       ),
     );
   }
@@ -428,7 +464,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: Row(
                         children: [
-                          const Icon(Icons.restaurant_menu, color: _orange, size: 20),
+                          Icon(_menuIconData(MenuService.to.getMenuIcon(menus[categoryIndex]['id'] as int)), color: _orange, size: 20),
                           const SizedBox(width: 8),
                           Text(
                             categoryName,
@@ -540,6 +576,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                       _buildMenuCard(
                                         name,
                                         '₺${(item['price'] as double).toStringAsFixed(2)}',
+                                        imageUrl: item['imageUrl'] as String?,
                                         dimmed: isOut,
                                       ),
                                       if (isTracked)
@@ -680,7 +717,10 @@ class _TableDetailViewState extends State<TableDetailView> {
         children: [
           Expanded(
             child: Obx(
-              () => ListView.builder(
+              () {
+                // Touch menuIcons so this Obx rebuilds when icons change.
+                final _ = MenuService.to.menuIcons.length;
+                return ListView.builder(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 itemCount: MenuService.to.menus.length,
                 itemBuilder: (context, index) {
@@ -723,7 +763,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                   : null,
                             ),
                             child: Icon(
-                              Icons.restaurant_menu,
+                              _menuIconData(MenuService.to.getMenuIcon(menu['id'] as int)),
                               size: 20,
                               color: isSelected ? Colors.white : _textSecondary,
                             ),
@@ -747,7 +787,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                     ),
                   );
                 },
-              ),
+              );
+              },
             ),
           ),
         ],
@@ -910,6 +951,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                     _buildMenuCard(
                       name,
                       '₺${(item['price'] as double).toStringAsFixed(2)}',
+                      imageUrl: item['imageUrl'] as String?,
                       dimmed: isOut,
                     ),
                     if (isTracked)
@@ -946,7 +988,8 @@ class _TableDetailViewState extends State<TableDetailView> {
     });
   }
 
-  Widget _buildMenuCard(String name, String price, {bool dimmed = false}) {
+  Widget _buildMenuCard(String name, String price, {String? imageUrl, bool dimmed = false}) {
+    final hasImage = imageUrl != null && imageUrl.isNotEmpty;
     return Opacity(
       opacity: dimmed ? 0.45 : 1.0,
       child: Container(
@@ -964,24 +1007,18 @@ class _TableDetailViewState extends State<TableDetailView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFFFBF4D), _orange],
-                ),
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.fastfood_rounded,
-                  size: 36,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+            child: hasImage
+                ? ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      errorBuilder: (_, __, ___) => _cardGradient(),
+                    ),
+                  )
+                : _cardGradient(),
           ),
           Padding(
             padding: const EdgeInsets.all(10),
@@ -1034,6 +1071,22 @@ class _TableDetailViewState extends State<TableDetailView> {
           ),
         ],
       ),
+      ),
+    );
+  }
+
+  Widget _cardGradient() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFBF4D), _orange],
+        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: const Center(
+        child: Icon(Icons.fastfood_rounded, size: 36, color: Colors.white),
       ),
     );
   }

@@ -46,6 +46,10 @@ class ShiftService extends GetxService {
         .subscribe();
   }
 
+  // ── Lifecycle refresh ────────────────────────────────────────
+
+  Future<void> refresh() => _load();
+
   // ── Load ────────────────────────────────────────────────────
 
   Future<void> _load() async {

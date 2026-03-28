@@ -54,6 +54,10 @@ class InventoryService extends GetxService {
     }
   }
 
+  // ── Lifecycle refresh ────────────────────────────────────────
+
+  Future<void> refresh() => _load();
+
   // ── Queries ──────────────────────────────────────────────────
 
   int getStock(String itemName) => stock[itemName] ?? -1;
