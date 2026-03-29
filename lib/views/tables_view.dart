@@ -7,6 +7,9 @@ import 'package:adisyos/views/public_menu_view.dart';
 import 'package:adisyos/services/table_service.dart';
 import 'package:adisyos/services/section_service.dart';
 import 'package:adisyos/services/staff_service.dart';
+import 'package:adisyos/services/day_service.dart';
+import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 // ── Design tokens ─────────────────────────────────────────────
 const _bg            = Color(0xFFF2F2F7);
@@ -27,6 +30,272 @@ class TablesView extends StatefulWidget {
 
 class _TablesViewState extends State<TablesView> {
   final _selectedSectionId = Rx<String?>(null);
+
+  // ── Day not started dialog ──────────────────────────────────
+
+  void _showDayNotStartedDialog() {
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: _orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: const Icon(
+                  Icons.wb_sunny_rounded,
+                  size: 32,
+                  color: _orange,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Gün Başlatılmadı',
+                style: GoogleFonts.poppins(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1C1C1E),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Sipariş alabilmek için önce\ngünü başlatmanız gerekmektedir.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF8E8E93),
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Primary action full-width, then dismiss below
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Get.back();
+                    final sn = StaffService.to.currentStaffIdentifier;
+                    final id = sn.isNotEmpty
+                        ? sn
+                        : (AuthController.to.user.value?.email ?? '');
+                    await DayService.to.startDay(id);
+                    Get.snackbar(
+                      'Gün Başlatıldı',
+                      'İyi çalışmalar!',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: const Color(0xFF34C759),
+                      colorText: Colors.white,
+                      margin: const EdgeInsets.all(16),
+                      borderRadius: 14,
+                      duration: const Duration(seconds: 2),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _orange,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: const Text(
+                    'Günü Başlat',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 15),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: TextButton(
+                  onPressed: Get.back,
+                  child: const Text(
+                    'Vazgeç',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF8E8E93)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Staff logout with day-end confirmation ──────────────────
+
+  void _handleStaffLogout() {
+    final name = StaffService.to.currentStaffIdentifier;
+
+    // Block logout if any table still has an active order
+    final hasOrders = TableService.to.tables.any((t) => t['isOccupied'] == true);
+    if (hasOrders) {
+      Get.dialog(
+        Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF3B30).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Icon(Icons.table_bar_rounded,
+                      size: 32, color: Color(0xFFFF3B30)),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Açık Sipariş Var',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1C1C1E),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Tüm masalar kapatılmadan\nçıkış yapılamaz.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF8E8E93),
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: Get.back,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _orange,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text('Tamam',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final dayActive = name.isNotEmpty && DayService.to.isDayStartedBy(name);
+
+    if (dayActive) {
+      Get.dialog(
+        Dialog(
+          backgroundColor: Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF9500).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Icon(Icons.wb_sunny_rounded,
+                      size: 32, color: Color(0xFFFF9500)),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Günü Bitir ve Çıkış Yap',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1C1C1E),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Aktif gününüz var. Çıkış yaparsanız\ngün otomatik olarak bitecektir.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF8E8E93),
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      Get.back();
+                      await DayService.to.endDay(name);
+                      StaffService.to.clearCurrentStaff();
+                      Get.offAll(() => const PinScreen());
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF3B30),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text(
+                      'Günü Bitir ve Çıkış Yap',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: TextButton(
+                    onPressed: Get.back,
+                    child: const Text(
+                      'Vazgeç',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF8E8E93)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } else {
+      StaffService.to.clearCurrentStaff();
+      Get.offAll(() => const PinScreen());
+    }
+  }
 
   // ── Dialogs ─────────────────────────────────────────────────
 
@@ -257,10 +526,7 @@ class _TablesViewState extends State<TablesView> {
                       icon: const Icon(Icons.logout_rounded,
                           size: 18, color: _textSecondary),
                       tooltip: 'Çıkış',
-                      onPressed: () {
-                        StaffService.to.clearCurrentStaff();
-                        Get.offAll(() => const PinScreen());
-                      },
+                      onPressed: () => _handleStaffLogout(),
                     );
                   }),
                 ],
@@ -390,12 +656,22 @@ class _TablesViewState extends State<TablesView> {
                       return _TableCard(
                         table: table,
                         index: actualIndex,
-                        onTap: () => Get.to(() => TableDetailView(
-                              tableNumber: actualIndex + 1,
-                              tableName:   table['name'] as String,
-                              isOccupied:  table['isOccupied'] as bool,
-                              tableIndex:  actualIndex,
-                            )),
+                        onTap: () {
+                          final staffName = StaffService.to.currentStaffIdentifier;
+                          final id = staffName.isNotEmpty
+                              ? staffName
+                              : (AuthController.to.user.value?.email ?? '');
+                          if (!DayService.to.isDayStartedBy(id)) {
+                            _showDayNotStartedDialog();
+                            return;
+                          }
+                          Get.to(() => TableDetailView(
+                                tableNumber: actualIndex + 1,
+                                tableName:   table['name'] as String,
+                                isOccupied:  table['isOccupied'] as bool,
+                                tableIndex:  actualIndex,
+                              ));
+                        },
                         onLongPress: (pos) =>
                             _showTableContextMenu(context, actualIndex, pos),
                       );

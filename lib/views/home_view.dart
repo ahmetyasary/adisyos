@@ -10,6 +10,7 @@ import 'package:adisyos/models/app_role.dart';
 import 'package:adisyos/views/auth_screen.dart';
 import 'package:adisyos/services/sales_history_service.dart';
 import 'package:adisyos/services/table_service.dart';
+import 'package:adisyos/services/day_service.dart';
 import 'package:adisyos/views/kitchen_display_view.dart';
 import 'package:adisyos/views/inventory_management_view.dart';
 import 'package:adisyos/views/staff_report_view.dart';
@@ -20,6 +21,7 @@ import 'package:adisyos/views/notifications_view.dart';
 import 'package:adisyos/views/reports_view.dart';
 import 'package:adisyos/views/settings_view.dart';
 import 'package:adisyos/views/tables_view.dart';
+import 'package:adisyos/views/day_management_view.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _bg             = Color(0xFFF2F2F7); // iOS system grouped background
@@ -70,7 +72,8 @@ class _HomeViewState extends State<HomeView> {
       case 'inventory':     Get.to(() => const InventoryManagementView()); break;
       case 'staff_report':  Get.to(() => const StaffReportView()); break;
       case 'shifts':        Get.to(() => const ShiftManagementView()); break;
-      case 'dashboard':     Get.to(() => const DashboardView()); break;
+      case 'dashboard':        Get.to(() => const DashboardView()); break;
+      case 'day_management':   Get.to(() => const DayManagementView()); break;
     }
   }
 
@@ -159,6 +162,17 @@ class _HomeViewState extends State<HomeView> {
         'primary': false,
         'roles':   [AppRole.admin],
       },
+      {
+        'title':   'Günler',
+        'subtitle':'Gün başlangıç/bitiş ve satışlar',
+        'icon':    Icons.wb_sunny_rounded,
+        'color':   const Color(0xFFFF9500), // Orange
+        'route':   'day_management',
+        'active':  true,
+        'hidden':  false,
+        'primary': false,
+        'roles':   [AppRole.admin],
+      },
     ];
 
     if (role == null) return [];
@@ -166,6 +180,278 @@ class _HomeViewState extends State<HomeView> {
       (c['roles'] as List<AppRole>).contains(role) &&
       (c['hidden'] as bool? ?? false) == false,
     ).toList();
+  }
+
+  /// Unique identifier for the current session's day tracking.
+  /// Staff → their profile name (set via PIN).
+  /// Admin (no staff selected) → their login email.
+  String get _currentIdentifier {
+    final staffName = StaffService.to.currentStaffIdentifier;
+    return staffName.isNotEmpty
+        ? staffName
+        : (AuthController.to.user.value?.email ?? '');
+  }
+
+  Future<void> _startDay() async {
+    final success = await DayService.to.startDay(_currentIdentifier);
+    if (success) {
+      Get.snackbar(
+        'Gün Başlatıldı',
+        'İyi çalışmalar!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF34C759),
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 14,
+        duration: const Duration(seconds: 2),
+      );
+    }
+  }
+
+  Future<void> _endDay() async {
+    // Block if any table still has an active order
+    final hasOrders = TableService.to.tables.any(
+      (t) => t['isOccupied'] == true,
+    );
+    if (hasOrders) {
+      Get.dialog(
+        Dialog(
+          backgroundColor: _card,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF9500).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Icon(Icons.table_bar_rounded,
+                      size: 32, color: Color(0xFFFF9500)),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Açık Masa Var',
+                  style: GoogleFonts.poppins(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w600,
+                    color: _labelPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Tüm masalar kapatılmadan\ngün bitirilemez.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: _labelSecondary,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton(
+                    onPressed: Get.back,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _orange,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Tamam',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await Get.dialog<bool>(_EndDayConfirmDialog());
+    if (confirmed != true) return;
+
+    final success = await DayService.to.endDay(_currentIdentifier);
+    if (success) {
+      Get.snackbar(
+        'Gün Bitirildi',
+        'Günü kapattınız. Yarın görüşmek üzere!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFFF3B30),
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 14,
+        duration: const Duration(seconds: 2),
+      );
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    // Block logout if any table still has an active order
+    final hasOrders = TableService.to.tables.any((t) => t['isOccupied'] == true);
+    if (hasOrders) {
+      Get.dialog(
+        Dialog(
+          backgroundColor: _card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF3B30).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Icon(Icons.table_bar_rounded,
+                      size: 32, color: Color(0xFFFF3B30)),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Açık Sipariş Var',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: _labelPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Tüm masalar kapatılmadan\nçıkış yapılamaz.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: _labelSecondary,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: Get.back,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _orange,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text('Tamam',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final id = _currentIdentifier;
+    final dayActive = DayService.to.isDayStartedBy(id);
+
+    if (dayActive) {
+      final confirmed = await Get.dialog<bool>(
+        Dialog(
+          backgroundColor: _card,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF9500).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Icon(Icons.wb_sunny_rounded,
+                      size: 32, color: Color(0xFFFF9500)),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Günü Bitir ve Çıkış Yap',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: _labelPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Aktif gününüz var. Çıkış yaparsanız\ngün otomatik olarak bitecektir.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: _labelSecondary,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () => Get.back(result: true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF3B30),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text(
+                      'Günü Bitir ve Çıkış Yap',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: TextButton(
+                    onPressed: () => Get.back(result: false),
+                    child: const Text(
+                      'Vazgeç',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: _labelSecondary),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      if (confirmed != true) return;
+      await DayService.to.endDay(id);
+    }
+
+    StaffService.to.clearCurrentStaff();
+    await AuthController.to.logout();
+    Get.offAll(() => const AuthScreen());
   }
 
   @override
@@ -179,15 +465,22 @@ class _HomeViewState extends State<HomeView> {
             _TopBar(
               currentTime: _currentTime,
               onNavigate: _navigate,
+              onLogout: _handleLogout,
             ),
             Expanded(
               child: Obx(() {
                 final role = AuthController.to.currentRole;
                 final cards = _featureCards(role);
-                return _MainContent(cards: cards, onNavigate: _navigate);
+                return _MainContent(
+                  cards: cards,
+                  onNavigate: _navigate,
+                  onStartDay: _startDay,
+                  onEndDay: _endDay,
+                );
               }),
             ),
-            Obx(() => _Footer(companyName: SettingsService.to.companyName.value)),
+            Obx(() =>
+                _Footer(companyName: SettingsService.to.companyName.value)),
           ],
         ),
       ),
@@ -203,10 +496,12 @@ class _TopBar extends StatelessWidget {
   const _TopBar({
     required this.currentTime,
     required this.onNavigate,
+    required this.onLogout,
   });
 
   final DateTime currentTime;
   final void Function(String) onNavigate;
+  final VoidCallback onLogout;
 
   @override
   Widget build(BuildContext context) {
@@ -260,11 +555,7 @@ class _TopBar extends StatelessWidget {
           const SizedBox(width: 6),
           _TopBarIconButton(
             icon: Icons.logout_rounded,
-            onTap: () async {
-              StaffService.to.clearCurrentStaff();
-              await AuthController.to.logout();
-              Get.offAll(() => const AuthScreen());
-            },
+            onTap: onLogout,
           ),
         ],
       ),
@@ -320,10 +611,17 @@ class _TopBarIconButtonState extends State<_TopBarIconButton> {
 // ──────────────────────────────────────────────────────────────
 
 class _MainContent extends StatelessWidget {
-  const _MainContent({required this.cards, required this.onNavigate});
+  const _MainContent({
+    required this.cards,
+    required this.onNavigate,
+    required this.onStartDay,
+    required this.onEndDay,
+  });
 
   final List<Map<String, dynamic>> cards;
   final void Function(String) onNavigate;
+  final VoidCallback onStartDay;
+  final VoidCallback onEndDay;
 
   @override
   Widget build(BuildContext context) {
@@ -332,6 +630,8 @@ class _MainContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _DayToggleCard(onStartDay: onStartDay, onEndDay: onEndDay),
+          const SizedBox(height: 16),
           const _SectionHeader(label: 'Genel Bakış'),
           const SizedBox(height: 12),
           _StatsRow(),
@@ -819,6 +1119,324 @@ class _FeatureCardState extends State<_FeatureCard>
                 ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// _DayToggleCard — single card that switches between start/end
+// ──────────────────────────────────────────────────────────────
+
+class _DayToggleCard extends StatelessWidget {
+  const _DayToggleCard({
+    required this.onStartDay,
+    required this.onEndDay,
+  });
+
+  final VoidCallback onStartDay;
+  final VoidCallback onEndDay;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final staffName = StaffService.to.currentStaffIdentifier;
+      final identifier = staffName.isNotEmpty
+          ? staffName
+          : (AuthController.to.user.value?.email ?? '');
+      final dayStarted = DayService.to.isDayStartedBy(identifier);
+      final isLoading = DayService.to.isLoading.value;
+      final day = DayService.to.getActiveDayFor(identifier);
+
+      if (!dayStarted) {
+        // ── Day NOT started — orange "Günü Başlat" card ──
+        return GestureDetector(
+          onTap: isLoading ? null : onStartDay,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFFFBE40), Color(0xFFFF9500)],
+              ),
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x40FF9500),
+                  blurRadius: 16,
+                  offset: Offset(0, 6),
+                ),
+                BoxShadow(
+                  color: Color(0x20FF9500),
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.wb_sunny_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Günü Başlat',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Sipariş almak için günü başlatın',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isLoading)
+                  const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                else
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      // ── Day IS started — green active card with end button ──
+      final startedAt = DateTime.tryParse(day?['started_at'] as String? ?? '');
+      final elapsed = startedAt != null
+          ? DateTime.now().difference(startedAt)
+          : Duration.zero;
+      final hours = elapsed.inHours;
+      final minutes = elapsed.inMinutes % 60;
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: _card,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: const Color(0xFF34C759).withValues(alpha: 0.3),
+            width: 1,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A000000),
+              blurRadius: 20,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Green pulse dot
+            Container(
+              width: 10,
+              height: 10,
+              decoration: const BoxDecoration(
+                color: Color(0xFF34C759),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(color: Color(0x4034C759), blurRadius: 8),
+                ],
+              ),
+            ),
+            const SizedBox(width: 14),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Gün Aktif',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF34C759),
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${hours}sa ${minutes}dk aktif',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: _labelSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            GestureDetector(
+              onTap: onEndDay,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF3B30).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.stop_rounded,
+                        size: 16, color: Color(0xFFFF3B30)),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'Günü Bitir',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFFF3B30),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// _EndDayConfirmDialog
+// ──────────────────────────────────────────────────────────────
+
+class _EndDayConfirmDialog extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: _card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF3B30).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Icon(
+                Icons.nights_stay_rounded,
+                size: 32,
+                color: Color(0xFFFF3B30),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Günü Bitir',
+              style: GoogleFonts.poppins(
+                fontSize: 19,
+                fontWeight: FontWeight.w600,
+                color: _labelPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Günü bitirmek istediğinize emin misiniz?\nGün bitince yeni sipariş alınamaz.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: _labelSecondary,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(result: false),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _labelPrimary,
+                        side: const BorderSide(color: _separator),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Vazgeç',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: ElevatedButton(
+                      onPressed: () => Get.back(result: true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF3B30),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Günü Bitir',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

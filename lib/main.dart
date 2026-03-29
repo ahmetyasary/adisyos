@@ -13,6 +13,7 @@ import 'package:adisyos/services/sales_history_service.dart';
 import 'package:adisyos/services/kitchen_service.dart';
 import 'package:adisyos/services/inventory_service.dart';
 import 'package:adisyos/services/shift_service.dart';
+import 'package:adisyos/services/day_service.dart';
 import 'package:adisyos/services/menu_service.dart';
 import 'package:adisyos/services/table_service.dart';
 import 'package:adisyos/services/settings_service.dart';
@@ -59,6 +60,7 @@ Future<void> main() async {
   Get.put(KitchenService());
   Get.put(InventoryService());
   Get.put(ShiftService());
+  Get.put(DayService());
   Get.put(MenuService());
   Get.put(TableService());
 
@@ -116,6 +118,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       KitchenService.to.refresh();
       InventoryService.to.refresh();
       ShiftService.to.refresh();
+      DayService.to.refresh();
       MenuService.to.refresh();
       TableService.to.refresh();
     }

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
 import 'package:adisyos/services/staff_service.dart';
+import 'package:adisyos/services/day_service.dart';
 import 'package:adisyos/views/auth_screen.dart';
 import 'package:adisyos/views/home_view.dart';
 import 'package:adisyos/views/tables_view.dart';
@@ -114,6 +115,11 @@ class _StaffPicker extends StatelessWidget {
               icon: const Icon(Icons.logout_rounded, size: 20, color: _textSec),
               tooltip: 'Hesaptan Çık',
               onPressed: () async {
+                final email = AuthController.to.user.value?.email ?? '';
+                if (email.isNotEmpty &&
+                    DayService.to.isDayStartedBy(email)) {
+                  await DayService.to.endDay(email);
+                }
                 StaffService.to.clearCurrentStaff();
                 await AuthController.to.logout();
                 Get.offAll(() => const AuthScreen());
@@ -484,32 +490,37 @@ class _PinPad extends StatelessWidget {
 
         const Spacer(),
 
-        // Number pad
+        // Number pad — fixed 300px wide, centered, never stretches on tablet
         Padding(
-          padding: const EdgeInsets.fromLTRB(48, 0, 48, 32),
-          child: Column(
-            children: [
-              for (final row in [
-                ['1', '2', '3'],
-                ['4', '5', '6'],
-                ['7', '8', '9'],
-                ['', '0', '⌫'],
-              ])
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: row.map((d) {
-                      if (d.isEmpty) return const SizedBox(width: 80);
-                      return _PinKey(
-                        label: d,
-                        onTap: d == '⌫' ? onDelete : () => onDigit(d),
-                        isDelete: d == '⌫',
-                      );
-                    }).toList(),
-                  ),
-                ),
-            ],
+          padding: const EdgeInsets.only(bottom: 32),
+          child: Center(
+            child: SizedBox(
+              width: 300,
+              child: Column(
+                children: [
+                  for (final row in [
+                    ['1', '2', '3'],
+                    ['4', '5', '6'],
+                    ['7', '8', '9'],
+                    ['', '0', '⌫'],
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: row.map((d) {
+                          if (d.isEmpty) return const SizedBox(width: 80);
+                          return _PinKey(
+                            label: d,
+                            onTap: d == '⌫' ? onDelete : () => onDigit(d),
+                            isDelete: d == '⌫',
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ],

@@ -17,6 +17,17 @@ const _blue        = Color(0xFF007AFF);
 class StaffReportView extends StatelessWidget {
   const StaffReportView({super.key});
 
+  // Normalise a staffEmail raw value to a display key.
+  // Admin logins (email addresses) and empty/unknown values all map to
+  // the sentinel 'Yönetici' so they are merged into a single entry.
+  static const _adminKey = 'Yönetici';
+
+  static String _toKey(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return _adminKey;
+    if (raw.contains('@')) return _adminKey;
+    return raw.trim();
+  }
+
   // Build combined stats: sales + hours for each staff member.
   List<Map<String, dynamic>> _buildStats() {
     final profiles = StaffService.to.staffList;
@@ -24,17 +35,15 @@ class StaffReportView extends StatelessWidget {
     final shifts   = ShiftService.to.shifts;
     final today    = DateTime.now();
 
-    // Aggregate sales by staff identifier (name or email)
+    // Aggregate sales — all admin/email/unknown entries merge into _adminKey
     final Map<String, Map<String, dynamic>> salesMap = {};
     for (final sale in sales) {
-      final id = (sale['staffEmail'] as String? ?? '').isEmpty
-          ? 'Bilinmiyor'
-          : sale['staffEmail'] as String;
+      final id = _toKey(sale['staffEmail'] as String?);
       salesMap.putIfAbsent(id, () => {'total': 0.0, 'count': 0, 'lastSale': null});
       salesMap[id]!['total'] =
           (salesMap[id]!['total'] as double) + ((sale['total'] as num).toDouble());
       salesMap[id]!['count'] = (salesMap[id]!['count'] as int) + 1;
-      final saleDate = DateTime.tryParse(sale['date'] as String);
+      final saleDate = DateTime.tryParse(sale['date'] as String? ?? '');
       if (saleDate != null) {
         final last = salesMap[id]!['lastSale'] as DateTime?;
         if (last == null || saleDate.isAfter(last)) {
@@ -43,11 +52,11 @@ class StaffReportView extends StatelessWidget {
       }
     }
 
-    // Calculate today's work minutes per staff identifier
+    // Today's work minutes per staff name key
     final Map<String, int> hoursMap = {};
     for (final shift in shifts) {
-      final id = shift['staffEmail'] as String? ?? '';
-      if (id.isEmpty) continue;
+      final id = _toKey(shift['staffEmail'] as String?);
+      if (id == _adminKey) continue; // admins don't use shift tracking
       final shiftDate = DateTime.tryParse(shift['date'] as String? ?? '');
       if (shiftDate == null) continue;
       if (shiftDate.year != today.year ||
@@ -56,7 +65,7 @@ class StaffReportView extends StatelessWidget {
       hoursMap[id] = (hoursMap[id] ?? 0) + ShiftService.to.getWorkMinutes(shift);
     }
 
-    // Build result list — start with known profiles
+    // Build result list — known staff profiles first
     final seen = <String>{};
     final result = <Map<String, dynamic>>[];
 
@@ -66,7 +75,7 @@ class StaffReportView extends StatelessWidget {
       final s = salesMap[name];
       result.add({
         'name': name,
-        'isProfile': true,
+        'isAdmin': false,
         'total': s?['total'] as double? ?? 0.0,
         'count': s?['count'] as int? ?? 0,
         'lastSale': s?['lastSale'] as DateTime?,
@@ -74,18 +83,17 @@ class StaffReportView extends StatelessWidget {
       });
     }
 
-    // Add any legacy email-based staff not in profiles
-    for (final entry in salesMap.entries) {
-      if (!seen.contains(entry.key)) {
-        result.add({
-          'name': entry.key,
-          'isProfile': false,
-          'total': entry.value['total'] as double,
-          'count': entry.value['count'] as int,
-          'lastSale': entry.value['lastSale'] as DateTime?,
-          'todayMinutes': hoursMap[entry.key] ?? 0,
-        });
-      }
+    // Add Yönetici entry if it has any sales data
+    if (!seen.contains(_adminKey) && salesMap.containsKey(_adminKey)) {
+      final s = salesMap[_adminKey]!;
+      result.add({
+        'name': _adminKey,
+        'isAdmin': true,
+        'total': s['total'] as double,
+        'count': s['count'] as int,
+        'lastSale': s['lastSale'] as DateTime?,
+        'todayMinutes': 0,
+      });
     }
 
     result.sort(
@@ -188,7 +196,7 @@ class _StaffCard extends StatelessWidget {
     final count        = stats['count'] as int;
     final lastSale     = stats['lastSale'] as DateTime?;
     final todayMinutes = stats['todayMinutes'] as int;
-    final isProfile    = stats['isProfile'] as bool;
+    final isAdmin      = stats['isAdmin'] as bool? ?? false;
 
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
@@ -305,17 +313,19 @@ class _StaffCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (!isProfile)
+                    if (isAdmin)
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: _textSec.withOpacity(0.10),
+                          color: _orange.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(5),
                         ),
-                        child: const Text('eski',
-                            style:
-                                TextStyle(fontSize: 10, color: _textSec)),
+                        child: const Text('yönetici',
+                            style: TextStyle(
+                                fontSize: 10,
+                                color: _orange,
+                                fontWeight: FontWeight.w600)),
                       ),
                   ],
                 ),
