@@ -6,6 +6,7 @@ import 'package:adisyos/services/settings_service.dart';
 import 'package:adisyos/services/staff_service.dart';
 import 'package:adisyos/services/section_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
+import 'package:adisyos/widgets/app_toast.dart';
 
 // ── Design tokens ─────────────────────────────────────────────
 const _bg          = Color(0xFFF2F2F7);
@@ -67,15 +68,7 @@ class _SettingsViewState extends State<SettingsView> {
     await prefs.setString('language', _selectedLanguage);
     setState(() => _saving = false);
     if (mounted) {
-      Get.snackbar(
-        'success'.tr,
-        'Ayarlar kaydedildi',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppTheme.successColor,
-        colorText: Colors.white,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 12,
-      );
+      AppToast.success('Ayarlar kaydedildi', title: 'success'.tr);
       Get.back();
     }
   }

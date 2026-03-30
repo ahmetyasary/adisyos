@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
 import 'package:adisyos/models/app_role.dart';
+import 'package:adisyos/widgets/app_toast.dart';
 
 // ── Named routes ──────────────────────────────────────────────
 
@@ -60,12 +61,7 @@ class AuthMiddleware extends GetMiddleware {
     // ── Check page-level permission ───────────────────────
     final allowed = _routePermissions[route];
     if (allowed != null && !allowed.contains(role)) {
-      Get.snackbar(
-        'Erişim Engellendi',
-        'Bu sayfaya erişim yetkiniz yok.',
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 3),
-      );
+      AppToast.warning('Bu sayfaya erişim yetkiniz yok.', title: 'Erişim Engellendi');
       return const RouteSettings(name: AppRoutes.home);
     }
 

@@ -119,14 +119,12 @@ class ShiftService extends GetxService {
     shifts[idx]['endTime'] = now;
     shifts.refresh();
 
-    try {
-      await _db
-          .from('shifts')
-          .update({'end_time': now})
-          .eq('id', shiftId);
-    } catch (e) {
-      if (kDebugMode) print('[ShiftService] clockOut error: $e');
-    }
+    _db.from('shifts')
+        .update({'end_time': now})
+        .eq('id', shiftId)
+        .catchError((e) {
+          if (kDebugMode) print('[ShiftService] clockOut error: $e');
+        });
   }
 
   Future<void> startBreak(String staffEmail) async {
@@ -173,14 +171,12 @@ class ShiftService extends GetxService {
     shifts[idx]['breaks'] = breaks;
     shifts.refresh();
 
-    try {
-      await _db
-          .from('shift_breaks')
-          .update({'end_time': now})
-          .eq('id', breakId);
-    } catch (e) {
-      if (kDebugMode) print('[ShiftService] endBreak error: $e');
-    }
+    _db.from('shift_breaks')
+        .update({'end_time': now})
+        .eq('id', breakId)
+        .catchError((e) {
+          if (kDebugMode) print('[ShiftService] endBreak error: $e');
+        });
   }
 
   // ── Queries ──────────────────────────────────────────────────

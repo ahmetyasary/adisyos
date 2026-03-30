@@ -8,6 +8,7 @@ import 'package:adisyos/services/table_service.dart';
 import 'package:adisyos/services/section_service.dart';
 import 'package:adisyos/services/staff_service.dart';
 import 'package:adisyos/services/day_service.dart';
+import 'package:adisyos/widgets/app_toast.dart';
 import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -88,16 +89,7 @@ class _TablesViewState extends State<TablesView> {
                         ? sn
                         : (AuthController.to.user.value?.email ?? '');
                     await DayService.to.startDay(id);
-                    Get.snackbar(
-                      'Gün Başlatıldı',
-                      'İyi çalışmalar!',
-                      snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: const Color(0xFF34C759),
-                      colorText: Colors.white,
-                      margin: const EdgeInsets.all(16),
-                      borderRadius: 14,
-                      duration: const Duration(seconds: 2),
-                    );
+                    AppToast.success('İyi çalışmalar!', title: 'Gün Başlatıldı', duration: const Duration(seconds: 2));
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _orange,
@@ -639,15 +631,16 @@ class _TablesViewState extends State<TablesView> {
                 }
 
                 return LayoutBuilder(builder: (context, constraints) {
-                  final cols = constraints.maxWidth < 500 ? 2
+                  final cols = constraints.maxWidth < 500 ? 3
                       : constraints.maxWidth < 700 ? 4 : 6;
+                  final compact = cols >= 3 && constraints.maxWidth < 500;
                   return GridView.builder(
                     padding: EdgeInsets.fromLTRB(16, 0, 16, MediaQuery.of(context).padding.bottom + 88),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: cols,
-                      crossAxisSpacing: 14,
-                      mainAxisSpacing: 14,
-                      childAspectRatio: 0.95,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: compact ? 0.85 : 0.95,
                     ),
                     itemCount: tables.length,
                     itemBuilder: (context, i) {
@@ -656,6 +649,7 @@ class _TablesViewState extends State<TablesView> {
                       return _TableCard(
                         table: table,
                         index: actualIndex,
+                        compact: compact,
                         onTap: () {
                           final staffName = StaffService.to.currentStaffIdentifier;
                           final id = staffName.isNotEmpty
@@ -788,6 +782,7 @@ class _SectionPill extends StatelessWidget {
 class _TableCard extends StatelessWidget {
   final Map<String, dynamic> table;
   final int index;
+  final bool compact;
   final VoidCallback onTap;
   final void Function(Offset) onLongPress;
 
@@ -796,161 +791,186 @@ class _TableCard extends StatelessWidget {
     required this.index,
     required this.onTap,
     required this.onLongPress,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final name       = table['name'] as String;
-    final isOccupied = table['isOccupied'] as bool;
-    final total      = (table['total'] as num?)?.toDouble() ?? 0.0;
-    final statusColor = isOccupied ? _occupied : _available;
+    final name        = table['name'] as String;
+    final isOccupied  = table['isOccupied'] as bool;
+    final rawTotal    = (table['total'] as num?)?.toDouble() ?? 0.0;
+    final discount    = (table['discount'] as num?)?.toDouble() ?? 0.0;
+    final total       = (rawTotal - discount).clamp(0.0, double.infinity);
+    final accentColor = isOccupied ? _occupied : _available;
 
-    // Parse name (e.g. "BAHÇE 2" -> prefix: "BAHÇE", mainText: "2")
-    final parts = name.split(' ');
-    final String prefix;
-    final String mainText;
+    // Parse "BAHÇE 2" -> section: "BAHÇE", number: "2"
+    final parts = name.trim().split(' ');
+    final String section;
+    final String number;
     if (parts.length > 1) {
-      mainText = parts.last;
-      prefix = parts.sublist(0, parts.length - 1).join(' ');
+      number  = parts.last;
+      section = parts.sublist(0, parts.length - 1).join(' ');
     } else {
-      prefix = '';
-      mainText = name;
+      section = 'MASA';
+      number  = name;
     }
+
+    final double pad      = compact ? 10.0 : 14.0;
+    final double numFont  = compact ? 28.0 : 34.0;
+    final double secFont  = compact ? 14.0 : 16.0;
+    final double radius   = compact ? 14.0 : 18.0;
 
     return GestureDetector(
       onTap: onTap,
       onLongPressStart: (d) => onLongPress(d.globalPosition),
       child: Container(
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: _card,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: const [
-            BoxShadow(color: Color(0x08000000), blurRadius: 10, offset: Offset(0, 4)),
+          // Occupied cards get a very subtle warm tint so they pop out of the grid
+          color: isOccupied ? const Color(0xFFFFF4EC) : Colors.white,
+          borderRadius: BorderRadius.circular(radius),
+          border: Border(
+            left: BorderSide(color: accentColor, width: compact ? 3.5 : 4),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isOccupied
+                  ? _occupied.withOpacity(0.08)
+                  : const Color(0x08000000),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
           ],
         ),
+        padding: EdgeInsets.fromLTRB(pad - 1, pad, pad, pad),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Top Section
+            // ── Zone 1: section label + occupied icon ──────────
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (prefix.isNotEmpty) ...[
-                        Text(
-                          prefix,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: _textSecondary,
-                            letterSpacing: 0.8,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                      ],
-                      Text(
-                        mainText,
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          color: _textPrimary,
-                          height: 1.1,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                  child: Text(
+                    section,
+                    style: TextStyle(
+                      fontSize: secFont,
+                      fontWeight: FontWeight.w700,
+                      color: isOccupied ? _occupied.withOpacity(0.7) : _textSecondary,
+                      letterSpacing: 0.6,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 if (isOccupied)
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.people_alt_rounded, size: 18, color: statusColor),
-                  ),
+                  Icon(Icons.person_rounded,
+                      size: compact ? 13 : 15, color: _occupied.withOpacity(0.6)),
               ],
             ),
 
-            const Spacer(),
+            // ── Zone 2: table number (hero) ─────────────────────
+            Text(
+              number,
+              style: TextStyle(
+                fontSize: numFont,
+                fontWeight: FontWeight.w800,
+                color: _textPrimary,
+                height: 1.0,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
 
-            // Bottom Section
+            // ── Zone 3: status + price / action ────────────────
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          isOccupied ? 'DOLU' : 'BOŞ',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: statusColor,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (isOccupied)
-                        Text(
-                          '₺${total.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: _textPrimary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        )
-                      else
-                        const Text(
-                          'Müsait',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: _textSecondary,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                // Action Button
+                isOccupied
+                    ? _PriceBadge(total: total, compact: compact)
+                    : _EmptyBadge(compact: compact),
+                const Spacer(),
                 GestureDetector(
                   onTapDown: (d) => onLongPress(d.globalPosition),
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: isOccupied ? null : BoxDecoration(
-                      color: _textSecondary.withOpacity(0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      isOccupied ? Icons.more_vert_rounded : Icons.add_rounded,
-                      size: 20,
-                      color: isOccupied ? _textSecondary : _textPrimary,
-                    ),
-                  ),
+                  child: isOccupied
+                      ? Icon(Icons.more_vert_rounded,
+                          size: compact ? 16 : 18, color: _textSecondary)
+                      : Container(
+                          padding: EdgeInsets.all(compact ? 4 : 5),
+                          decoration: BoxDecoration(
+                            color: _available.withOpacity(0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.add_rounded,
+                              size: compact ? 14 : 16, color: _available),
+                        ),
                 ),
               ],
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Orange price badge shown on occupied tables.
+class _PriceBadge extends StatelessWidget {
+  final double total;
+  final bool compact;
+  const _PriceBadge({required this.total, required this.compact});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+          horizontal: compact ? 6 : 8, vertical: compact ? 3 : 4),
+      decoration: BoxDecoration(
+        color: _orange.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        '₺${total.toStringAsFixed(2)}',
+        style: TextStyle(
+          fontSize: compact ? 12 : 14,
+          fontWeight: FontWeight.w800,
+          color: _orange,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+}
+
+/// Green "available" badge shown on empty tables.
+class _EmptyBadge extends StatelessWidget {
+  final bool compact;
+  const _EmptyBadge({required this.compact});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: compact ? 6 : 7,
+          height: compact ? 6 : 7,
+          decoration: const BoxDecoration(
+            color: _available,
+            shape: BoxShape.circle,
+          ),
+        ),
+        SizedBox(width: compact ? 4 : 5),
+        Text(
+          'Müsait',
+          style: TextStyle(
+            fontSize: compact ? 10 : 12,
+            fontWeight: FontWeight.w600,
+            color: _available,
+          ),
+        ),
+      ],
     );
   }
 }

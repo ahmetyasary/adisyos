@@ -63,7 +63,10 @@ class StaffService extends GetxService {
         'isActive': row['is_active'] as bool? ?? true,
       };
 
-  /// Returns true if the PIN matches the given staff id.
+  void _err(String tag, Object e) {
+    if (kDebugMode) print('[StaffService] $tag error: $e');
+  }
+
   bool verifyPin(String staffId, String pin) {
     final staff = staffList.firstWhereOrNull((s) => s['id'] == staffId);
     if (staff == null) return false;
@@ -78,6 +81,7 @@ class StaffService extends GetxService {
     currentStaff.value = null;
   }
 
+  // addStaff must await: caller needs the real DB id immediately.
   Future<void> addStaff(String name, String pin) async {
     try {
       final row = await _db
@@ -87,36 +91,34 @@ class StaffService extends GetxService {
           .single();
       staffList.add(_rowToStaff(row));
     } catch (e) {
-      if (kDebugMode) print('[StaffService] addStaff error: $e');
+      _err('addStaff', e);
       rethrow;
     }
   }
 
-  Future<void> updateStaff(String id,
-      {required String name, required String pin}) async {
+  Future<void> updateStaff(String id, {required String name, required String pin}) async {
+    final idx = staffList.indexWhere((s) => s['id'] == id);
+    if (idx >= 0) {
+      staffList[idx] = {...staffList[idx], 'name': name.trim(), 'pin': pin};
+    }
     try {
-      await _db
-          .from('staff_profiles')
+      await _db.from('staff_profiles')
           .update({'name': name.trim(), 'pin': pin})
           .eq('id', id);
-      final idx = staffList.indexWhere((s) => s['id'] == id);
-      if (idx >= 0) {
-        staffList[idx] = {...staffList[idx], 'name': name.trim(), 'pin': pin};
-      }
     } catch (e) {
-      if (kDebugMode) print('[StaffService] updateStaff error: $e');
-      rethrow;
+      _err('updateStaff', e);
     }
   }
 
   Future<void> deleteStaff(String id) async {
+    staffList.removeWhere((s) => s['id'] == id);
+    if (currentStaff.value?['id'] == id) clearCurrentStaff();
     try {
-      await _db.from('staff_profiles').delete().eq('id', id);
-      staffList.removeWhere((s) => s['id'] == id);
-      if (currentStaff.value?['id'] == id) clearCurrentStaff();
+      await _db.from('staff_profiles')
+          .delete()
+          .eq('id', id);
     } catch (e) {
-      if (kDebugMode) print('[StaffService] deleteStaff error: $e');
-      rethrow;
+      _err('deleteStaff', e);
     }
   }
 }

@@ -13,6 +13,7 @@ import 'package:adisyos/services/table_service.dart';
 import 'package:adisyos/services/day_service.dart';
 import 'package:adisyos/views/kitchen_display_view.dart';
 import 'package:adisyos/views/inventory_management_view.dart';
+import 'package:adisyos/widgets/app_toast.dart';
 import 'package:adisyos/views/staff_report_view.dart';
 import 'package:adisyos/views/shift_management_view.dart';
 import 'package:adisyos/views/dashboard_view.dart';
@@ -195,16 +196,7 @@ class _HomeViewState extends State<HomeView> {
   Future<void> _startDay() async {
     final success = await DayService.to.startDay(_currentIdentifier);
     if (success) {
-      Get.snackbar(
-        'Gün Başlatıldı',
-        'İyi çalışmalar!',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF34C759),
-        colorText: Colors.white,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 14,
-        duration: const Duration(seconds: 2),
-      );
+      AppToast.success('İyi çalışmalar!', title: 'Gün Başlatıldı', duration: const Duration(seconds: 2));
     }
   }
 
@@ -283,16 +275,7 @@ class _HomeViewState extends State<HomeView> {
 
     final success = await DayService.to.endDay(_currentIdentifier);
     if (success) {
-      Get.snackbar(
-        'Gün Bitirildi',
-        'Günü kapattınız. Yarın görüşmek üzere!',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFFF3B30),
-        colorText: Colors.white,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 14,
-        duration: const Duration(seconds: 2),
-      );
+      AppToast.info('Günü kapattınız. Yarın görüşmek üzere!', title: 'Gün Bitirildi', duration: const Duration(seconds: 2));
     }
   }
 

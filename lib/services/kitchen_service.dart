@@ -69,6 +69,10 @@ class KitchenService extends GetxService {
         .subscribe();
   }
 
+  void _err(String tag, Object e) {
+    if (kDebugMode) print('[KitchenService] $tag error: $e');
+  }
+
   // ── Mutations ────────────────────────────────────────────────
 
   Future<void> addOrUpdateTicket({
@@ -89,13 +93,27 @@ class KitchenService extends GetxService {
         final ticketId = tickets[existingIdx]['id'] as String;
         tickets[existingIdx]['quantity'] = quantity;
         tickets.refresh();
-        await _db
-            .from('kitchen_tickets')
+
+        // Fire-and-forget DB update.
+        _db.from('kitchen_tickets')
             .update({'quantity': quantity})
-            .eq('id', ticketId);
+            .eq('id', ticketId)
+            .catchError((e) => _err('addOrUpdateTicket(update)', e));
       } else {
-        final row = await _db
-            .from('kitchen_tickets')
+        // Insert: need real id — resolve optimistically with temp then patch.
+        final now = DateTime.now().toIso8601String();
+        final tempId = 'tmp_${now}_$itemName';
+        tickets.add({
+          'id': tempId,
+          'tableId': tableId,
+          'tableName': tableName,
+          'itemName': itemName,
+          'quantity': quantity,
+          'status': 'pending',
+          'orderedAt': now,
+        });
+
+        _db.from('kitchen_tickets')
             .insert({
               'table_id': tableId,
               'table_name': tableName,
@@ -104,16 +122,22 @@ class KitchenService extends GetxService {
               'status': 'pending',
             })
             .select()
-            .single();
-
-        tickets.add(_rowToTicket(row));
+            .single()
+            .then((row) {
+              final idx = tickets.indexWhere((t) => t['id'] == tempId);
+              if (idx != -1) {
+                tickets[idx] = _rowToTicket(row);
+                tickets.refresh();
+              }
+            })
+            .catchError((e) => _err('addOrUpdateTicket(insert)', e));
       }
     } catch (e) {
-      if (kDebugMode) print('[KitchenService] addOrUpdateTicket error: $e');
+      _err('addOrUpdateTicket', e);
     }
   }
 
-  Future<void> advanceStatus(String ticketId) async {
+  void advanceStatus(String ticketId) {
     final idx = tickets.indexWhere((t) => t['id'] == ticketId);
     if (idx == -1) return;
 
@@ -128,26 +152,18 @@ class KitchenService extends GetxService {
     tickets[idx]['status'] = next;
     tickets.refresh();
 
-    try {
-      await _db
-          .from('kitchen_tickets')
-          .update({'status': next})
-          .eq('id', ticketId);
-    } catch (e) {
-      if (kDebugMode) print('[KitchenService] advanceStatus error: $e');
-    }
+    _db.from('kitchen_tickets')
+        .update({'status': next})
+        .eq('id', ticketId)
+        .catchError((e) => _err('advanceStatus', e));
   }
 
   Future<void> removeTicketsForTable(int tableId) async {
     tickets.removeWhere((t) => t['tableId'] == tableId);
-    try {
-      await _db
-          .from('kitchen_tickets')
-          .delete()
-          .eq('table_id', tableId);
-    } catch (e) {
-      if (kDebugMode) print('[KitchenService] removeTicketsForTable error: $e');
-    }
+    _db.from('kitchen_tickets')
+        .delete()
+        .eq('table_id', tableId)
+        .catchError((e) => _err('removeTicketsForTable', e));
   }
 
   Future<void> removeTicketForItem({
@@ -157,24 +173,19 @@ class KitchenService extends GetxService {
     tickets.removeWhere(
       (t) => t['tableId'] == tableId && t['itemName'] == itemName,
     );
-    try {
-      await _db
-          .from('kitchen_tickets')
-          .delete()
-          .eq('table_id', tableId)
-          .eq('item_name', itemName);
-    } catch (e) {
-      if (kDebugMode) print('[KitchenService] removeTicketForItem error: $e');
-    }
+    _db.from('kitchen_tickets')
+        .delete()
+        .eq('table_id', tableId)
+        .eq('item_name', itemName)
+        .catchError((e) => _err('removeTicketForItem', e));
   }
 
-  Future<void> clearReadyTickets() async {
+  void clearReadyTickets() {
     tickets.removeWhere((t) => t['status'] == 'ready');
-    try {
-      await _db.from('kitchen_tickets').delete().eq('status', 'ready');
-    } catch (e) {
-      if (kDebugMode) print('[KitchenService] clearReadyTickets error: $e');
-    }
+    _db.from('kitchen_tickets')
+        .delete()
+        .eq('status', 'ready')
+        .catchError((e) => _err('clearReadyTickets', e));
   }
 
   // ── Lifecycle refresh ────────────────────────────────────────

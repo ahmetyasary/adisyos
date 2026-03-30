@@ -57,6 +57,10 @@ class SectionService extends GetxService {
         'orderIndex': row['order_index'] as int? ?? 0,
       };
 
+  void _err(String tag, Object e) {
+    if (kDebugMode) print('[SectionService] $tag error: $e');
+  }
+
   Future<void> addSection(String name) async {
     try {
       final row = await _db
@@ -69,32 +73,33 @@ class SectionService extends GetxService {
           .single();
       sections.add(_rowToSection(row));
     } catch (e) {
-      if (kDebugMode) print('[SectionService] addSection error: $e');
+      _err('addSection', e);
       rethrow;
     }
   }
 
   Future<void> updateSection(String id, String name) async {
+    final idx = sections.indexWhere((s) => s['id'] == id);
+    if (idx >= 0) {
+      sections[idx] = {...sections[idx], 'name': name.trim()};
+    }
     try {
-      await _db
-          .from('sections')
+      await _db.from('sections')
           .update({'name': name.trim()})
           .eq('id', id);
-      final idx = sections.indexWhere((s) => s['id'] == id);
-      if (idx >= 0) sections[idx] = {...sections[idx], 'name': name.trim()};
     } catch (e) {
-      if (kDebugMode) print('[SectionService] updateSection error: $e');
-      rethrow;
+      _err('updateSection', e);
     }
   }
 
   Future<void> deleteSection(String id) async {
+    sections.removeWhere((s) => s['id'] == id);
     try {
-      await _db.from('sections').delete().eq('id', id);
-      sections.removeWhere((s) => s['id'] == id);
+      await _db.from('sections')
+          .delete()
+          .eq('id', id);
     } catch (e) {
-      if (kDebugMode) print('[SectionService] deleteSection error: $e');
-      rethrow;
+      _err('deleteSection', e);
     }
   }
 

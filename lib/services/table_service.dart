@@ -12,6 +12,9 @@ class TableService extends GetxService {
 
   final RxList<Map<String, dynamic>> tables = <Map<String, dynamic>>[].obs;
 
+  // Partial payments survive navigation; keyed by tableIndex.
+  final Map<int, List<Map<String, dynamic>>> _partialPaymentsByTable = {};
+
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
   Timer? _debounce;
@@ -124,6 +127,10 @@ class TableService extends GetxService {
     } catch (_) {}
   }
 
+  void _err(String tag, Object e) {
+    if (kDebugMode) print('[TableService] $tag error: $e');
+  }
+
   // ── Table CRUD ───────────────────────────────────────────────
 
   Future<void> addTable(String name, {String? sectionId}) async {
@@ -153,7 +160,7 @@ class TableService extends GetxService {
         'orders': <Map<String, dynamic>>[],
       });
     } catch (e) {
-      if (kDebugMode) print('[TableService] addTable error: $e');
+      _err('addTable', e);
     }
   }
 
@@ -161,34 +168,24 @@ class TableService extends GetxService {
     final tableId = _id(index);
     await KitchenService.to.removeTicketsForTable(tableId);
     tables.removeAt(index);
-    try {
-      // orders cascade-delete via FK
-      await _db.from('tables').delete().eq('id', tableId);
-    } catch (e) {
-      if (kDebugMode) print('[TableService] removeTable error: $e');
-    }
+    _db.from('tables').delete().eq('id', tableId)
+        .catchError((e) => _err('removeTable', e));
   }
 
-  Future<void> updateTableName(int index, String newName) async {
+  void updateTableName(int index, String newName) {
     tables[index]['name'] = newName;
     tables.refresh();
-    try {
-      await _db.from('tables').update({'name': newName}).eq('id', _id(index));
-    } catch (e) {
-      if (kDebugMode) print('[TableService] updateTableName error: $e');
-    }
+    _db.from('tables').update({'name': newName}).eq('id', _id(index))
+        .catchError((e) => _err('updateTableName', e));
   }
 
-  Future<void> toggleTableStatus(int index) async {
+  void toggleTableStatus(int index) {
     tables[index]['isOccupied'] = !(tables[index]['isOccupied'] as bool);
     tables.refresh();
-    try {
-      await _db.from('tables').update({
-        'is_occupied': tables[index]['isOccupied'] as bool,
-      }).eq('id', _id(index));
-    } catch (e) {
-      if (kDebugMode) print('[TableService] toggleTableStatus error: $e');
-    }
+    _db.from('tables').update({
+      'is_occupied': tables[index]['isOccupied'] as bool,
+    }).eq('id', _id(index))
+        .catchError((e) => _err('toggleTableStatus', e));
   }
 
   void _setOccupied(int tableIndex) {
@@ -199,10 +196,12 @@ class TableService extends GetxService {
 
   // ── Order mutations ──────────────────────────────────────────
 
-  Future<void> addOrder(int tableIndex, String name, double price) async {
+  void addOrder(int tableIndex, String name, double price) {
     final tableId = _id(tableIndex);
     final orders = tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
     final existingIdx = orders.indexWhere((o) => o['name'] == name);
+
+    _assignStaff(tableIndex);
 
     if (existingIdx != -1) {
       final newQty = (orders[existingIdx]['quantity'] as int) + 1;
@@ -210,8 +209,6 @@ class TableService extends GetxService {
       orders[existingIdx]['quantity'] = newQty;
       tables[tableIndex]['total'] =
           (tables[tableIndex]['total'] as double) + price;
-
-      _assignStaff(tableIndex);
       _setOccupied(tableIndex);
 
       KitchenService.to.addOrUpdateTicket(
@@ -221,19 +218,14 @@ class TableService extends GetxService {
         quantity: newQty,
       );
 
-      try {
-        await _db.from('orders').update({'quantity': newQty}).eq('id', orderId);
-        await _syncTableHeader(tableIndex);
-      } catch (e) {
-        if (kDebugMode) print('[TableService] addOrder (update) error: $e');
-      }
+      Future.wait([
+        _db.from('orders').update({'quantity': newQty}).eq('id', orderId),
+        _syncTableHeader(tableIndex),
+      ]).catchError((e) => _err('addOrder(update)', e));
     } else {
-      // Optimistic: placeholder id = -1 until insert resolves
       orders.add(<String, dynamic>{'id': -1, 'name': name, 'quantity': 1, 'price': price});
       tables[tableIndex]['total'] =
           (tables[tableIndex]['total'] as double) + price;
-
-      _assignStaff(tableIndex);
       _setOccupied(tableIndex);
 
       KitchenService.to.addOrUpdateTicket(
@@ -243,25 +235,20 @@ class TableService extends GetxService {
         quantity: 1,
       );
 
-      try {
-        final row = await _db
-            .from('orders')
-            .insert({'table_id': tableId, 'name': name, 'quantity': 1, 'price': price})
-            .select()
-            .single();
-
-        // Patch the placeholder with the real id
-        final idx = orders.indexWhere((o) => o['name'] == name && o['id'] == -1);
-        if (idx != -1) orders[idx]['id'] = row['id'] as int;
-
-        await _syncTableHeader(tableIndex);
-      } catch (e) {
-        if (kDebugMode) print('[TableService] addOrder (insert) error: $e');
-      }
+      _db.from('orders')
+          .insert({'table_id': tableId, 'name': name, 'quantity': 1, 'price': price})
+          .select()
+          .single()
+          .then((row) {
+            final idx = orders.indexWhere((o) => o['name'] == name && o['id'] == -1);
+            if (idx != -1) orders[idx]['id'] = row['id'] as int;
+            return _syncTableHeader(tableIndex);
+          })
+          .catchError((e) => _err('addOrder(insert)', e));
     }
   }
 
-  Future<void> removeOrder(int tableIndex, int orderIndex) async {
+  void removeOrder(int tableIndex, int orderIndex) {
     final orders = tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
     if (orderIndex >= orders.length) return;
 
@@ -280,19 +267,19 @@ class TableService extends GetxService {
       tables[tableIndex]['discount'] = 0.0;
     }
 
-    await KitchenService.to.removeTicketForItem(tableId: _id(tableIndex), itemName: name);
     orders.removeAt(orderIndex);
     _setOccupied(tableIndex);
 
-    try {
-      await _db.from('orders').delete().eq('id', orderId);
-      await _syncTableHeader(tableIndex);
-    } catch (e) {
-      if (kDebugMode) print('[TableService] removeOrder error: $e');
-    }
+    KitchenService.to.removeTicketForItem(
+        tableId: _id(tableIndex), itemName: name);
+
+    Future.wait([
+      _db.from('orders').delete().eq('id', orderId),
+      _syncTableHeader(tableIndex),
+    ]).catchError((e) => _err('removeOrder', e));
   }
 
-  Future<void> decrementOrder(int tableIndex, int orderIndex) async {
+  void decrementOrder(int tableIndex, int orderIndex) {
     final orders = tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
     if (orderIndex >= orders.length) return;
 
@@ -303,8 +290,7 @@ class TableService extends GetxService {
     final orderId = order['id'] as int;
 
     if (qty <= 1) {
-      await KitchenService.to.removeTicketForItem(tableId: _id(tableIndex), itemName: name);
-      await removeOrder(tableIndex, orderIndex);
+      removeOrder(tableIndex, orderIndex);
       return;
     }
 
@@ -312,7 +298,6 @@ class TableService extends GetxService {
     tables[tableIndex]['total'] =
         ((tables[tableIndex]['total'] as double) - price)
             .clamp(0.0, double.infinity);
-
     _setOccupied(tableIndex);
 
     KitchenService.to.addOrUpdateTicket(
@@ -322,22 +307,19 @@ class TableService extends GetxService {
       quantity: qty - 1,
     );
 
-    try {
-      await _db
-          .from('orders')
-          .update({'quantity': qty - 1})
-          .eq('id', orderId);
-      await _syncTableHeader(tableIndex);
-    } catch (e) {
-      if (kDebugMode) print('[TableService] decrementOrder error: $e');
-    }
+    Future.wait([
+      _db.from('orders').update({'quantity': qty - 1}).eq('id', orderId),
+      _syncTableHeader(tableIndex),
+    ]).catchError((e) => _err('decrementOrder', e));
   }
 
   // ── Clear / Payment ──────────────────────────────────────────
 
-  Future<void> clearTable(int tableIndex) async {
+  void clearTable(int tableIndex) {
+    clearPartialPayments(tableIndex);
     final tableId = _id(tableIndex);
-    await KitchenService.to.removeTicketsForTable(tableId);
+
+    KitchenService.to.removeTicketsForTable(tableId);
 
     tables[tableIndex]['orders'] = <Map<String, dynamic>>[];
     tables[tableIndex]['total'] = 0.0;
@@ -346,18 +328,16 @@ class TableService extends GetxService {
     tables[tableIndex]['staffEmail'] = '';
     tables.refresh();
 
-    try {
-      await _db.from('orders').delete().eq('table_id', tableId);
-      await _syncTableHeader(tableIndex);
-    } catch (e) {
-      if (kDebugMode) print('[TableService] clearTable error: $e');
-    }
+    Future.wait([
+      _db.from('orders').delete().eq('table_id', tableId),
+      _syncTableHeader(tableIndex),
+    ]).catchError((e) => _err('clearTable', e));
   }
 
-  Future<void> recordPayment(
+  void recordPayment(
     int tableIndex, {
     String paymentMethod = 'cash',
-  }) async {
+  }) {
     final table = tables[tableIndex];
     final orders = List<Map<String, dynamic>>.from(
       table['orders'] as List<Map<String, dynamic>>,
@@ -366,37 +346,120 @@ class TableService extends GetxService {
     final discount = (table['discount'] ?? 0.0) as double;
     final total = (subtotal - discount).clamp(0.0, double.infinity);
     final staffEmail = (table['staffEmail'] as String? ?? '');
+    final tableName = table['name'] as String;
 
-    await SalesHistoryService.to.recordSale(
-      tableName: table['name'] as String,
+    // Clear in-memory immediately — UI reflects empty table at once.
+    clearTable(tableIndex);
+
+    // Persist sale + inventory in background.
+    SalesHistoryService.to.recordSale(
+      tableName: tableName,
       items: orders,
       subtotal: subtotal,
       discount: discount,
       total: total,
       staffEmail: staffEmail,
       paymentMethod: paymentMethod,
-    );
+    ).ignore();
 
-    await InventoryService.to.decrementForSale(orders);
-    await clearTable(tableIndex);
+    InventoryService.to.decrementForSale(orders).ignore();
   }
+
+  /// Pay [units] units of [itemName] — optimistic: in-memory update is instant,
+  /// DB writes fire in the background without blocking the caller.
+  Future<void> recordPartialPaymentUnits(
+    int tableIndex,
+    String itemName,
+    int units, {
+    String paymentMethod = 'cash',
+  }) async {
+    if (tableIndex >= tables.length) return;
+    final orders = tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
+    final idx = orders.indexWhere((o) => o['name'] == itemName);
+    if (idx == -1) return;
+
+    final order      = orders[idx];
+    final price      = order['price']    as double;
+    final currentQty = order['quantity'] as int;
+    final orderId    = order['id']       as int;
+    final payUnits   = units.clamp(1, currentQty);
+    final newQty     = currentQty - payUnits;
+    final tableName  = tables[tableIndex]['name'] as String;
+    final staffEmail = (tables[tableIndex]['staffEmail'] as String? ?? '');
+    final tableId    = _id(tableIndex);
+
+    // ── 1. Instant in-memory update ─────────────────────────────
+    tables[tableIndex]['total'] =
+        ((tables[tableIndex]['total'] as double) - price * payUnits)
+            .clamp(0.0, double.infinity);
+
+    if (newQty <= 0) {
+      orders.removeAt(idx);
+      KitchenService.to
+          .removeTicketForItem(tableId: tableId, itemName: itemName);
+    } else {
+      orders[idx]['quantity'] = newQty;
+      KitchenService.to.addOrUpdateTicket(
+        tableId: tableId,
+        tableName: tableName,
+        itemName: itemName,
+        quantity: newQty,
+      );
+    }
+    _setOccupied(tableIndex);
+
+    // ── 2. Background DB writes — all parallel, non-blocking ────
+    final saleItems = [
+      {'name': itemName, 'quantity': payUnits, 'price': price}
+    ];
+    final saleTotal = price * payUnits;
+
+    SalesHistoryService.to.recordSale(
+      tableName: tableName,
+      items: saleItems,
+      subtotal: saleTotal,
+      discount: 0.0,
+      total: saleTotal,
+      staffEmail: staffEmail,
+      paymentMethod: paymentMethod,
+    ).ignore();
+
+    InventoryService.to.decrementForSale(saleItems).ignore();
+
+    final orderFuture = newQty <= 0
+        ? _db.from('orders').delete().eq('id', orderId)
+        : _db.from('orders').update({'quantity': newQty}).eq('id', orderId);
+
+    orderFuture
+        .then((_) => _syncTableHeader(tableIndex))
+        .catchError((e) => _err('recordPartialPaymentUnits', e));
+  }
+
+  // ── Partial payment records (in-memory, per table) ───────────
+
+  void addPartialPaymentRecord(int tableIndex, Map<String, dynamic> record) {
+    _partialPaymentsByTable.putIfAbsent(tableIndex, () => []).add(record);
+  }
+
+  List<Map<String, dynamic>> getPartialPayments(int tableIndex) =>
+      List.from(_partialPaymentsByTable[tableIndex] ?? []);
+
+  void clearPartialPayments(int tableIndex) =>
+      _partialPaymentsByTable.remove(tableIndex);
 
   // ── Discount ─────────────────────────────────────────────────
 
-  Future<void> applyDiscount(int tableIndex, double discountPercentage) async {
+  void applyDiscount(int tableIndex, double discountPercentage) {
     final currentTotal = tables[tableIndex]['total'] as double;
     final clamped = discountPercentage.clamp(0.0, 100.0);
     final discountAmount = currentTotal * (clamped / 100);
     tables[tableIndex]['discount'] = discountAmount;
     tables.refresh();
 
-    try {
-      await _db.from('tables').update({
-        'discount': discountAmount,
-      }).eq('id', _id(tableIndex));
-    } catch (e) {
-      if (kDebugMode) print('[TableService] applyDiscount error: $e');
-    }
+    _db.from('tables').update({
+      'discount': discountAmount,
+    }).eq('id', _id(tableIndex))
+        .catchError((e) => _err('applyDiscount', e));
   }
 
   double getTotalWithDiscount(int tableIndex) {
@@ -416,11 +479,11 @@ class TableService extends GetxService {
 
   // ── Move orders between tables ────────────────────────────────
 
-  Future<void> moveOrderToTable(
+  void moveOrderToTable(
     int fromTableIndex,
     int toTableIndex,
     int orderIndex,
-  ) async {
+  ) {
     final srcOrders = getOrders(fromTableIndex);
     if (orderIndex >= srcOrders.length) return;
 
@@ -446,11 +509,8 @@ class TableService extends GetxService {
         quantity: newQty,
       );
 
-      try {
-        await _db.from('orders').update({'quantity': newQty}).eq('id', destOrderId);
-      } catch (e) {
-        if (kDebugMode) print('[TableService] moveOrder dest-update error: $e');
-      }
+      _db.from('orders').update({'quantity': newQty}).eq('id', destOrderId)
+          .catchError((e) => _err('moveOrder dest-update', e));
     } else {
       destOrders.add({'id': -1, 'name': name, 'quantity': qty, 'price': price});
 
@@ -461,14 +521,13 @@ class TableService extends GetxService {
         quantity: qty,
       );
 
-      try {
-        // Re-parent the order row
-        await _db.from('orders').update({'table_id': destTableId}).eq('id', srcOrderId);
-        final idx = destOrders.indexWhere((o) => o['name'] == name && o['id'] == -1);
-        if (idx != -1) destOrders[idx]['id'] = srcOrderId;
-      } catch (e) {
-        if (kDebugMode) print('[TableService] moveOrder reparent error: $e');
-      }
+      _db.from('orders').update({'table_id': destTableId}).eq('id', srcOrderId)
+          .then((_) {
+            final idx = destOrders.indexWhere(
+                (o) => o['name'] == name && o['id'] == -1);
+            if (idx != -1) destOrders[idx]['id'] = srcOrderId;
+          })
+          .catchError((e) => _err('moveOrder reparent', e));
     }
 
     tables[toTableIndex]['total'] =
@@ -486,25 +545,23 @@ class TableService extends GetxService {
       tables[fromTableIndex]['discount'] = 0.0;
     }
 
-    await KitchenService.to.removeTicketForItem(
+    KitchenService.to.removeTicketForItem(
       tableId: _id(fromTableIndex),
       itemName: name,
     );
 
     tables.refresh();
 
-    try {
-      await _syncTableHeader(fromTableIndex);
-      await _syncTableHeader(toTableIndex);
-    } catch (e) {
-      if (kDebugMode) print('[TableService] moveOrder sync error: $e');
-    }
+    Future.wait([
+      _syncTableHeader(fromTableIndex),
+      _syncTableHeader(toTableIndex),
+    ]).catchError((e) => _err('moveOrder sync', e));
   }
 
-  Future<void> moveAllOrdersToTable(
+  void moveAllOrdersToTable(
     int fromTableIndex,
     int toTableIndex,
-  ) async {
+  ) {
     final srcOrders =
         List<Map<String, dynamic>>.from(getOrders(fromTableIndex));
     final destOrders = getOrders(toTableIndex);
@@ -531,16 +588,10 @@ class TableService extends GetxService {
           quantity: newQty,
         );
 
-        try {
-          await _db
-              .from('orders')
-              .update({'quantity': newQty})
-              .eq('id', destOrderId);
-          // Delete the source duplicate
-          await _db.from('orders').delete().eq('id', srcOrderId);
-        } catch (e) {
-          if (kDebugMode) print('[TableService] moveAll merge error: $e');
-        }
+        Future.wait([
+          _db.from('orders').update({'quantity': newQty}).eq('id', destOrderId),
+          _db.from('orders').delete().eq('id', srcOrderId),
+        ]).catchError((e) => _err('moveAll merge', e));
       } else {
         destOrders.add({'id': srcOrderId, 'name': name, 'quantity': qty, 'price': price});
 
@@ -551,17 +602,11 @@ class TableService extends GetxService {
           quantity: qty,
         );
 
-        try {
-          await _db
-              .from('orders')
-              .update({'table_id': destTableId})
-              .eq('id', srcOrderId);
-        } catch (e) {
-          if (kDebugMode) print('[TableService] moveAll reparent error: $e');
-        }
+        _db.from('orders').update({'table_id': destTableId}).eq('id', srcOrderId)
+            .catchError((e) => _err('moveAll reparent', e));
       }
 
-      await KitchenService.to.removeTicketForItem(
+      KitchenService.to.removeTicketForItem(
         tableId: _id(fromTableIndex),
         itemName: name,
       );
@@ -579,11 +624,9 @@ class TableService extends GetxService {
 
     tables.refresh();
 
-    try {
-      await _syncTableHeader(fromTableIndex);
-      await _syncTableHeader(toTableIndex);
-    } catch (e) {
-      if (kDebugMode) print('[TableService] moveAll sync error: $e');
-    }
+    Future.wait([
+      _syncTableHeader(fromTableIndex),
+      _syncTableHeader(toTableIndex),
+    ]).catchError((e) => _err('moveAll sync', e));
   }
 }

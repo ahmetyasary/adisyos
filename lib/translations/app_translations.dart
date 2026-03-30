@@ -47,7 +47,7 @@ class AppTranslations extends Translations {
           'gift': 'İkram',
           'exchange': 'İade',
           'split': 'Böl',
-          'discount': 'İskonto',
+          'discount': 'İndirim',
           'print': 'Yazdır',
           'cancel': 'İptal',
           'move': 'Taşı',
@@ -136,7 +136,7 @@ class AppTranslations extends Translations {
           // Settings
           'company_name': 'Şirket Adı',
           'company_name_hint': 'Şirket adınızı girin',
-          'default_discount_rate': 'İskonto Oranı (%)',
+          'default_discount_rate': 'İndirim Oranı (%)',
           'default_discount_hint': 'Örn: 10',
           'language': 'Dil',
           'save_settings': 'Kaydet',

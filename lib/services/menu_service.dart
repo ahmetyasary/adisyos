@@ -57,13 +57,11 @@ class MenuService extends GetxService {
     try {
       List<dynamic> rows;
       try {
-        // Full query: icon_key on menus + image_url on items.
         rows = await _db
             .from('menus')
             .select('id, name, icon_key, menu_items(id, name, price, image_url)')
             .order('id');
       } catch (_) {
-        // Fallback: neither column added yet.
         rows = await _db
             .from('menus')
             .select('id, name, menu_items(id, name, price)')
@@ -80,7 +78,6 @@ class MenuService extends GetxService {
   Map<String, dynamic> _rowToMenu(Map<String, dynamic> row) => {
         'id': row['id'] as int,
         'name': row['name'] as String,
-        // Falls back to default if column not yet migrated
         'iconKey': (row['icon_key'] as String?) ?? 'restaurant_menu',
         'items': ((row['menu_items'] ?? []) as List)
             .map((i) => {
@@ -92,7 +89,6 @@ class MenuService extends GetxService {
             .toList(),
       };
 
-  /// Syncs [menuIcons] directly from the menus list (already loaded from DB).
   void _syncIconsFromMenus() {
     final map = <int, String>{};
     for (final m in menus) {
@@ -101,29 +97,29 @@ class MenuService extends GetxService {
     menuIcons.assignAll(map);
   }
 
+  void _err(String tag, Object e) {
+    if (kDebugMode) print('[MenuService] $tag error: $e');
+  }
+
   // ── Icon helpers ─────────────────────────────────────────────
 
   String getMenuIcon(int menuId) => menuIcons[menuId] ?? 'restaurant_menu';
 
-  /// Updates icon both locally and in Supabase.
-  Future<void> setMenuIcon(int menuId, String iconKey) async {
+  void setMenuIcon(int menuId, String iconKey) {
     menuIcons[menuId] = iconKey;
     final idx = menus.indexWhere((m) => m['id'] == menuId);
     if (idx != -1) {
       menus[idx]['iconKey'] = iconKey;
       menus.refresh();
     }
-    try {
-      await _db.from('menus').update({'icon_key': iconKey}).eq('id', menuId);
-    } catch (e) {
-      if (kDebugMode) print('[MenuService] setMenuIcon error: $e');
-    }
+    _db.from('menus')
+        .update({'icon_key': iconKey})
+        .eq('id', menuId)
+        .catchError((e) => _err('setMenuIcon', e));
   }
 
   // ── Image upload (Supabase Storage bucket: menu-images) ──────
 
-  /// Uploads image bytes and returns the public URL.
-  /// Throws [StorageException] on failure — callers must handle.
   Future<String> uploadItemImage(Uint8List bytes, int itemId) async {
     final filename = 'item_$itemId.jpg';
     await _db.storage.from('menu-images').uploadBinary(
@@ -185,31 +181,29 @@ class MenuService extends GetxService {
       menuIcons[id] = 'restaurant_menu';
       return id;
     } catch (e) {
-      if (kDebugMode) print('[MenuService] addMenu error: $e');
+      _err('addMenu', e);
       return null;
     }
   }
 
-  Future<void> updateMenu(int index, String name) async {
+  void updateMenu(int index, String name) {
     final id = menus[index]['id'] as int;
     menus[index]['name'] = name;
     menus.refresh();
-    try {
-      await _db.from('menus').update({'name': name}).eq('id', id);
-    } catch (e) {
-      if (kDebugMode) print('[MenuService] updateMenu error: $e');
-    }
+    _db.from('menus')
+        .update({'name': name})
+        .eq('id', id)
+        .catchError((e) => _err('updateMenu', e));
   }
 
-  Future<void> removeMenu(int index) async {
+  void removeMenu(int index) {
     final id = menus[index]['id'] as int;
     menus.removeAt(index);
     menuIcons.remove(id);
-    try {
-      await _db.from('menus').delete().eq('id', id);
-    } catch (e) {
-      if (kDebugMode) print('[MenuService] removeMenu error: $e');
-    }
+    _db.from('menus')
+        .delete()
+        .eq('id', id)
+        .catchError((e) => _err('removeMenu', e));
   }
 
   Future<void> addMenuItem(
@@ -229,11 +223,11 @@ class MenuService extends GetxService {
     String? imageUrl;
 
     if (imageBytes != null) {
-      imageUrl = await uploadItemImage(imageBytes, itemId); // throws on failure
-      await _db
-          .from('menu_items')
+      imageUrl = await uploadItemImage(imageBytes, itemId);
+      _db.from('menu_items')
           .update({'image_url': imageUrl})
-          .eq('id', itemId);
+          .eq('id', itemId)
+          .catchError((e) => _err('addMenuItem(image)', e));
     }
 
     (menus[menuIndex]['items'] as List).add({
@@ -256,6 +250,7 @@ class MenuService extends GetxService {
         (menus[menuIndex]['items'] as List)[itemIndex] as Map<String, dynamic>;
     final itemId = item['id'] as int;
 
+    // Update in-memory immediately.
     item['name'] = name;
     item['price'] = price;
     menus.refresh();
@@ -263,24 +258,26 @@ class MenuService extends GetxService {
     final updateData = <String, dynamic>{'name': name, 'price': price};
 
     if (imageBytes != null) {
-      final url = await uploadItemImage(imageBytes, itemId); // throws on failure
+      final url = await uploadItemImage(imageBytes, itemId);
       item['imageUrl'] = url;
       menus.refresh();
       updateData['image_url'] = url;
     }
 
-    await _db.from('menu_items').update(updateData).eq('id', itemId);
+    _db.from('menu_items')
+        .update(updateData)
+        .eq('id', itemId)
+        .catchError((e) => _err('updateMenuItem', e));
   }
 
-  Future<void> removeMenuItem(int menuIndex, int itemIndex) async {
+  void removeMenuItem(int menuIndex, int itemIndex) {
     final items = menus[menuIndex]['items'] as List;
     final itemId = (items[itemIndex] as Map<String, dynamic>)['id'] as int;
     items.removeAt(itemIndex);
     menus.refresh();
-    try {
-      await _db.from('menu_items').delete().eq('id', itemId);
-    } catch (e) {
-      if (kDebugMode) print('[MenuService] removeMenuItem error: $e');
-    }
+    _db.from('menu_items')
+        .delete()
+        .eq('id', itemId)
+        .catchError((e) => _err('removeMenuItem', e));
   }
 }

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:adisyos/services/menu_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
+import 'package:adisyos/widgets/app_toast.dart';
 
 // ── Design tokens ──────────────────────────────────────────────
 const _bg          = Color(0xFFF2F2F7);
@@ -536,13 +537,7 @@ class _ItemFormDialogState extends State<_ItemFormDialog> {
       setState(() => _pickedBytes = bytes);
     } catch (e) {
       if (mounted) {
-        Get.snackbar(
-          'Hata',
-          'Fotoğraf seçilemedi: $e',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFFFF3B30),
-          colorText: Colors.white,
-        );
+        AppToast.error('Fotoğraf seçilemedi: $e', title: 'Hata');
       }
     }
   }
@@ -554,13 +549,7 @@ class _ItemFormDialogState extends State<_ItemFormDialog> {
 
     final price = double.tryParse(priceText);
     if (price == null || price < 0) {
-      Get.snackbar(
-        'error'.tr,
-        'invalid_price'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppTheme.errorColor,
-        colorText: Colors.white,
-      );
+      AppToast.error('invalid_price'.tr, title: 'error'.tr);
       return;
     }
 
@@ -589,14 +578,7 @@ class _ItemFormDialogState extends State<_ItemFormDialog> {
         final msg = e.toString().contains('storage')
             ? 'Fotoğraf yüklenemedi. Supabase Storage politikasını kontrol edin.\n\n$e'
             : 'Kaydedilemedi: $e';
-        Get.snackbar(
-          'Hata',
-          msg,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFFFF3B30),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 6),
-        );
+        AppToast.error(msg, title: 'Hata', duration: const Duration(seconds: 6));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

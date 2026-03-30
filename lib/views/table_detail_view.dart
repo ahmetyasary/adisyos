@@ -9,6 +9,7 @@ import 'package:adisyos/services/table_service.dart';
 import 'package:adisyos/services/inventory_service.dart';
 import 'package:adisyos/services/settings_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
+import 'package:adisyos/widgets/app_toast.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _bg            = Color(0xFFF2F2F7);
@@ -71,7 +72,19 @@ class _TableDetailViewState extends State<TableDetailView> {
   int _selectedMenuIndex = 0;
   bool _isSearching = false;
   String _searchQuery = '';
+  bool _isPartialPayMode = false;
+  List<Map<String, dynamic>> _partialPayments = [];
+  // itemName → how many units the cashier has tapped to pay this round
+  final Map<String, int> _partialSelected = {};
   final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Restore any partial payments recorded before navigating away.
+    _partialPayments =
+        TableService.to.getPartialPayments(widget.tableIndex);
+  }
 
   @override
   void dispose() {
@@ -366,13 +379,33 @@ class _TableDetailViewState extends State<TableDetailView> {
                   final quantity = order['quantity'] as int;
                   final price    = order['price']    as double;
                   final lineTotal = price * quantity;
-                  return Container(
+                  final isPartial = _isPartialPayMode;
+                  final selCount = isPartial ? (_partialSelected[name] ?? 0) : 0;
+                  return GestureDetector(
+                    onTap: isPartial
+                        ? () {
+                            setState(() {
+                              final cur = _partialSelected[name] ?? 0;
+                              _partialSelected[name] = (cur + 1) % (quantity + 1);
+                            });
+                          }
+                        : null,
+                    child: Container(
                     margin: const EdgeInsets.only(top: 8),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: isPartial && selCount > 0
+                          ? _orange.withOpacity(0.05)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(16),
+                      border: isPartial
+                          ? Border.all(
+                              color: selCount > 0
+                                  ? _orange.withOpacity(0.7)
+                                  : _orange.withOpacity(0.2),
+                              width: selCount > 0 ? 2.0 : 1.0)
+                          : null,
                       boxShadow: const [
                         BoxShadow(color: Color(0x07000000), blurRadius: 12, offset: Offset(0, 3)),
                       ],
@@ -380,50 +413,63 @@ class _TableDetailViewState extends State<TableDetailView> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // ── Qty pill ──
-                        Container(
-                          decoration: BoxDecoration(
-                            color: _bg,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              GestureDetector(
-                                onTap: () => TableService.to
-                                    .decrementOrder(widget.tableIndex, index),
-                                child: const SizedBox(
-                                  width: 38,
-                                  height: 42,
-                                  child: Icon(Icons.remove_rounded,
-                                      size: 16, color: _textSecondary),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 28,
+                        // ── Qty display ──
+                        isPartial
+                            ? Container(
+                                width: 32,
+                                alignment: Alignment.center,
                                 child: Text(
                                   '$quantity',
-                                  textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     fontSize: 17,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF1C1C1E),
+                                    color: _orange,
                                   ),
                                 ),
-                              ),
-                              GestureDetector(
-                                onTap: () => TableService.to
-                                    .addOrder(widget.tableIndex, name, price),
-                                child: const SizedBox(
-                                  width: 38,
-                                  height: 42,
-                                  child: Icon(Icons.add_rounded,
-                                      size: 16, color: _textSecondary),
+                              )
+                            : Container(
+                                decoration: BoxDecoration(
+                                  color: _bg,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () => TableService.to
+                                          .decrementOrder(widget.tableIndex, index),
+                                      child: const SizedBox(
+                                        width: 38,
+                                        height: 42,
+                                        child: Icon(Icons.remove_rounded,
+                                            size: 16, color: _textSecondary),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 28,
+                                      child: Text(
+                                        '$quantity',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF1C1C1E),
+                                        ),
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () => TableService.to
+                                          .addOrder(widget.tableIndex, name, price),
+                                      child: const SizedBox(
+                                        width: 38,
+                                        height: 42,
+                                        child: Icon(Icons.add_rounded,
+                                            size: 16, color: _textSecondary),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
                         const SizedBox(width: 12),
                         // ── Name ──
                         Expanded(
@@ -432,7 +478,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF1C1C1E),
+                              color: _textPrimary,
                               letterSpacing: -0.2,
                             ),
                             maxLines: 2,
@@ -451,23 +497,42 @@ class _TableDetailViewState extends State<TableDetailView> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        // ── Delete ──
-                        GestureDetector(
-                          onTap: () => _confirmDelete(name, index),
-                          child: Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFF3B30).withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.delete_outline_rounded,
-                                size: 18, color: Color(0xFFFF3B30)),
-                          ),
-                        ),
+                        // ── Delete / counter badge ──
+                        isPartial
+                            ? Container(
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  color: selCount > 0 ? _orange : _bg,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '$selCount',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: selCount > 0 ? Colors.white : _textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : GestureDetector(
+                                onTap: () => _confirmDelete(name, index),
+                                child: Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFF3B30).withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.delete_outline_rounded,
+                                      size: 18, color: Color(0xFFFF3B30)),
+                                ),
+                              ),
                       ],
                     ),
-                  );
+                  ));
                 },
               );
             }),
@@ -504,7 +569,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                   ),
                   if (discount > 0)
                     _SummaryRow(
-                      label: 'İskonto',
+                      label: 'İndirim',
                       value: '-₺${discount.toStringAsFixed(2)}',
                       valueColor: _orange,
                     ),
@@ -549,33 +614,199 @@ class _TableDetailViewState extends State<TableDetailView> {
               ],
             ),
           ),
-          // ── Payment button ──
+          // ── Payment buttons ──
           Padding(
             padding: EdgeInsets.fromLTRB(16, 4, 16, 16 + bottomPad),
-            child: SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _orange,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18)),
-                ),
-                onPressed: _handlePayment,
-                icon: const Icon(Icons.payments_outlined, size: 22),
-                label: const Text(
-                  'Ödeme Al',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 17,
-                    letterSpacing: 0.3,
+            child: _isPartialPayMode
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Mode banner
+                      Builder(builder: (_) {
+                        final hasSelected = _partialSelected.values.any((v) => v > 0);
+                        final selTotal = _selectedTotal;
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _orange.withOpacity(0.07),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                                color: _orange.withOpacity(0.18)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                hasSelected ? Icons.check_circle_outline_rounded : Icons.touch_app_rounded,
+                                size: 16, color: _orange,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                hasSelected
+                                    ? '${_partialSelected.values.fold(0, (s, v) => s + v)} ürün seçildi · ₺${selTotal.toStringAsFixed(2)}'
+                                    : 'Ödemek istediğiniz ürüne dokunun',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: hasSelected ? _orange : _textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 50,
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: _textSecondary,
+                                  side: const BorderSide(
+                                      color: Color(0xFFE5E5EA), width: 1.5),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16)),
+                                ),
+                                onPressed: () => setState(() {
+                                  _isPartialPayMode = false;
+                                  _partialSelected.clear();
+                                }),
+                                child: const Text(
+                                  'İptal Et',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: SizedBox(
+                              height: 50,
+                              child: _partialSelected.values.any((v) => v > 0)
+                                  ? ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: _orange,
+                                        foregroundColor: Colors.white,
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(16)),
+                                      ),
+                                      onPressed: _confirmPartialPayments,
+                                      child: Text(
+                                        'Öde · ₺${_selectedTotal.toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 14),
+                                      ),
+                                    )
+                                  : ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF3A3A3C),
+                                        foregroundColor: Colors.white,
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(16)),
+                                      ),
+                                      onPressed: _showPartialPaymentsPanel,
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Text(
+                                            'Ödemeler',
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14),
+                                          ),
+                                          if (_partialPayments.isNotEmpty) ...[
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                  horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(0.3),
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              child: Text(
+                                                '${_partialPayments.length}',
+                                                style: const TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 56,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF3A3A3C),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18)),
+                            ),
+                            onPressed: () {
+                              final orders = TableService.to
+                                  .getOrders(widget.tableIndex);
+                              if (orders.isEmpty) {
+                                AppToast.warning('empty_no_pay'.tr, title: 'warning'.tr);
+                                return;
+                              }
+                              setState(() => _isPartialPayMode = true);
+                            },
+                            child: const Text(
+                              'Parçalı Ödeme Al',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: SizedBox(
+                          height: 56,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _orange,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18)),
+                            ),
+                            onPressed: _handlePayment,
+                            child: const Text(
+                              'Toplu Ödeme Al',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-            ),
           ),
         ],
       ),
@@ -855,13 +1086,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                 return InkWell(
                                   onTap: () {
                                     if (isOut) {
-                                      Get.snackbar(
-                                        'warning'.tr,
-                                        '$name stokta yok!',
-                                        snackPosition: SnackPosition.BOTTOM,
-                                        backgroundColor: AppTheme.warningColor,
-                                        colorText: Colors.white,
-                                      );
+                                      AppToast.warning('$name stokta yok!', title: 'warning'.tr);
                                       return;
                                     }
                                     TableService.to.addOrder(
@@ -869,15 +1094,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                       name,
                                       item['price'] as double,
                                     );
-                                    Get.snackbar(
-                                      '',
-                                      '$name eklendi',
-                                      snackPosition: SnackPosition.BOTTOM,
-                                      backgroundColor: const Color(0xFF34C759),
-                                      colorText: Colors.white,
-                                      duration: const Duration(milliseconds: 800),
-                                      margin: const EdgeInsets.all(12),
-                                    );
+                                    AppToast.success('$name eklendi', duration: const Duration(milliseconds: 800));
                                   },
                                   borderRadius: BorderRadius.circular(16),
                                   child: Stack(
@@ -1239,13 +1456,7 @@ class _TableDetailViewState extends State<TableDetailView> {
               return InkWell(
                 onTap: () {
                   if (isOut) {
-                    Get.snackbar(
-                      'warning'.tr,
-                      '$name stokta yok!',
-                      snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: AppTheme.warningColor,
-                      colorText: Colors.white,
-                    );
+                    AppToast.warning('$name stokta yok!', title: 'warning'.tr);
                     return;
                   }
                   TableService.to.addOrder(
@@ -1504,56 +1715,84 @@ class _TableDetailViewState extends State<TableDetailView> {
                   final quantity = order['quantity'] as int;
                   final price = order['price'] as double;
                   final lineTotal = price * quantity;
-                  return Padding(
+                  final isPartial = _isPartialPayMode;
+                  final selCount = isPartial ? (_partialSelected[name] ?? 0) : 0;
+                  return GestureDetector(
+                    onTap: isPartial
+                        ? () {
+                            setState(() {
+                              final cur = _partialSelected[name] ?? 0;
+                              _partialSelected[name] = (cur + 1) % (quantity + 1);
+                            });
+                          }
+                        : null,
+                    child: Container(
+                      color: isPartial && selCount > 0
+                          ? _orange.withOpacity(0.05)
+                          : Colors.transparent,
+                      child: Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 12),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Qty pill — same as phone view
-                        Container(
-                          decoration: BoxDecoration(
-                            color: _bg,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              GestureDetector(
-                                onTap: () => TableService.to
-                                    .decrementOrder(widget.tableIndex, index),
-                                child: const SizedBox(
-                                  width: 38,
-                                  height: 42,
-                                  child: Icon(Icons.remove_rounded,
-                                      size: 16, color: _textSecondary),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 28,
+                        // Qty display
+                        isPartial
+                            ? Container(
+                                width: 32,
+                                alignment: Alignment.center,
                                 child: Text(
                                   '$quantity',
-                                  textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     fontSize: 17,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF1C1C1E),
+                                    color: _orange,
                                   ),
                                 ),
-                              ),
-                              GestureDetector(
-                                onTap: () => TableService.to
-                                    .addOrder(widget.tableIndex, name, price),
-                                child: const SizedBox(
-                                  width: 38,
-                                  height: 42,
-                                  child: Icon(Icons.add_rounded,
-                                      size: 16, color: _textSecondary),
+                              )
+                            : Container(
+                                decoration: BoxDecoration(
+                                  color: _bg,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () => TableService.to
+                                          .decrementOrder(widget.tableIndex, index),
+                                      child: const SizedBox(
+                                        width: 38,
+                                        height: 42,
+                                        child: Icon(Icons.remove_rounded,
+                                            size: 16, color: _textSecondary),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 28,
+                                      child: Text(
+                                        '$quantity',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF1C1C1E),
+                                        ),
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () => TableService.to
+                                          .addOrder(widget.tableIndex, name, price),
+                                      child: const SizedBox(
+                                        width: 38,
+                                        height: 42,
+                                        child: Icon(Icons.add_rounded,
+                                            size: 16, color: _textSecondary),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
                         const SizedBox(width: 10),
                         // Item name
                         Expanded(
@@ -1580,22 +1819,46 @@ class _TableDetailViewState extends State<TableDetailView> {
                             letterSpacing: -0.3,
                           ),
                         ),
-                        // Delete button
                         const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () => _confirmDelete(name, index),
-                          child: Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFF3B30).withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(11),
-                            ),
-                            child: const Icon(Icons.delete_outline_rounded,
-                                size: 20, color: Color(0xFFFF3B30)),
-                          ),
-                        ),
+                        // Delete / counter badge
+                        isPartial
+                            ? Container(
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  color: selCount > 0 ? _orange : _bg,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '$selCount',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: selCount > 0 ? Colors.white : _textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : GestureDetector(
+                                onTap: () => _confirmDelete(name, index),
+                                child: Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFF3B30)
+                                        .withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(11),
+                                  ),
+                                  child: const Icon(
+                                      Icons.delete_outline_rounded,
+                                      size: 20,
+                                      color: Color(0xFFFF3B30)),
+                                ),
+                              ),
                       ],
+                    ),
+                  ),
                     ),
                   );
                 },
@@ -1619,7 +1882,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                   ),
                   if (discount > 0)
                     _SummaryRow(
-                      label: 'İskonto',
+                      label: 'İndirim',
                       value: '-₺${discount.toStringAsFixed(2)}',
                       valueColor: _orange,
                     ),
@@ -1694,32 +1957,202 @@ class _TableDetailViewState extends State<TableDetailView> {
               ),
             ),
           ),
-          // Checkout button
+          // Checkout buttons
           Padding(
             padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _orange,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+            child: _isPartialPayMode
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Builder(builder: (_) {
+                        final hasSelected = _partialSelected.values.any((v) => v > 0);
+                        final selTotal = _selectedTotal;
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _orange.withOpacity(0.07),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: _orange.withOpacity(0.18)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                hasSelected ? Icons.check_circle_outline_rounded : Icons.touch_app_rounded,
+                                size: 15, color: _orange,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                hasSelected
+                                    ? '${_partialSelected.values.fold(0, (s, v) => s + v)} ürün seçildi · ₺${selTotal.toStringAsFixed(2)}'
+                                    : 'Ödemek istediğiniz ürüne dokunun',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: hasSelected ? _orange : _textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 48,
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: _textSecondary,
+                                  side: const BorderSide(
+                                      color: Color(0xFFE5E5EA),
+                                      width: 1.5),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(14)),
+                                ),
+                                onPressed: () => setState(() {
+                                  _isPartialPayMode = false;
+                                  _partialSelected.clear();
+                                }),
+                                child: const Text(
+                                  'İptal Et',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: SizedBox(
+                              height: 48,
+                              child: _partialSelected.values.any((v) => v > 0)
+                                  ? ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: _orange,
+                                        foregroundColor: Colors.white,
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(14)),
+                                      ),
+                                      onPressed: _confirmPartialPayments,
+                                      child: Text(
+                                        'Öde · ₺${_selectedTotal.toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 13),
+                                      ),
+                                    )
+                                  : ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF3A3A3C),
+                                        foregroundColor: Colors.white,
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(14)),
+                                      ),
+                                      onPressed: _showPartialPaymentsPanel,
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Text(
+                                            'Ödemeler',
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 13),
+                                          ),
+                                          if (_partialPayments.isNotEmpty) ...[
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                  horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(0.3),
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              child: Text(
+                                                '${_partialPayments.length}',
+                                                style: const TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 52,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  const Color(0xFF3A3A3C),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(16)),
+                            ),
+                            onPressed: () {
+                              final orders = TableService.to
+                                  .getOrders(widget.tableIndex);
+                              if (orders.isEmpty) {
+                                AppToast.warning('empty_no_pay'.tr, title: 'warning'.tr);
+                                return;
+                              }
+                              setState(
+                                  () => _isPartialPayMode = true);
+                            },
+                            child: const Text(
+                              'Parçalı Ödeme Al',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: SizedBox(
+                          height: 52,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _orange,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(16),
+                              ),
+                            ),
+                            onPressed: _handlePayment,
+                            child: const Text(
+                              'Toplu Ödeme Al',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                onPressed: _handlePayment,
-                child: const Text(
-                  'Ödeme Al',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-            ),
           ),
         ],
       ),
@@ -1730,13 +2163,7 @@ class _TableDetailViewState extends State<TableDetailView> {
   void _handleNewOrder() {
     final orders = TableService.to.getOrders(widget.tableIndex);
     if (orders.isEmpty) {
-      Get.snackbar(
-        'info'.tr,
-        'table_already_empty'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppTheme.infoColor,
-        colorText: Colors.white,
-      );
+      AppToast.info('table_already_empty'.tr, title: 'info'.tr);
       return;
     }
 
@@ -1757,13 +2184,7 @@ class _TableDetailViewState extends State<TableDetailView> {
             onPressed: () {
               TableService.to.clearTable(widget.tableIndex);
               Get.back();
-              Get.snackbar(
-                'success'.tr,
-                'table_cleared'.tr,
-                snackPosition: SnackPosition.BOTTOM,
-                backgroundColor: AppTheme.successColor,
-                colorText: Colors.white,
-              );
+              AppToast.success('table_cleared'.tr, title: 'success'.tr);
             },
             child: Text('clear'.tr),
           ),
@@ -1776,13 +2197,7 @@ class _TableDetailViewState extends State<TableDetailView> {
   void _handleSplit() {
     final orders = TableService.to.getOrders(widget.tableIndex);
     if (orders.isEmpty) {
-      Get.snackbar(
-        'warning'.tr,
-        'empty_no_split'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppTheme.warningColor,
-        colorText: Colors.white,
-      );
+      AppToast.warning('empty_no_split'.tr, title: 'warning'.tr);
       return;
     }
 
@@ -1881,13 +2296,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                   ),
                 );
               } else {
-                Get.snackbar(
-                  'error'.tr,
-                  'valid_people_count'.tr,
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: AppTheme.errorColor,
-                  colorText: Colors.white,
-                );
+                AppToast.error('valid_people_count'.tr, title: 'error'.tr);
               }
             },
             child: Text('calculate'.tr),
@@ -1901,13 +2310,7 @@ class _TableDetailViewState extends State<TableDetailView> {
   void _handleDiscount() {
     final orders = TableService.to.getOrders(widget.tableIndex);
     if (orders.isEmpty) {
-      Get.snackbar(
-        'warning'.tr,
-        'empty_no_discount'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppTheme.warningColor,
-        colorText: Colors.white,
-      );
+      AppToast.warning('empty_no_discount'.tr, title: 'warning'.tr);
       return;
     }
 
@@ -1956,21 +2359,9 @@ class _TableDetailViewState extends State<TableDetailView> {
                 TableService.to
                     .applyDiscount(widget.tableIndex, discount);
                 Get.back();
-                Get.snackbar(
-                  'success'.tr,
-                  'discount_applied'.tr,
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: AppTheme.successColor,
-                  colorText: Colors.white,
-                );
+                AppToast.success('discount_applied'.tr, title: 'success'.tr);
               } else {
-                Get.snackbar(
-                  'error'.tr,
-                  'valid_discount'.tr,
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: AppTheme.errorColor,
-                  colorText: Colors.white,
-                );
+                AppToast.error('valid_discount'.tr, title: 'error'.tr);
               }
             },
             child: Text('apply'.tr),
@@ -1984,13 +2375,7 @@ class _TableDetailViewState extends State<TableDetailView> {
   Future<void> _handlePrint() async {
     final orders = TableService.to.getOrders(widget.tableIndex);
     if (orders.isEmpty) {
-      Get.snackbar(
-        'warning'.tr,
-        'empty_no_print'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppTheme.warningColor,
-        colorText: Colors.white,
-      );
+      AppToast.warning('empty_no_print'.tr, title: 'warning'.tr);
       return;
     }
 
@@ -2077,7 +2462,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      pw.Text('Iskonto',
+                      pw.Text('Indirim',
                           style: pw.TextStyle(
                               font: regularFont, fontSize: 11)),
                       pw.Text('-TL ${discount.toStringAsFixed(2)}',
@@ -2115,13 +2500,7 @@ class _TableDetailViewState extends State<TableDetailView> {
       await Printing.layoutPdf(
           onLayout: (format) async => doc.save());
     } catch (e) {
-      Get.snackbar(
-        'error'.tr,
-        'PDF olusturulurken hata: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppTheme.errorColor,
-        colorText: Colors.white,
-      );
+      AppToast.error('PDF olusturulurken hata: $e', title: 'error'.tr);
     }
   }
 
@@ -2129,13 +2508,7 @@ class _TableDetailViewState extends State<TableDetailView> {
   void _handleMove() {
     final orders = TableService.to.getOrders(widget.tableIndex);
     if (orders.isEmpty) {
-      Get.snackbar(
-        'warning'.tr,
-        'empty_no_move'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppTheme.warningColor,
-        colorText: Colors.white,
-      );
+      AppToast.warning('empty_no_move'.tr, title: 'warning'.tr);
       return;
     }
 
@@ -2187,13 +2560,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                           .moveAllOrdersToTable(widget.tableIndex, tableIdx);
                       Get.back();
                       Get.back();
-                      Get.snackbar(
-                        'success'.tr,
-                        '$tName ${'moved_to_table'.tr}',
-                        snackPosition: SnackPosition.BOTTOM,
-                        backgroundColor: AppTheme.successColor,
-                        colorText: Colors.white,
-                      );
+                      AppToast.success('$tName ${'moved_to_table'.tr}', title: 'success'.tr);
                     },
                   );
                 },
@@ -2212,16 +2579,414 @@ class _TableDetailViewState extends State<TableDetailView> {
   }
 
   // Take payment
+  // ── Partial payment ─────────────────────────────────────────
+
+  void _showPartialPaymentsPanel() {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.35),
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440, minWidth: 280),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 12, 0),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Ödemeler',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1C1C1E),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded,
+                          size: 20, color: Color(0xFF8E8E93)),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: Color(0xFFE5E5EA)),
+              // List
+              if (_partialPayments.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: Center(
+                    child: Text(
+                      'Henüz ödeme yapılmamış',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF8E8E93),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 320),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: _partialPayments.length,
+                    separatorBuilder: (_, __) => const Divider(
+                        height: 1, color: Color(0xFFE5E5EA), indent: 16, endIndent: 16),
+                    itemBuilder: (ctx, i) {
+                      final p = _partialPayments[i];
+                      final methodIcon = p['method'] == 'cash'
+                          ? Icons.payments_rounded
+                          : p['method'] == 'card'
+                              ? Icons.credit_card_rounded
+                              : Icons.account_balance_rounded;
+                      final methodLabel = p['method'] == 'cash'
+                          ? 'Nakit'
+                          : p['method'] == 'card'
+                              ? 'Kart'
+                              : 'Havale';
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 32, height: 32,
+                              decoration: BoxDecoration(
+                                color: _orange.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(methodIcon, size: 16, color: _orange),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    p['name'] as String,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF1C1C1E),
+                                    ),
+                                  ),
+                                  Text(
+                                    '${p['qty']}x · $methodLabel',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF8E8E93),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              '₺${(p['total'] as double).toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: _orange,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              if (_partialPayments.isNotEmpty) ...[
+                const Divider(height: 1, color: Color(0xFFE5E5EA)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Ödenen Toplam',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1C1C1E),
+                        ),
+                      ),
+                      Text(
+                        '₺${_partialPayments.fold<double>(0, (s, p) => s + (p['total'] as double)).toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF34C759),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  double get _selectedTotal {
+    final orders = TableService.to.getOrders(widget.tableIndex);
+    double total = 0;
+    for (final entry in _partialSelected.entries) {
+      if (entry.value <= 0) continue;
+      try {
+        final order = orders.firstWhere((o) => o['name'] == entry.key);
+        total += (order['price'] as double) * entry.value;
+      } catch (_) {}
+    }
+    return total;
+  }
+
+  void _confirmPartialPayments() {
+    final selected = Map<String, int>.from(_partialSelected)
+      ..removeWhere((_, v) => v == 0);
+    if (selected.isEmpty) return;
+
+    final orders = TableService.to.getOrders(widget.tableIndex);
+
+    // Pre-compute line totals for display
+    final lineItems = <Map<String, dynamic>>[];
+    double totalAmount = 0;
+    for (final entry in selected.entries) {
+      try {
+        final order = orders.firstWhere((o) => o['name'] == entry.key);
+        final price = order['price'] as double;
+        final lineTotal = price * entry.value;
+        totalAmount += lineTotal;
+        lineItems.add({'name': entry.key, 'qty': entry.value, 'total': lineTotal});
+      } catch (_) {}
+    }
+    if (lineItems.isEmpty) return;
+
+    String selectedMethod = 'cash';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+              20, 12, 20, 20 + MediaQuery.of(ctx).viewInsets.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE5E5EA),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Seçilen Ürünler',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: _textPrimary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Selected items list
+              ...lineItems.map((item) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 28, height: 28,
+                      decoration: const BoxDecoration(
+                        color: _orange, shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${item['qty']}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        item['name'] as String,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: _textPrimary,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '₺${(item['total'] as double).toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: _textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+              const Divider(height: 20, color: _border),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Toplam',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: _textPrimary,
+                    ),
+                  ),
+                  Text(
+                    '₺${totalAmount.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: _orange,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Ödeme Yöntemi',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: _textSecondary,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _PartialPayMethodBtn(
+                    icon: Icons.payments_rounded,
+                    label: 'pay_cash'.tr,
+                    value: 'cash',
+                    selected: selectedMethod == 'cash',
+                    onTap: () => setSheet(() => selectedMethod = 'cash'),
+                  ),
+                  const SizedBox(width: 10),
+                  _PartialPayMethodBtn(
+                    icon: Icons.credit_card_rounded,
+                    label: 'pay_card'.tr,
+                    value: 'card',
+                    selected: selectedMethod == 'card',
+                    onTap: () => setSheet(() => selectedMethod = 'card'),
+                  ),
+                  const SizedBox(width: 10),
+                  _PartialPayMethodBtn(
+                    icon: Icons.account_balance_rounded,
+                    label: 'pay_transfer'.tr,
+                    value: 'transfer',
+                    selected: selectedMethod == 'transfer',
+                    onTap: () => setSheet(() => selectedMethod = 'transfer'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _orange,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                  ),
+                  onPressed: () {
+                    final method = selectedMethod;
+                    final toProcess = List<Map<String, dynamic>>.from(lineItems);
+                    Navigator.pop(ctx);
+
+                    // All in-memory updates are synchronous inside
+                    // recordPartialPaymentUnits — fire all in parallel.
+                    for (final item in toProcess) {
+                      final itemName  = item['name']  as String;
+                      final units     = item['qty']   as int;
+                      final lineTotal = item['total'] as double;
+
+                      // Instant in-memory update; DB writes fire in background.
+                      TableService.to.recordPartialPaymentUnits(
+                        widget.tableIndex,
+                        itemName,
+                        units,
+                        paymentMethod: method,
+                      ).ignore();
+
+                      final record = {
+                        'name': itemName,
+                        'qty': units,
+                        'total': lineTotal,
+                        'method': method,
+                      };
+                      TableService.to.addPartialPaymentRecord(
+                          widget.tableIndex, record);
+                      _partialPayments.add(record);
+                    }
+
+                    setState(() {
+                      _partialSelected.clear();
+                      if (TableService.to
+                          .getOrders(widget.tableIndex)
+                          .isEmpty) {
+                        _isPartialPayMode = false;
+                      }
+                    });
+
+                    AppToast.info(
+                      '${toProcess.length} kalem · ₺${totalAmount.toStringAsFixed(2)}',
+                      title: 'Parça Ödeme Alındı',
+                      duration: const Duration(seconds: 2),
+                    );
+                  },
+                  child: Text(
+                    'Öde · ₺${totalAmount.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _handlePayment() {
     final orders = TableService.to.getOrders(widget.tableIndex);
     if (orders.isEmpty) {
-      Get.snackbar(
-        'warning'.tr,
-        'empty_no_pay'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppTheme.warningColor,
-        colorText: Colors.white,
-      );
+      AppToast.warning('empty_no_pay'.tr, title: 'warning'.tr);
       return;
     }
 
@@ -2330,13 +3095,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                     paymentMethod: selectedMethod);
                 Get.back();
                 Get.back();
-                Get.snackbar(
-                  'success'.tr,
-                  'payment_received'.tr,
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: AppTheme.successColor,
-                  colorText: Colors.white,
-                );
+                AppToast.success('payment_received'.tr, title: 'success'.tr);
               },
               child: Text('pay'.tr),
             ),
@@ -2366,28 +3125,83 @@ class _ActionBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(10),
-        ),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 24, color: color),
-            const SizedBox(height: 2),
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, size: 24, color: color),
+            ),
+            const SizedBox(height: 6),
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 11,
                 color: color,
                 fontWeight: FontWeight.w600,
+                letterSpacing: -0.1,
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Expanded payment method button used in the partial pay bottom sheet.
+class _PartialPayMethodBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _PartialPayMethodBtn({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: selected ? _orange : const Color(0xFFF2F2F7),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 22,
+                  color: selected ? Colors.white : const Color(0xFF8E8E93)),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? Colors.white : const Color(0xFF8E8E93),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );

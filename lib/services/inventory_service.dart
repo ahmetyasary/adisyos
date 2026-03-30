@@ -41,6 +41,10 @@ class InventoryService extends GetxService {
         .subscribe();
   }
 
+  void _err(String tag, Object e) {
+    if (kDebugMode) print('[InventoryService] $tag error: $e');
+  }
+
   // ── Load ────────────────────────────────────────────────────
 
   Future<void> _load() async {
@@ -50,7 +54,7 @@ class InventoryService extends GetxService {
         for (final r in rows) r['item_name'] as String: r['stock'] as int,
       });
     } catch (e) {
-      if (kDebugMode) print('[InventoryService] load error: $e');
+      _err('load', e);
     }
   }
 
@@ -83,27 +87,22 @@ class InventoryService extends GetxService {
 
   // ── Mutations ────────────────────────────────────────────────
 
-  Future<void> setStock(String itemName, int count) async {
+  void setStock(String itemName, int count) {
     stock[itemName] = count;
     stock.refresh();
-    try {
-      await _db.from('inventory').upsert(
-        {'item_name': itemName, 'stock': count, 'updated_at': DateTime.now().toIso8601String()},
-        onConflict: 'item_name',
-      );
-    } catch (e) {
-      if (kDebugMode) print('[InventoryService] setStock error: $e');
-    }
+    _db.from('inventory').upsert(
+      {'item_name': itemName, 'stock': count, 'updated_at': DateTime.now().toIso8601String()},
+      onConflict: 'item_name',
+    ).catchError((e) => _err('setStock', e));
   }
 
-  Future<void> removeTracking(String itemName) async {
+  void removeTracking(String itemName) {
     stock.remove(itemName);
     stock.refresh();
-    try {
-      await _db.from('inventory').delete().eq('item_name', itemName);
-    } catch (e) {
-      if (kDebugMode) print('[InventoryService] removeTracking error: $e');
-    }
+    _db.from('inventory')
+        .delete()
+        .eq('item_name', itemName)
+        .catchError((e) => _err('removeTracking', e));
   }
 
   /// Called on sale checkout — decrements tracked items.
@@ -124,20 +123,15 @@ class InventoryService extends GetxService {
     if (updates.isEmpty) return;
     stock.refresh();
 
-    try {
-      // Batch upsert
-      await _db.from('inventory').upsert(
-        updates.entries
-            .map((e) => {
-                  'item_name': e.key,
-                  'stock': e.value,
-                  'updated_at': DateTime.now().toIso8601String(),
-                })
-            .toList(),
-        onConflict: 'item_name',
-      );
-    } catch (e) {
-      if (kDebugMode) print('[InventoryService] decrementForSale error: $e');
-    }
+    _db.from('inventory').upsert(
+      updates.entries
+          .map((e) => {
+                'item_name': e.key,
+                'stock': e.value,
+                'updated_at': DateTime.now().toIso8601String(),
+              })
+          .toList(),
+      onConflict: 'item_name',
+    ).catchError((e) => _err('decrementForSale', e));
   }
 }

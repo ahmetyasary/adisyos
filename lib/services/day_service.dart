@@ -127,32 +127,29 @@ class DayService extends GetxService {
   Future<bool> endDay(String email) async {
     final day = getActiveDayFor(email);
     if (day == null) return true;
-    isLoading.value = true;
-    try {
-      final id = day['id'];
-      final now = DateTime.now().toIso8601String();
 
-      await _db
-          .from('day_status')
-          .update({'ended_by': email, 'ended_at': now})
-          .eq('id', id);
+    final id = day['id'];
+    final now = DateTime.now().toIso8601String();
 
-      activeDays.removeWhere((d) => d['id'] == id);
-      // update allDays entry with the ended_at value
-      final idx = allDays.indexWhere((d) => d['id'] == id);
-      if (idx != -1) {
-        final updated = Map<String, dynamic>.from(allDays[idx]);
-        updated['ended_by'] = email;
-        updated['ended_at'] = now;
-        allDays[idx] = updated;
-        allDays.refresh();
-      }
-      isLoading.value = false;
-      return true;
-    } catch (e) {
-      if (kDebugMode) print('[DayService] endDay error: $e');
-      isLoading.value = false;
-      return false;
+    // Optimistic in-memory update first.
+    activeDays.removeWhere((d) => d['id'] == id);
+    final idx = allDays.indexWhere((d) => d['id'] == id);
+    if (idx != -1) {
+      final updated = Map<String, dynamic>.from(allDays[idx]);
+      updated['ended_by'] = email;
+      updated['ended_at'] = now;
+      allDays[idx] = updated;
+      allDays.refresh();
     }
+
+    // DB write in background.
+    _db.from('day_status')
+        .update({'ended_by': email, 'ended_at': now})
+        .eq('id', id)
+        .catchError((e) {
+          if (kDebugMode) print('[DayService] endDay error: $e');
+        });
+
+    return true;
   }
 }
