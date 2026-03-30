@@ -73,17 +73,17 @@ class _TableDetailViewState extends State<TableDetailView> {
   bool _isSearching = false;
   String _searchQuery = '';
   bool _isPartialPayMode = false;
-  List<Map<String, dynamic>> _partialPayments = [];
   // itemName → how many units the cashier has tapped to pay this round
   final Map<String, int> _partialSelected = {};
   final TextEditingController _searchController = TextEditingController();
 
+  /// Always reads from the reactive service — updates on any device in real-time.
+  List<Map<String, dynamic>> get _partialPayments =>
+      TableService.to.getPartialPayments(widget.tableIndex);
+
   @override
   void initState() {
     super.initState();
-    // Restore any partial payments recorded before navigating away.
-    _partialPayments =
-        TableService.to.getPartialPayments(widget.tableIndex);
   }
 
   @override
@@ -382,6 +382,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                   final isPartial = _isPartialPayMode;
                   final selCount = isPartial ? (_partialSelected[name] ?? 0) : 0;
                   return GestureDetector(
+                    key: ValueKey(order['id']),
                     onTap: isPartial
                         ? () {
                             setState(() {
@@ -713,34 +714,37 @@ class _TableDetailViewState extends State<TableDetailView> {
                                             borderRadius: BorderRadius.circular(16)),
                                       ),
                                       onPressed: _showPartialPaymentsPanel,
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          const Text(
-                                            'Ödemeler',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 14),
-                                          ),
-                                          if (_partialPayments.isNotEmpty) ...[
-                                            const SizedBox(width: 6),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                  horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withOpacity(0.3),
-                                                borderRadius: BorderRadius.circular(10),
-                                              ),
-                                              child: Text(
-                                                '${_partialPayments.length}',
-                                                style: const TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w700),
-                                              ),
+                                      child: Obx(() {
+                                        final payments = TableService.to.getPartialPayments(widget.tableIndex);
+                                        return Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            const Text(
+                                              'Ödemeler',
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14),
                                             ),
+                                            if (payments.isNotEmpty) ...[
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                    horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white.withOpacity(0.3),
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                                child: Text(
+                                                  '${payments.length}',
+                                                  style: const TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w700),
+                                                ),
+                                              ),
+                                            ],
                                           ],
-                                        ],
-                                      ),
+                                        );
+                                      }),
                                     ),
                             ),
                           ),
@@ -1079,59 +1083,63 @@ class _TableDetailViewState extends State<TableDetailView> {
                               itemBuilder: (ctx, i) {
                                 final item = items[i];
                                 final name = item['name'] as String;
-                                final isOut = InventoryService.to.isOutOfStock(name);
-                                final isLow = InventoryService.to.isLowStock(name);
-                                final isTracked = InventoryService.to.isTracked(name);
-                                final stockVal = InventoryService.to.getStock(name);
-                                return InkWell(
-                                  onTap: () {
-                                    if (isOut) {
-                                      AppToast.warning('$name stokta yok!', title: 'warning'.tr);
-                                      return;
-                                    }
-                                    TableService.to.addOrder(
-                                      widget.tableIndex,
-                                      name,
-                                      item['price'] as double,
-                                    );
-                                    AppToast.success('$name eklendi', duration: const Duration(milliseconds: 800));
-                                  },
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Stack(
-                                    children: [
-                                      _buildMenuCard(
+                                final price = item['price'] as double;
+                                final imageUrl = item['imageUrl'] as String?;
+                                return Obx(() {
+                                  final isOut = InventoryService.to.isOutOfStock(name);
+                                  final isLow = InventoryService.to.isLowStock(name);
+                                  final isTracked = InventoryService.to.isTracked(name);
+                                  final stockVal = InventoryService.to.getStock(name);
+                                  return InkWell(
+                                    onTap: () {
+                                      if (isOut) {
+                                        AppToast.warning('$name stokta yok!', title: 'warning'.tr);
+                                        return;
+                                      }
+                                      TableService.to.addOrder(
+                                        widget.tableIndex,
                                         name,
-                                        '₺${(item['price'] as double).toStringAsFixed(2)}',
-                                        imageUrl: item['imageUrl'] as String?,
-                                        dimmed: isOut,
-                                      ),
-                                      if (isTracked)
-                                        Positioned(
-                                          top: 6,
-                                          right: 6,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: isOut
-                                                  ? const Color(0xFFFF3B30)
-                                                  : isLow
-                                                      ? _orange
-                                                      : const Color(0xFF34C759),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              isOut ? 'Bitti' : '$stockVal',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.bold,
+                                        price,
+                                      );
+                                      AppToast.success('$name eklendi', duration: const Duration(milliseconds: 800));
+                                    },
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Stack(
+                                      children: [
+                                        _buildMenuCard(
+                                          name,
+                                          '₺${price.toStringAsFixed(2)}',
+                                          imageUrl: imageUrl,
+                                          dimmed: isOut,
+                                        ),
+                                        if (isTracked)
+                                          Positioned(
+                                            top: 6,
+                                            right: 6,
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: isOut
+                                                    ? const Color(0xFFFF3B30)
+                                                    : isLow
+                                                        ? _orange
+                                                        : const Color(0xFF34C759),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                isOut ? 'Bitti' : '$stockVal',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                    ],
-                                  ),
-                                );
+                                      ],
+                                    ),
+                                  );
+                                });
                               },
                             ),
                     ),
@@ -1375,6 +1383,9 @@ class _TableDetailViewState extends State<TableDetailView> {
 
   Widget _buildMenuGrid() {
     return Obx(() {
+      // Touch stock so this Obx rebuilds when inventory changes.
+      // ignore: unused_local_variable
+      final _stockLen = InventoryService.to.stock.length;
       final menus = MenuService.to.menus;
 
       if (menus.isEmpty) {
@@ -1718,6 +1729,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                   final isPartial = _isPartialPayMode;
                   final selCount = isPartial ? (_partialSelected[name] ?? 0) : 0;
                   return GestureDetector(
+                    key: ValueKey(order['id']),
                     onTap: isPartial
                         ? () {
                             setState(() {
@@ -2056,34 +2068,37 @@ class _TableDetailViewState extends State<TableDetailView> {
                                             borderRadius: BorderRadius.circular(14)),
                                       ),
                                       onPressed: _showPartialPaymentsPanel,
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          const Text(
-                                            'Ödemeler',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 13),
-                                          ),
-                                          if (_partialPayments.isNotEmpty) ...[
-                                            const SizedBox(width: 6),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                  horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withOpacity(0.3),
-                                                borderRadius: BorderRadius.circular(10),
-                                              ),
-                                              child: Text(
-                                                '${_partialPayments.length}',
-                                                style: const TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w700),
-                                              ),
+                                      child: Obx(() {
+                                        final payments = TableService.to.getPartialPayments(widget.tableIndex);
+                                        return Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            const Text(
+                                              'Ödemeler',
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 13),
                                             ),
+                                            if (payments.isNotEmpty) ...[
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                    horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white.withOpacity(0.3),
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                                child: Text(
+                                                  '${payments.length}',
+                                                  style: const TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w700),
+                                                ),
+                                              ),
+                                            ],
                                           ],
-                                        ],
-                                      ),
+                                        );
+                                      }),
                                     ),
                             ),
                           ),
@@ -2523,13 +2538,15 @@ class _TableDetailViewState extends State<TableDetailView> {
               final otherTables = TableService.to.tables
                   .asMap()
                   .entries
-                  .where((e) => e.key != widget.tableIndex)
+                  .where((e) =>
+                      e.key != widget.tableIndex &&
+                      !(e.value['isOccupied'] as bool))
                   .toList();
 
               if (otherTables.isEmpty) {
                 return Center(
                   child: Text(
-                    'Başka masa yok.',
+                    'Boş masa yok.',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                 );
@@ -2543,16 +2560,6 @@ class _TableDetailViewState extends State<TableDetailView> {
                   final table = entry.value;
                   return ListTile(
                     title: Text(table['name'] as String),
-                    subtitle: Text(
-                      (table['isOccupied'] as bool)
-                          ? 'occupied_status'.tr
-                          : 'available_status'.tr,
-                      style: TextStyle(
-                        color: (table['isOccupied'] as bool)
-                            ? AppTheme.errorColor
-                            : AppTheme.successColor,
-                      ),
-                    ),
                     trailing: const Icon(Icons.arrow_forward),
                     onTap: () {
                       final tName = table['name'] as String;
@@ -2618,30 +2625,32 @@ class _TableDetailViewState extends State<TableDetailView> {
                 ),
               ),
               const Divider(height: 1, color: Color(0xFFE5E5EA)),
-              // List
-              if (_partialPayments.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 32),
-                  child: Center(
-                    child: Text(
-                      'Henüz ödeme yapılmamış',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF8E8E93),
+              // List — Obx so other-device payments appear in real-time
+              Obx(() {
+                final payments = TableService.to.getPartialPayments(widget.tableIndex);
+                if (payments.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 32),
+                    child: Center(
+                      child: Text(
+                        'Henüz ödeme yapılmamış',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF8E8E93),
+                        ),
                       ),
                     ),
-                  ),
-                )
-              else
-                ConstrainedBox(
+                  );
+                }
+                return ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 320),
                   child: ListView.separated(
                     shrinkWrap: true,
-                    itemCount: _partialPayments.length,
+                    itemCount: payments.length,
                     separatorBuilder: (_, __) => const Divider(
                         height: 1, color: Color(0xFFE5E5EA), indent: 16, endIndent: 16),
                     itemBuilder: (ctx, i) {
-                      final p = _partialPayments[i];
+                      final p = payments[i];
                       final methodIcon = p['method'] == 'cash'
                           ? Icons.payments_rounded
                           : p['method'] == 'card'
@@ -2701,35 +2710,44 @@ class _TableDetailViewState extends State<TableDetailView> {
                       );
                     },
                   ),
-                ),
-              if (_partialPayments.isNotEmpty) ...[
-                const Divider(height: 1, color: Color(0xFFE5E5EA)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Ödenen Toplam',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF1C1C1E),
-                        ),
+                );
+              }),
+              // Footer total (also reactive)
+              Obx(() {
+                final payments = TableService.to.getPartialPayments(widget.tableIndex);
+                if (payments.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Divider(height: 1, color: Color(0xFFE5E5EA)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Ödenen Toplam',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1C1C1E),
+                            ),
+                          ),
+                          Text(
+                            '₺${payments.fold<double>(0, (s, p) => s + (p['total'] as double)).toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: _orange,
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        '₺${_partialPayments.fold<double>(0, (s, p) => s + (p['total'] as double)).toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF34C759),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                    ),
+                  ],
+                );
+              }),
             ],
           ),
         ),
@@ -2949,9 +2967,9 @@ class _TableDetailViewState extends State<TableDetailView> {
                         'total': lineTotal,
                         'method': method,
                       };
+                      // addPartialPaymentRecord persists to DB + reactive map.
                       TableService.to.addPartialPaymentRecord(
                           widget.tableIndex, record);
-                      _partialPayments.add(record);
                     }
 
                     setState(() {

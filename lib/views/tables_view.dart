@@ -803,11 +803,16 @@ class _TableCard extends StatelessWidget {
     final total       = (rawTotal - discount).clamp(0.0, double.infinity);
     final accentColor = isOccupied ? _occupied : _available;
 
-    // Parse "BAHÇE 2" -> section: "BAHÇE", number: "2"
+    // Derive section label from sectionId (live lookup) then fallback to name parse
+    final sectionId = table['sectionId'] as String?;
+    final sectionFromService = SectionService.to.nameById(sectionId);
     final parts = name.trim().split(' ');
     final String section;
     final String number;
-    if (parts.length > 1) {
+    if (sectionFromService != null && sectionFromService.isNotEmpty) {
+      section = sectionFromService.toUpperCase();
+      number  = parts.last;
+    } else if (parts.length > 1) {
       number  = parts.last;
       section = parts.sublist(0, parts.length - 1).join(' ');
     } else {

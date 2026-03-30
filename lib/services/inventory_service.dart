@@ -105,8 +105,35 @@ class InventoryService extends GetxService {
         .catchError((e) => _err('removeTracking', e));
   }
 
-  /// Called on sale checkout — decrements tracked items.
-  Future<void> decrementForSale(List<Map<String, dynamic>> items) async {
+  /// Called when order items are cancelled/removed — restores tracked stock.
+  void incrementForCancellation(List<Map<String, dynamic>> items) {
+    final updates = <String, int>{};
+    for (final item in items) {
+      final name = item['name'] as String;
+      final qty = item['quantity'] as int;
+      final current = getStock(name);
+      if (current != -1) {
+        final next = current + qty;
+        stock[name] = next;
+        updates[name] = next;
+      }
+    }
+    if (updates.isEmpty) return;
+    stock.refresh();
+    _db.from('inventory').upsert(
+      updates.entries
+          .map((e) => {
+                'item_name': e.key,
+                'stock': e.value,
+                'updated_at': DateTime.now().toIso8601String(),
+              })
+          .toList(),
+      onConflict: 'item_name',
+    ).catchError((e) => _err('incrementForCancellation', e));
+  }
+
+  /// Called when items are added to an order — decrements tracked items instantly.
+  void decrementForSale(List<Map<String, dynamic>> items) {
     final updates = <String, int>{};
 
     for (final item in items) {
