@@ -34,7 +34,12 @@ class _TablesViewState extends State<TablesView> {
 
   // ── Day not started dialog ──────────────────────────────────
 
-  void _showDayNotStartedDialog() {
+  void _showDayNotStartedDialog({
+    required int tableNumber,
+    required String tableName,
+    required bool isOccupied,
+    required int tableIndex,
+  }) {
     Get.dialog(
       Dialog(
         backgroundColor: Colors.white,
@@ -90,6 +95,12 @@ class _TablesViewState extends State<TablesView> {
                         : (AuthController.to.user.value?.email ?? '');
                     await DayService.to.startDay(id);
                     AppToast.success('İyi çalışmalar!', title: 'Gün Başlatıldı', duration: const Duration(seconds: 2));
+                    Get.to(() => TableDetailView(
+                          tableNumber: tableNumber,
+                          tableName:   tableName,
+                          isOccupied:  isOccupied,
+                          tableIndex:  tableIndex,
+                        ));
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _orange,
@@ -656,7 +667,12 @@ class _TablesViewState extends State<TablesView> {
                               ? staffName
                               : (AuthController.to.user.value?.email ?? '');
                           if (!DayService.to.isDayStartedBy(id)) {
-                            _showDayNotStartedDialog();
+                            _showDayNotStartedDialog(
+                              tableNumber: actualIndex + 1,
+                              tableName:   table['name'] as String,
+                              isOccupied:  table['isOccupied'] as bool,
+                              tableIndex:  actualIndex,
+                            );
                             return;
                           }
                           Get.to(() => TableDetailView(

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:adisyos/services/inventory_service.dart';
+import 'package:adisyos/services/table_service.dart';
 
 class MenuService extends GetxService {
   static MenuService get to => Get.find();
@@ -197,9 +199,19 @@ class MenuService extends GetxService {
   }
 
   void removeMenu(int index) {
-    final id = menus[index]['id'] as int;
+    final menu = menus[index];
+    final id = menu['id'] as int;
+    final items = List<Map<String, dynamic>>.from(
+      (menu['items'] as List).cast<Map<String, dynamic>>(),
+    );
     menus.removeAt(index);
     menuIcons.remove(id);
+    // Remove active orders and inventory tracking for every item in this menu.
+    for (final item in items) {
+      final name = item['name'] as String;
+      TableService.to.removeOrdersByItemName(name);
+      InventoryService.to.removeTracking(name);
+    }
     _db.from('menus')
         .delete()
         .eq('id', id)
@@ -272,9 +284,14 @@ class MenuService extends GetxService {
 
   void removeMenuItem(int menuIndex, int itemIndex) {
     final items = menus[menuIndex]['items'] as List;
-    final itemId = (items[itemIndex] as Map<String, dynamic>)['id'] as int;
+    final item = items[itemIndex] as Map<String, dynamic>;
+    final itemId = item['id'] as int;
+    final itemName = item['name'] as String;
     items.removeAt(itemIndex);
     menus.refresh();
+    // Remove active orders and inventory tracking for this item.
+    TableService.to.removeOrdersByItemName(itemName);
+    InventoryService.to.removeTracking(itemName);
     _db.from('menu_items')
         .delete()
         .eq('id', itemId)

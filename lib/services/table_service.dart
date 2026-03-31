@@ -22,6 +22,14 @@ class TableService extends GetxService {
   Timer? _debounce;
   int _loadSeq = 0;
 
+  /// Per-table FIFO queue: serialises every DB mutation for one table so that
+  /// rapid taps never race each other or corrupt totals.
+  final Map<int, Future<void>> _tableOps = {};
+
+  /// Count of in-flight queued operations across all tables.
+  /// Used to suppress realtime reloads while writes are pending.
+  int _pendingOpCount = 0;
+
   @override
   void onInit() {
     super.onInit();
@@ -49,7 +57,34 @@ class TableService extends GetxService {
 
   void _debouncedLoad() {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () => _load());
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      // Don't reload while our own writes are still in-flight — the DB hasn't
+      // settled yet and a full reload would stomp on optimistic UI state.
+      if (_pendingOpCount > 0) {
+        _debouncedLoad(); // re-arm; will fire once all ops complete
+        return;
+      }
+      _load();
+    });
+  }
+
+  /// Enqueues [work] for [tableIndex] so that all mutations on the same table
+  /// run strictly one-at-a-time.  The optimistic UI update must happen
+  /// BEFORE calling this; the queued function performs only the DB write.
+  Future<void> _enqueue(int tableIndex, Future<void> Function() work) {
+    _pendingOpCount++;
+    final prev = _tableOps[tableIndex] ?? Future.value();
+    final next = prev.then<void>((_) async {
+      try {
+        await work();
+      } catch (e) {
+        _err('queue[$tableIndex]', e);
+      } finally {
+        _pendingOpCount = (_pendingOpCount - 1).clamp(0, 99999);
+      }
+    });
+    _tableOps[tableIndex] = next;
+    return next;
   }
 
   // ── Load ────────────────────────────────────────────────────
@@ -76,14 +111,16 @@ class TableService extends GetxService {
         'discount': (row['discount'] as num).toDouble(),
         'staffEmail': (row['staff_email'] as String?) ?? '',
         'sectionId': row['section_id'] as String?,
-        'orders': (row['orders'] as List)
+        'orders': ((row['orders'] as List)
             .map((o) => <String, dynamic>{
                   'id': o['id'] as int,
                   'name': o['name'] as String,
                   'quantity': o['quantity'] as int,
                   'price': (o['price'] as num).toDouble(),
                 })
-            .toList(),
+            .toList()
+          ..sort((a, b) =>
+              (a['name'] as String).compareTo(b['name'] as String))),
       };
 
   // ── Partial payments — DB-backed realtime ────────────────────
@@ -168,7 +205,12 @@ class TableService extends GetxService {
     if ((tables[tableIndex]['staffEmail'] as String).isNotEmpty) return;
     try {
       final name = StaffService.to.currentStaffIdentifier;
-      if (name.isNotEmpty) tables[tableIndex]['staffEmail'] = name;
+      if (name.isNotEmpty) {
+        tables[tableIndex]['staffEmail'] = name;
+      } else {
+        final email = _db.auth.currentUser?.email ?? '';
+        if (email.isNotEmpty) tables[tableIndex]['staffEmail'] = email;
+      }
     } catch (_) {}
   }
 
@@ -246,13 +288,15 @@ class TableService extends GetxService {
   void addOrder(int tableIndex, String name, double price) {
     final tableId = _id(tableIndex);
     final orders = tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
-    final existingIdx = orders.indexWhere((o) => o['name'] == name);
     _assignStaff(tableIndex);
 
+    final existingIdx = orders.indexWhere((o) => o['name'] == name);
+
     if (existingIdx != -1) {
-      final newQty = (orders[existingIdx]['quantity'] as int) + 1;
-      final orderId = orders[existingIdx]['id'] as int;
-      orders[existingIdx]['quantity'] = newQty;
+      // ── Existing item — bump quantity optimistically, then write ────
+      final order = orders[existingIdx]; // stable Map reference
+      final newQty = (order['quantity'] as int) + 1;
+      order['quantity'] = newQty;
       tables[tableIndex]['total'] =
           (tables[tableIndex]['total'] as double) + price;
       _setOccupied(tableIndex);
@@ -262,18 +306,37 @@ class TableService extends GetxService {
         itemName: name,
         quantity: newQty,
       );
-      InventoryService.to.decrementForSale([{'name': name, 'quantity': 1, 'price': price}]);
-      Future.wait([
-        _db.from('orders').update({'quantity': newQty}).eq('id', orderId),
-        _syncTableHeader(tableIndex),
-      ]).catchError((e) => _err('addOrder(update)', e));
+      InventoryService.to
+          .decrementForSale([{'name': name, 'quantity': 1, 'price': price}]);
+
+      _enqueue(tableIndex, () async {
+        final orderId = order['id'] as int;
+        // If the insert for this item is still ahead in the queue, it will
+        // commit the accumulated quantity — nothing for us to do here.
+        if (orderId == -1) return;
+        // Write whatever quantity is current after all optimistic taps.
+        await _db
+            .from('orders')
+            .update({'quantity': order['quantity'] as int})
+            .eq('id', orderId);
+        await _syncTableHeader(tableIndex);
+      });
     } else {
-      orders.add(<String, dynamic>{
+      // ── New item — add sentinel, insert asynchronously ───────────
+      final newOrder = <String, dynamic>{
         'id': -1,
         'name': name,
         'quantity': 1,
         'price': price,
-      });
+      };
+      // Insert at the correct alphabetical position so the list never jumps.
+      final insertIdx = orders.indexWhere(
+          (o) => (o['name'] as String).compareTo(name) > 0);
+      if (insertIdx == -1) {
+        orders.add(newOrder);
+      } else {
+        orders.insert(insertIdx, newOrder);
+      }
       tables[tableIndex]['total'] =
           (tables[tableIndex]['total'] as double) + price;
       _setOccupied(tableIndex);
@@ -283,34 +346,78 @@ class TableService extends GetxService {
         itemName: name,
         quantity: 1,
       );
-      InventoryService.to.decrementForSale([{'name': name, 'quantity': 1, 'price': price}]);
-      _db.from('orders')
-          .insert({
-            'table_id': tableId,
-            'name': name,
-            'quantity': 1,
-            'price': price,
-          })
-          .select()
-          .single()
-          .then((row) {
-            final idx =
-                orders.indexWhere((o) => o['name'] == name && o['id'] == -1);
-            if (idx != -1) orders[idx]['id'] = row['id'] as int;
-            return _syncTableHeader(tableIndex);
-          })
-          .catchError((e) => _err('addOrder(insert)', e));
+      InventoryService.to
+          .decrementForSale([{'name': name, 'quantity': 1, 'price': price}]);
+
+      _enqueue(tableIndex, () async {
+        // Item was removed before this op ran — skip insert entirely.
+        if (!orders.contains(newOrder)) {
+          await _syncTableHeader(tableIndex);
+          return;
+        }
+        // Already given a real ID by a previous duplicate enqueue — just update.
+        if ((newOrder['id'] as int) != -1) {
+          await _db
+              .from('orders')
+              .update({'quantity': newOrder['quantity'] as int})
+              .eq('id', newOrder['id'] as int);
+          await _syncTableHeader(tableIndex);
+          return;
+        }
+        // Insert with the quantity that accumulated from all rapid taps.
+        final row = await _db.from('orders').insert({
+          'table_id': tableId,
+          'name': name,
+          'quantity': newOrder['quantity'] as int,
+          'price': price,
+        }).select().single();
+        newOrder['id'] = row['id'] as int;
+        await _syncTableHeader(tableIndex);
+      });
     }
+  }
+
+  /// Removes all active orders matching [itemName] across every table.
+  /// Called when a menu item is deleted from the menus page.
+  void removeOrdersByItemName(String itemName) {
+    for (int tableIndex = 0; tableIndex < tables.length; tableIndex++) {
+      final orders = tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
+      final matching = orders
+          .where((o) => o['name'] == itemName)
+          .toList();
+      if (matching.isEmpty) continue;
+      for (final order in matching) {
+        final orderId = order['id'] as int;
+        final price = order['price'] as double;
+        final qty = order['quantity'] as int;
+        tables[tableIndex]['total'] =
+            ((tables[tableIndex]['total'] as double) - price * qty)
+                .clamp(0.0, double.infinity);
+        if ((tables[tableIndex]['discount'] as double) >
+            (tables[tableIndex]['total'] as double)) {
+          tables[tableIndex]['discount'] = 0.0;
+        }
+        KitchenService.to
+            .removeTicketForItem(tableId: _id(tableIndex), itemName: itemName);
+        _db.from('orders').delete().eq('id', orderId)
+            .catchError((e) => _err('removeOrdersByItemName', e));
+      }
+      orders.removeWhere((o) => o['name'] == itemName);
+      _setOccupied(tableIndex);
+      _syncTableHeader(tableIndex).catchError((e) => _err('removeOrdersByItemName(sync)', e));
+    }
+    tables.refresh();
   }
 
   void removeOrder(int tableIndex, int orderIndex) {
     final orders = tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
     if (orderIndex >= orders.length) return;
-    final order = orders[orderIndex];
-    final orderId = order['id'] as int;
+    final order = orders[orderIndex]; // stable Map reference — survives removeAt
     final price = order['price'] as double;
     final qty = order['quantity'] as int;
     final name = order['name'] as String;
+
+    // Optimistic UI
     tables[tableIndex]['total'] =
         ((tables[tableIndex]['total'] as double) - price * qty)
             .clamp(0.0, double.infinity);
@@ -322,41 +429,59 @@ class TableService extends GetxService {
     _setOccupied(tableIndex);
     KitchenService.to
         .removeTicketForItem(tableId: _id(tableIndex), itemName: name);
-    InventoryService.to.incrementForCancellation([{'name': name, 'quantity': qty, 'price': price}]);
-    Future.wait([
-      _db.from('orders').delete().eq('id', orderId),
-      _syncTableHeader(tableIndex),
-    ]).catchError((e) => _err('removeOrder', e));
+    InventoryService.to.incrementForCancellation(
+        [{'name': name, 'quantity': qty, 'price': price}]);
+
+    _enqueue(tableIndex, () async {
+      final orderId = order['id'] as int;
+      if (orderId != -1) {
+        await _db.from('orders').delete().eq('id', orderId);
+      }
+      // If orderId is still -1, the insert op ahead in the queue saw that
+      // the item is no longer in the list and skipped the insert — nothing
+      // to delete from DB.
+      await _syncTableHeader(tableIndex);
+    });
   }
 
   void decrementOrder(int tableIndex, int orderIndex) {
     final orders = tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
     if (orderIndex >= orders.length) return;
-    final order = orders[orderIndex];
+    final order = orders[orderIndex]; // stable Map reference
     final qty = order['quantity'] as int;
     final price = order['price'] as double;
     final name = order['name'] as String;
-    final orderId = order['id'] as int;
+
     if (qty <= 1) {
       removeOrder(tableIndex, orderIndex);
       return;
     }
-    orders[orderIndex]['quantity'] = qty - 1;
+
+    // Optimistic UI
+    order['quantity'] = qty - 1;
     tables[tableIndex]['total'] =
         ((tables[tableIndex]['total'] as double) - price)
             .clamp(0.0, double.infinity);
     _setOccupied(tableIndex);
-    InventoryService.to.incrementForCancellation([{'name': name, 'quantity': 1, 'price': price}]);
+    InventoryService.to.incrementForCancellation(
+        [{'name': name, 'quantity': 1, 'price': price}]);
     KitchenService.to.addOrUpdateTicket(
       tableId: _id(tableIndex),
       tableName: tables[tableIndex]['name'] as String,
       itemName: name,
       quantity: qty - 1,
     );
-    Future.wait([
-      _db.from('orders').update({'quantity': qty - 1}).eq('id', orderId),
-      _syncTableHeader(tableIndex),
-    ]).catchError((e) => _err('decrementOrder', e));
+
+    _enqueue(tableIndex, () async {
+      final orderId = order['id'] as int;
+      // Insert still pending — it will commit the already-decremented quantity.
+      if (orderId == -1) return;
+      await _db
+          .from('orders')
+          .update({'quantity': order['quantity'] as int})
+          .eq('id', orderId);
+      await _syncTableHeader(tableIndex);
+    });
   }
 
   // ── Clear / Payment ──────────────────────────────────────────
@@ -555,7 +680,14 @@ class TableService extends GetxService {
           .eq('id', destOrderId)
           .catchError((e) => _err('moveOrder dest-update', e));
     } else {
-      destOrders.add({'id': -1, 'name': name, 'quantity': qty, 'price': price});
+      final movedOrder = <String, dynamic>{'id': -1, 'name': name, 'quantity': qty, 'price': price};
+      final destInsertIdx = destOrders.indexWhere(
+          (o) => (o['name'] as String).compareTo(name) > 0);
+      if (destInsertIdx == -1) {
+        destOrders.add(movedOrder);
+      } else {
+        destOrders.insert(destInsertIdx, movedOrder);
+      }
       KitchenService.to.addOrUpdateTicket(
         tableId: destTableId,
         tableName: tables[toTableIndex]['name'] as String,
@@ -565,11 +697,7 @@ class TableService extends GetxService {
       _db.from('orders')
           .update({'table_id': destTableId})
           .eq('id', srcOrderId)
-          .then((_) {
-            final idx = destOrders
-                .indexWhere((o) => o['name'] == name && o['id'] == -1);
-            if (idx != -1) destOrders[idx]['id'] = srcOrderId;
-          })
+          .then((_) => movedOrder['id'] = srcOrderId)
           .catchError((e) => _err('moveOrder reparent', e));
     }
     tables[toTableIndex]['total'] =
@@ -623,8 +751,19 @@ class TableService extends GetxService {
           _db.from('orders').delete().eq('id', srcOrderId),
         ]).catchError((e) => _err('moveAll merge', e));
       } else {
-        destOrders.add(
-            {'id': srcOrderId, 'name': name, 'quantity': qty, 'price': price});
+        final movedAllOrder = <String, dynamic>{
+          'id': srcOrderId,
+          'name': name,
+          'quantity': qty,
+          'price': price,
+        };
+        final destInsertIdx = destOrders.indexWhere(
+            (o) => (o['name'] as String).compareTo(name) > 0);
+        if (destInsertIdx == -1) {
+          destOrders.add(movedAllOrder);
+        } else {
+          destOrders.insert(destInsertIdx, movedAllOrder);
+        }
         KitchenService.to.addOrUpdateTicket(
           tableId: destTableId,
           tableName: tables[toTableIndex]['name'] as String,
