@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:adisyos/services/menu_service.dart';
+import 'package:adisyos/services/settings_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
 import 'package:adisyos/widgets/app_toast.dart';
 
@@ -152,11 +153,12 @@ class _MenuManagementViewState extends State<MenuManagementView> {
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
             // ── Header ───────────────────────────────────
             Container(
-              height: 60,
+              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
               decoration: const BoxDecoration(
                 color: _card,
                 boxShadow: [
@@ -164,61 +166,64 @@ class _MenuManagementViewState extends State<MenuManagementView> {
                   BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
                 ],
               ),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                        size: 18, color: _textPrimary),
-                    onPressed: Get.back,
-                  ),
-                  Text(
-                    'menu_management'.tr,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: _textPrimary,
-                      letterSpacing: -0.3,
+              child: SizedBox(
+                height: 52,
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                          size: 18, color: _textPrimary),
+                      onPressed: Get.back,
                     ),
-                  ),
-                  const Spacer(),
-                  Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: GestureDetector(
-                      onTap: _showAddMenuDialog,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: _orange,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x44FF9500),
-                              blurRadius: 8,
-                              offset: Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.add_rounded,
-                                size: 16, color: Colors.white),
-                            const SizedBox(width: 4),
-                            Text(
-                              'add_menu'.tr,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
+                    Text(
+                      'menu_management'.tr,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: _textPrimary,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const Spacer(),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: GestureDetector(
+                        onTap: _showAddMenuDialog,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: _orange,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x44FF9500),
+                                blurRadius: 8,
+                                offset: Offset(0, 3),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.add_rounded,
+                                  size: 16, color: Colors.white),
+                              const SizedBox(width: 4),
+                              Text(
+                                'add_menu'.tr,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
@@ -637,13 +642,13 @@ class _ItemFormDialogState extends State<_ItemFormDialog> {
               const SizedBox(height: 12),
 
               // Price field
-              TextField(
+              Obx(() => TextField(
                 controller: _priceCtrl,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   labelText: 'price'.tr,
-                  prefixText: '₺',
+                  prefixText: SettingsService.cs,
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12)),
                   focusedBorder: OutlineInputBorder(
@@ -653,7 +658,7 @@ class _ItemFormDialogState extends State<_ItemFormDialog> {
                   ),
                 ),
                 onSubmitted: (_) => _save(),
-              ),
+              )),
               const SizedBox(height: 24),
 
               // Actions
@@ -1018,14 +1023,14 @@ class _MenuCard extends StatelessWidget {
                           color: _orangeLight,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text(
-                          '₺${itemPrice.toStringAsFixed(2)}',
+                        child: Obx(() => Text(
+                          '${SettingsService.cs}${itemPrice.toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: _orange,
                           ),
-                        ),
+                        )),
                       ),
                       const SizedBox(width: 4),
 

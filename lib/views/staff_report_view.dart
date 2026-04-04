@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:adisyos/services/sales_history_service.dart';
 import 'package:adisyos/services/shift_service.dart';
 import 'package:adisyos/services/staff_service.dart';
+import 'package:adisyos/services/settings_service.dart';
 
 // ── Design tokens ─────────────────────────────────────────────
 const _bg          = Color(0xFFF2F2F7);
@@ -106,11 +107,12 @@ class StaffReportView extends StatelessWidget {
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
             // ── Header ─────────────────────────────────────
             Container(
-              height: 60,
+              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
               decoration: const BoxDecoration(
                 color: _card,
                 boxShadow: [
@@ -120,25 +122,28 @@ class StaffReportView extends StatelessWidget {
                       offset: Offset(0, 2)),
                 ],
               ),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                        size: 18, color: _textPrimary),
-                    onPressed: () => Get.back(),
-                  ),
-                  const Text(
-                    'Personel Raporu',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 17,
-                      color: _textPrimary,
-                      letterSpacing: -0.3,
+              child: SizedBox(
+                height: 52,
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                          size: 18, color: _textPrimary),
+                      onPressed: () => Get.back(),
                     ),
-                  ),
-                  const Spacer(),
-                  const SizedBox(width: 8),
-                ],
+                    const Text(
+                      'Personel Raporu',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 17,
+                        color: _textPrimary,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const Spacer(),
+                    const SizedBox(width: 8),
+                  ],
+                ),
               ),
             ),
 
@@ -375,7 +380,7 @@ class _StaffCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '₺${total.toStringAsFixed(2)}',
+                '${SettingsService.cs}${total.toStringAsFixed(2)}',
                 style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:adisyos/services/sales_history_service.dart';
 import 'package:adisyos/services/table_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
+import 'package:adisyos/services/settings_service.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _bg          = Color(0xFFF2F2F7);
@@ -48,11 +49,13 @@ class _DashboardViewState extends State<DashboardView> {
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
             _Header(now: _now),
             Expanded(
               child: Obx(() {
+                final cs = SettingsService.cs;
                 final tables = TableService.to.tables;
                 final occupied =
                     tables.where((t) => t['isOccupied'] == true).toList();
@@ -85,14 +88,14 @@ class _DashboardViewState extends State<DashboardView> {
                         final kpiCards = [
                           _KpiCard(
                             label: 'Bugünkü Satış',
-                            value: '₺${todayTotal.toStringAsFixed(0)}',
+                            value: '$cs${todayTotal.toStringAsFixed(0)}',
                             sub: '${todaySales.length} işlem',
                             icon: Icons.attach_money_rounded,
                             color: _green,
                           ),
                           _KpiCard(
                             label: 'Ort. Sipariş',
-                            value: '₺${avgOrder.toStringAsFixed(0)}',
+                            value: '$cs${avgOrder.toStringAsFixed(0)}',
                             sub: 'işlem başına',
                             icon: Icons.trending_up_rounded,
                             color: _orange,
@@ -201,8 +204,9 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
     return Container(
-      height: 60,
+      padding: EdgeInsets.only(top: topPad, left: 8, right: 8),
       decoration: const BoxDecoration(
         color: _card,
         boxShadow: [
@@ -210,50 +214,52 @@ class _Header extends StatelessWidget {
           BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                size: 18, color: _textPrimary),
-            onPressed: () => Get.back(),
-          ),
-          const Text(
-            'Canlı Dashboard',
-            style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: _textPrimary,
-                letterSpacing: -0.3),
-          ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            margin: const EdgeInsets.only(right: 12),
-            decoration: BoxDecoration(
-              color: _green.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
+      child: SizedBox(
+        height: 52,
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 18, color: _textPrimary),
+              onPressed: () => Get.back(),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                        color: _green, shape: BoxShape.circle)),
-                const SizedBox(width: 6),
-                Text(
-                  DateFormat('HH:mm:ss').format(now),
-                  style: const TextStyle(
-                      color: _green,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13),
-                ),
-              ],
+            const Text(
+              'Canlı Dashboard',
+              style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: _textPrimary,
+                  letterSpacing: -0.3),
             ),
-          ),
-        ],
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                color: _green.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                          color: _green, shape: BoxShape.circle)),
+                  const SizedBox(width: 6),
+                  Text(
+                    DateFormat('HH:mm:ss').format(now),
+                    style: const TextStyle(
+                        color: _green,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -483,13 +489,13 @@ class _ActiveTablesList extends StatelessWidget {
                         style: const TextStyle(
                             fontSize: 12, color: _textSec)),
                     const Spacer(),
-                    Text(
-                      '₺${total.toStringAsFixed(2)}',
+                    Obx(() => Text(
+                      '${SettingsService.cs}${total.toStringAsFixed(2)}',
                       style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 13,
                           color: _textPrimary),
-                    ),
+                    )),
                   ],
                 ),
               );
@@ -517,85 +523,82 @@ class _HourlyChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (hourlyTotals.isEmpty) {
-      return const SizedBox(
-        height: 160,
-        child: Center(
-          child: Text('Henüz satış yok',
-              style: TextStyle(color: _textSec)),
+    return Obx(() {
+      final cs = SettingsService.cs;
+      if (hourlyTotals.isEmpty) {
+        return const SizedBox(
+          height: 160,
+          child: Center(
+            child: Text('Henüz satış yok', style: TextStyle(color: _textSec)),
+          ),
+        );
+      }
+      final maxY = hourlyTotals.values.reduce((a, b) => a > b ? a : b);
+      final groups = hourlyTotals.entries
+          .map((e) => BarChartGroupData(
+                x: e.key,
+                barRods: [
+                  BarChartRodData(
+                    toY: e.value,
+                    color: AppTheme.accentColor,
+                    width: 14,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ],
+              ))
+          .toList()
+        ..sort((a, b) => a.x.compareTo(b.x));
+
+      return SizedBox(
+        height: 180,
+        child: BarChart(
+          BarChartData(
+            alignment: BarChartAlignment.spaceAround,
+            maxY: maxY * 1.25,
+            barTouchData: BarTouchData(
+              touchTooltipData: BarTouchTooltipData(
+                getTooltipItem: (group, _, rod, __) => BarTooltipItem(
+                  '${group.x}:00\n$cs${rod.toY.toStringAsFixed(0)}',
+                  const TextStyle(color: Colors.white, fontSize: 11),
+                ),
+              ),
+            ),
+            titlesData: FlTitlesData(
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 40,
+                  getTitlesWidget: (v, _) => Text(
+                    '$cs${v.toInt()}',
+                    style: const TextStyle(fontSize: 9, color: _textSec),
+                  ),
+                ),
+              ),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (v, _) => Text(
+                    '${v.toInt()}:00',
+                    style: const TextStyle(fontSize: 9, color: _textSec),
+                  ),
+                ),
+              ),
+              rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            ),
+            borderData: FlBorderData(show: false),
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              horizontalInterval: maxY > 0 ? maxY / 4 : 1,
+              getDrawingHorizontalLine: (_) =>
+                  const FlLine(color: _border, strokeWidth: 1),
+            ),
+            barGroups: groups,
+          ),
         ),
       );
-    }
-    final maxY =
-        hourlyTotals.values.reduce((a, b) => a > b ? a : b);
-    final groups = hourlyTotals.entries
-        .map((e) => BarChartGroupData(
-              x: e.key,
-              barRods: [
-                BarChartRodData(
-                  toY: e.value,
-                  color: AppTheme.accentColor,
-                  width: 14,
-                  borderRadius: BorderRadius.circular(5),
-                ),
-              ],
-            ))
-        .toList()
-      ..sort((a, b) => a.x.compareTo(b.x));
-
-    return SizedBox(
-      height: 180,
-      child: BarChart(
-        BarChartData(
-          alignment: BarChartAlignment.spaceAround,
-          maxY: maxY * 1.25,
-          barTouchData: BarTouchData(
-            touchTooltipData: BarTouchTooltipData(
-              getTooltipItem: (group, _, rod, __) => BarTooltipItem(
-                '${group.x}:00\n₺${rod.toY.toStringAsFixed(0)}',
-                const TextStyle(color: Colors.white, fontSize: 11),
-              ),
-            ),
-          ),
-          titlesData: FlTitlesData(
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 40,
-                getTitlesWidget: (v, _) => Text(
-                  '₺${v.toInt()}',
-                  style:
-                      const TextStyle(fontSize: 9, color: _textSec),
-                ),
-              ),
-            ),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (v, _) => Text(
-                  '${v.toInt()}:00',
-                  style:
-                      const TextStyle(fontSize: 9, color: _textSec),
-                ),
-              ),
-            ),
-            rightTitles: AxisTitles(
-                sideTitles: SideTitles(showTitles: false)),
-            topTitles: AxisTitles(
-                sideTitles: SideTitles(showTitles: false)),
-          ),
-          borderData: FlBorderData(show: false),
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            horizontalInterval: maxY > 0 ? maxY / 4 : 1,
-            getDrawingHorizontalLine: (_) =>
-                const FlLine(color: _border, strokeWidth: 1),
-          ),
-          barGroups: groups,
-        ),
-      ),
-    );
+    });
   }
 }
 
@@ -700,13 +703,13 @@ class _PayTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Text(
-            '₺${amount.toStringAsFixed(2)}',
+          Obx(() => Text(
+            '${SettingsService.cs}${amount.toStringAsFixed(2)}',
             style: TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 18,
                 color: color),
-          ),
+          )),
           const SizedBox(height: 6),
           LinearProgressIndicator(
             value: pct / 100,

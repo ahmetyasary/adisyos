@@ -5,6 +5,7 @@ import 'package:adisyos/views/pin_screen.dart';
 import 'package:adisyos/views/table_detail_view.dart';
 import 'package:adisyos/views/public_menu_view.dart';
 import 'package:adisyos/services/table_service.dart';
+import 'package:adisyos/services/settings_service.dart';
 import 'package:adisyos/services/section_service.dart';
 import 'package:adisyos/services/staff_service.dart';
 import 'package:adisyos/services/day_service.dart';
@@ -487,16 +488,22 @@ class _TablesViewState extends State<TablesView> {
         );
       }),
       body: SafeArea(
+        top: false,
         bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Header bar ─────────────────────────────────
             Container(
-              height: 56,
               color: _card,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top,
+                left: 8,
+                right: 8,
+              ),
+              child: SizedBox(
+                height: 52,
+                child: Row(
                 children: [
                   IconButton(
                     icon: const Icon(Icons.arrow_back_ios_new_rounded,
@@ -533,6 +540,7 @@ class _TablesViewState extends State<TablesView> {
                     );
                   }),
                 ],
+                ),
               ),
             ),
 
@@ -950,8 +958,8 @@ class _PriceBadge extends StatelessWidget {
         color: _orange.withOpacity(0.12),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(
-        '₺${total.toStringAsFixed(2)}',
+      child: Obx(() => Text(
+        '${SettingsService.cs}${total.toStringAsFixed(2)}',
         style: TextStyle(
           fontSize: compact ? 12 : 14,
           fontWeight: FontWeight.w800,
@@ -959,7 +967,7 @@ class _PriceBadge extends StatelessWidget {
         ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-      ),
+      )),
     );
   }
 }

@@ -7,6 +7,7 @@ class StaffService extends GetxService {
 
   final RxList<Map<String, dynamic>> staffList = <Map<String, dynamic>>[].obs;
   final Rx<Map<String, dynamic>?> currentStaff = Rx(null);
+  final RxBool isLoaded = false.obs;
 
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
@@ -53,6 +54,8 @@ class StaffService extends GetxService {
       staffList.assignAll(rows.map(_rowToStaff).toList());
     } catch (e) {
       if (kDebugMode) print('[StaffService] load error: $e');
+    } finally {
+      isLoaded.value = true;
     }
   }
 

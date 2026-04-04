@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:adisyos/services/kitchen_service.dart';
+import 'package:adisyos/services/table_service.dart';
+import 'package:adisyos/services/section_service.dart';
 
 // ── Design tokens ──────────────────────────────────────────────
 const _bg           = Color(0xFFF2F2F7);
@@ -40,13 +42,14 @@ class _KitchenDisplayViewState extends State<KitchenDisplayView>
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
+        top: false,
         bottom: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isMobile = constraints.maxWidth < 650;
             return Column(
               children: [
-                _buildHeader(isMobile),
+                _buildHeader(context, isMobile),
                 Expanded(
                   child: Obx(() {
                     final svc = KitchenService.to;
@@ -64,8 +67,9 @@ class _KitchenDisplayViewState extends State<KitchenDisplayView>
   }
 
   // ── Header ─────────────────────────────────────────────────────
-  Widget _buildHeader(bool isMobile) {
+  Widget _buildHeader(BuildContext context, bool isMobile) {
     return Container(
+      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
       decoration: const BoxDecoration(
         color: _card,
         boxShadow: [
@@ -77,7 +81,7 @@ class _KitchenDisplayViewState extends State<KitchenDisplayView>
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-            height: 60,
+            height: 52,
             child: Row(
               children: [
                 IconButton(
@@ -453,8 +457,24 @@ class _TicketCard extends StatelessWidget {
     return '${diff.inHours} sa';
   }
 
+  /// Returns "Section · TableName" when the table has a section, else just TableName.
+  String _resolveTableLabel(String rawName) {
+    final tables = TableService.to.tables;
+    final match = tables.firstWhereOrNull(
+        (t) => (t['name'] as String) == rawName);
+    if (match == null) return rawName;
+    final sectionId = match['sectionId'] as String?;
+    final sectionName = SectionService.to.nameById(sectionId);
+    if (sectionName != null && sectionName.isNotEmpty) {
+      return '$sectionName · $rawName';
+    }
+    return rawName;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final tableLabel = _resolveTableLabel(ticket['tableName'] as String);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -479,7 +499,7 @@ class _TicketCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  ticket['tableName'] as String,
+                  tableLabel,
                   style: TextStyle(
                       color: color, fontWeight: FontWeight.bold, fontSize: 11),
                 ),

@@ -78,6 +78,7 @@ class _SettingsViewState extends State<SettingsView> {
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
+        top: false,
         bottom: false,
         child: Column(
           children: [
@@ -99,12 +100,18 @@ class _SettingsViewState extends State<SettingsView> {
                     _SectionLabel('İşletme'),
                     const SizedBox(height: 10),
                     _Card(
-                      child: _InlineField(
-                        icon: Icons.store_rounded,
-                        label: 'Şirket Adı',
-                        hint: 'Şirket adınızı girin',
-                        controller: _companyCtrl,
-                        textCapitalization: TextCapitalization.words,
+                      child: Column(
+                        children: [
+                          _InlineField(
+                            icon: Icons.store_rounded,
+                            label: 'Şirket Adı',
+                            hint: 'Şirket adınızı girin',
+                            controller: _companyCtrl,
+                            textCapitalization: TextCapitalization.words,
+                          ),
+                          const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
+                          const _CurrencyRow(),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 28),
@@ -158,32 +165,35 @@ class _SettingsViewState extends State<SettingsView> {
 class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
     return Container(
-      height: 60,
+      padding: EdgeInsets.only(top: topPad, left: 8, right: 8),
       decoration: const BoxDecoration(
         color: _card,
         boxShadow: [
           BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                size: 18, color: _textPrimary),
-            onPressed: () => Get.back(),
-          ),
-          Text(
-            'settings'.tr,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: _textPrimary,
-              letterSpacing: -0.3,
+      child: SizedBox(
+        height: 52,
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 18, color: _textPrimary),
+              onPressed: () => Get.back(),
             ),
-          ),
-        ],
+            Text(
+              'settings'.tr,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: _textPrimary,
+                letterSpacing: -0.3,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -407,6 +417,110 @@ class _InlineField extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// ── Currency row ───────────────────────────────────────────────
+
+class _CurrencyRow extends StatelessWidget {
+  const _CurrencyRow();
+
+  static const _currencies = [
+    ('₺', 'Türk Lirası'),
+    ('\$', 'Dolar'),
+    ('€', 'Euro'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final current = SettingsService.to.currencySymbol.value;
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: _orange.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: const Icon(Icons.currency_exchange_rounded, size: 17, color: _orange),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Para Birimi',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _textSec,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: _currencies.map((c) {
+                      final symbol = c.$1;
+                      final label  = c.$2;
+                      final selected = symbol == current;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onTap: () => SettingsService.to.setCurrency(symbol),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: selected ? _orange : _bg,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: selected ? _orange : _border,
+                                width: 1.5,
+                              ),
+                              boxShadow: selected
+                                  ? [BoxShadow(color: _orange.withOpacity(0.30), blurRadius: 10, offset: const Offset(0, 3))]
+                                  : [],
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  symbol,
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    color: selected ? Colors.white : _textPrimary,
+                                    height: 1.1,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  label,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                    color: selected ? Colors.white.withOpacity(0.90) : _textSec,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }
 

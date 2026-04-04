@@ -3,7 +3,24 @@ import 'package:get/get.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:adisyos/services/sales_history_service.dart';
+import 'package:adisyos/services/table_service.dart';
+import 'package:adisyos/services/section_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
+import 'package:adisyos/services/settings_service.dart';
+
+/// Returns "Section · tableName" when a live table with that name has a section.
+String _resolveTableLabel(String rawName) {
+  final tables = TableService.to.tables;
+  final match = tables.firstWhereOrNull(
+      (t) => (t['name'] as String) == rawName);
+  if (match == null) return rawName;
+  final sectionId = match['sectionId'] as String?;
+  final sectionName = SectionService.to.nameById(sectionId);
+  if (sectionName != null && sectionName.isNotEmpty) {
+    return '$sectionName · $rawName';
+  }
+  return rawName;
+}
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _bg          = Color(0xFFF2F2F7);
@@ -22,11 +39,13 @@ class DailyReportView extends StatelessWidget {
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
             _Header(title: 'daily_report'.tr),
             Expanded(
               child: Obx(() {
+                final cs = SettingsService.cs;
                 final sales = SalesHistoryService.to.getSalesForDate(today);
                 final total = SalesHistoryService.to.getTotalForSales(sales);
                 final hourlyTotals =
@@ -59,7 +78,7 @@ class DailyReportView extends StatelessWidget {
                             child: _StatCard(
                               icon: Icons.attach_money_rounded,
                               label: 'total_sales'.tr,
-                              value: '₺${total.toStringAsFixed(2)}',
+                              value: '$cs${total.toStringAsFixed(2)}',
                               accent: AppTheme.successColor,
                             ),
                           ),
@@ -78,8 +97,8 @@ class DailyReportView extends StatelessWidget {
                               icon: Icons.trending_up_rounded,
                               label: 'Ort. Sipariş',
                               value: sales.isEmpty
-                                  ? '₺0.00'
-                                  : '₺${(total / sales.length).toStringAsFixed(2)}',
+                                  ? '${cs}0.00'
+                                  : '$cs${(total / sales.length).toStringAsFixed(2)}',
                               accent: AppTheme.warningColor,
                             ),
                           ),
@@ -90,13 +109,13 @@ class DailyReportView extends StatelessWidget {
                       if (sales.isEmpty)
                         _buildEmptyState()
                       else ...[
-                        // Hourly chart
+                        // Hourly line chart
                         _SectionTitle(
                             title: 'hourly_sales'.tr,
                             icon: Icons.access_time_rounded),
                         const SizedBox(height: 12),
                         _ChartCard(
-                            child: _buildHourlyChart(hourlyTotals)),
+                            child: _buildHourlyLineChart(hourlyTotals, cs)),
                         const SizedBox(height: 24),
 
                         // Payment method breakdown
@@ -108,7 +127,7 @@ class DailyReportView extends StatelessWidget {
                             child: _buildPaymentBreakdown(
                                 SalesHistoryService.to
                                     .getPaymentMethodTotals(sales),
-                                total)),
+                                total, cs)),
                         const SizedBox(height: 24),
 
                         // Top items
@@ -122,12 +141,12 @@ class DailyReportView extends StatelessWidget {
                           const SizedBox(height: 24),
                         ],
 
-                        // Recent transactions
+                        // Son Aktivite — table-grouped
                         _SectionTitle(
                             title: 'recent_activity'.tr,
                             icon: Icons.list_alt_rounded),
                         const SizedBox(height: 12),
-                        _buildTransactionsList(sales),
+                        _buildTableGroupedActivity(sales, cs),
                       ],
                     ],
                   ),
@@ -140,64 +159,91 @@ class DailyReportView extends StatelessWidget {
     );
   }
 
-  Widget _buildHourlyChart(Map<int, double> hourlyTotals) {
+  // ── Hourly line chart (upgraded from bar chart) ───────────────
+  Widget _buildHourlyLineChart(Map<int, double> hourlyTotals, String cs) {
     if (hourlyTotals.isEmpty) {
       return const SizedBox(
           height: 200, child: Center(child: Text('-')));
     }
 
+    // Build a full 0-23 hour axis with 0 for empty hours
+    final allHours = List.generate(24, (i) => i);
+    final spots = allHours
+        .map((h) => FlSpot(h.toDouble(), hourlyTotals[h] ?? 0))
+        .toList();
     final maxY = hourlyTotals.values.reduce((a, b) => a > b ? a : b);
-    final barGroups = hourlyTotals.entries.map((e) {
-      return BarChartGroupData(
-        x: e.key,
-        barRods: [
-          BarChartRodData(
-            toY: e.value,
-            color: AppTheme.accentColor,
-            width: 16,
-            borderRadius: BorderRadius.circular(6),
-          ),
-        ],
-      );
-    }).toList()
-      ..sort((a, b) => a.x.compareTo(b.x));
 
     return SizedBox(
-      height: 200,
-      child: BarChart(
-        BarChartData(
-          alignment: BarChartAlignment.spaceAround,
-          maxY: maxY * 1.2,
-          barTouchData: BarTouchData(
-            touchTooltipData: BarTouchTooltipData(
-              getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                return BarTooltipItem(
-                  '${group.x}:00\n₺${rod.toY.toStringAsFixed(0)}',
-                  const TextStyle(color: Colors.white, fontSize: 12),
+      height: 220,
+      child: LineChart(
+        LineChartData(
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              curveSmoothness: 0.35,
+              color: AppTheme.accentColor,
+              barWidth: 2.5,
+              dotData: FlDotData(
+                show: true,
+                getDotPainter: (spot, pct, bar, idx) => FlDotCirclePainter(
+                  radius: spot.y > 0 ? 4 : 0,
+                  color: AppTheme.accentColor,
+                  strokeWidth: 2,
+                  strokeColor: Colors.white,
+                ),
+              ),
+              belowBarData: BarAreaData(
+                show: true,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppTheme.accentColor.withValues(alpha: 0.22),
+                    AppTheme.accentColor.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          minY: 0,
+          maxY: maxY * 1.25,
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipItems: (spots) => spots.map((s) {
+                if (s.y == 0) return null;
+                return LineTooltipItem(
+                  '${s.x.toInt()}:00\n$cs${s.y.toStringAsFixed(0)}',
+                  const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600),
                 );
-              },
+              }).toList(),
             ),
           ),
           titlesData: FlTitlesData(
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 44,
+                reservedSize: 46,
                 getTitlesWidget: (value, meta) => Text(
-                  '₺${value.toInt()}',
-                  style:
-                      const TextStyle(fontSize: 10, color: _textSec),
+                  '$cs${value.toInt()}',
+                  style: const TextStyle(fontSize: 9, color: _textSec),
                 ),
               ),
             ),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                getTitlesWidget: (value, meta) => Text(
-                  '${value.toInt()}:00',
-                  style:
-                      const TextStyle(fontSize: 10, color: _textSec),
-                ),
+                interval: 4,
+                getTitlesWidget: (value, meta) {
+                  final h = value.toInt();
+                  return Text(
+                    '$h:00',
+                    style: const TextStyle(fontSize: 9, color: _textSec),
+                  );
+                },
               ),
             ),
             rightTitles:
@@ -210,29 +256,26 @@ class DailyReportView extends StatelessWidget {
             show: true,
             drawVerticalLine: false,
             horizontalInterval: maxY > 0 ? maxY / 4 : 1,
-            getDrawingHorizontalLine: (_) => FlLine(
-              color: _border,
-              strokeWidth: 1,
-            ),
+            getDrawingHorizontalLine: (_) =>
+                const FlLine(color: _border, strokeWidth: 1),
           ),
-          barGroups: barGroups,
         ),
       ),
     );
   }
 
   Widget _buildPaymentBreakdown(
-      Map<String, double> totals, double grandTotal) {
+      Map<String, double> totals, double grandTotal, String cs) {
     final methods = [
-      {'key': 'cash', 'label': 'pay_cash', 'icon': Icons.payments_rounded, 'color': const Color(0xFF52C97F)},
-      {'key': 'card', 'label': 'pay_card', 'icon': Icons.credit_card_rounded, 'color': const Color(0xFF5DADE2)},
+      {'key': 'cash',     'label': 'pay_cash',     'icon': Icons.payments_rounded,        'color': const Color(0xFF52C97F)},
+      {'key': 'card',     'label': 'pay_card',     'icon': Icons.credit_card_rounded,     'color': const Color(0xFF5DADE2)},
       {'key': 'transfer', 'label': 'pay_transfer', 'icon': Icons.account_balance_rounded, 'color': const Color(0xFFAB84F5)},
     ];
     return Column(
       children: methods.map((m) {
-        final amount = totals[m['key'] as String] ?? 0.0;
+        final amount   = totals[m['key'] as String] ?? 0.0;
         final fraction = grandTotal > 0 ? amount / grandTotal : 0.0;
-        final color = m['color'] as Color;
+        final color    = m['color'] as Color;
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Row(
@@ -258,7 +301,7 @@ class DailyReportView extends StatelessWidget {
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: _textPrimary)),
-                        Text('₺${amount.toStringAsFixed(2)}',
+                        Text('$cs${amount.toStringAsFixed(2)}',
                             style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -287,16 +330,15 @@ class DailyReportView extends StatelessWidget {
     final maxQty = topItems.first.value;
     return Column(
       children: topItems.asMap().entries.map((entry) {
-        final rank = entry.key + 1;
-        final item = entry.value;
+        final rank     = entry.key + 1;
+        final item     = entry.value;
         final fraction = maxQty > 0 ? item.value / maxQty : 0.0;
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Row(
             children: [
               Container(
-                width: 28,
-                height: 28,
+                width: 28, height: 28,
                 decoration: BoxDecoration(
                   color: AppTheme.accentColor
                       .withValues(alpha: rank == 1 ? 0.15 : 0.08),
@@ -348,59 +390,229 @@ class DailyReportView extends StatelessWidget {
     );
   }
 
-  Widget _buildTransactionsList(List<Map<String, dynamic>> sales) {
-    final recent = sales.reversed.take(10).toList();
+  // ── Son Aktivite: table-grouped ───────────────────────────────
+  Widget _buildTableGroupedActivity(List<Map<String, dynamic>> sales, String cs) {
+    // Group by tableName, preserve order (newest first already)
+    final grouped = <String, List<Map<String, dynamic>>>{};
+    for (final sale in sales) {
+      final name = sale['tableName'] as String;
+      grouped.putIfAbsent(name, () => []).add(sale);
+    }
+
+    // Sort tables by their most recent sale (already newest-first in each group)
+    final tableNames = grouped.keys.toList()
+      ..sort((a, b) {
+        final aDate = DateTime.parse(grouped[a]!.first['date'] as String);
+        final bDate = DateTime.parse(grouped[b]!.first['date'] as String);
+        return bDate.compareTo(aDate);
+      });
+
     return Column(
-      children: recent.map((sale) {
-        final date = DateTime.parse(sale['date'] as String);
+      children: tableNames.map((tableName) {
+        final tableSales = grouped[tableName]!;
+        final tableTotal = tableSales.fold(
+            0.0, (sum, s) => sum + (s['total'] as double));
+
         return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: const BoxDecoration(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
             color: _card,
-            borderRadius: BorderRadius.all(Radius.circular(14)),
-            boxShadow: [
-              BoxShadow(color: Color(0x0A000000), blurRadius: 16, offset: Offset(0, 3)),
-              BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: const [
+              BoxShadow(
+                  color: Color(0x0A000000),
+                  blurRadius: 20,
+                  offset: Offset(0, 4)),
+              BoxShadow(
+                  color: Color(0x05000000),
+                  blurRadius: 5,
+                  offset: Offset(0, 1)),
             ],
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Table header
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: AppTheme.successColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  gradient: LinearGradient(
+                    colors: [
+                      AppTheme.accentColor.withValues(alpha: 0.10),
+                      AppTheme.accentColor.withValues(alpha: 0.04),
+                    ],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(18)),
                 ),
-                child: const Icon(Icons.check_circle_outline_rounded,
-                    color: AppTheme.successColor, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Text(sale['tableName'] as String,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                            color: _textPrimary)),
-                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentColor
+                            .withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.table_restaurant_rounded,
+                          color: AppTheme.accentColor, size: 16),
+                    ),
+                    const SizedBox(width: 10),
                     Text(
-                        '${(sale['items'] as List).length} ürün · ${DateFormat('HH:mm').format(date)}',
-                        style:
-                            const TextStyle(color: _textSec, fontSize: 12)),
+                      _resolveTableLabel(tableName),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: _textPrimary,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.successColor
+                            .withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '$cs${tableTotal.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: AppTheme.successColor,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              Text(
-                '₺${(sale['total'] as double).toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.successColor,
-                  fontSize: 15,
-                ),
-              ),
+
+              // Individual sales for this table
+              ...tableSales.asMap().entries.map((entry) {
+                final idx  = entry.key;
+                final sale = entry.value;
+                final date =
+                    DateTime.parse(sale['date'] as String);
+                final items = (sale['items'] as List)
+                    .cast<Map<String, dynamic>>();
+                final method =
+                    (sale['paymentMethod'] as String?) ?? 'cash';
+                final isLast =
+                    idx == tableSales.length - 1;
+
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                          16, 12, 16, 12),
+                      child: Column(
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                        children: [
+                          // Time + payment method row
+                          Row(
+                            children: [
+                              Icon(Icons.access_time_rounded,
+                                  size: 13, color: _textSec),
+                              const SizedBox(width: 4),
+                              Text(
+                                DateFormat('HH:mm').format(date),
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    color: _textSec,
+                                    fontWeight: FontWeight.w500),
+                              ),
+                              const SizedBox(width: 10),
+                              _PayMethodBadge(method: method),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+
+                          // Item list
+                          ...items.map((item) {
+                            final qty =
+                                (item['quantity'] as num).toInt();
+                            final price =
+                                (item['price'] as num).toDouble();
+                            return Padding(
+                              padding:
+                                  const EdgeInsets.only(bottom: 6),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 22, height: 22,
+                                    decoration: BoxDecoration(
+                                      color: _bg,
+                                      borderRadius:
+                                          BorderRadius.circular(6),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      '$qty',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: _textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      item['name'] as String,
+                                      style: const TextStyle(
+                                          fontSize: 13,
+                                          color: _textPrimary),
+                                    ),
+                                  ),
+                                  Text(
+                                    '$cs${(qty * price).toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: _textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+
+                          // Sale total row
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisAlignment:
+                                MainAxisAlignment.end,
+                            children: [
+                              Text(
+                                '${items.length} ürün · ',
+                                style: const TextStyle(
+                                    fontSize: 12, color: _textSec),
+                              ),
+                              Text(
+                                '$cs${(sale['total'] as double).toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.successColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!isLast)
+                      const Divider(
+                          height: 1, indent: 16, endIndent: 16,
+                          color: _border),
+                  ],
+                );
+              }),
             ],
           ),
         );
@@ -417,7 +629,7 @@ class DailyReportView extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: _border,
                 shape: BoxShape.circle,
               ),
@@ -436,6 +648,40 @@ class DailyReportView extends StatelessWidget {
   }
 }
 
+// ── Payment method badge ──────────────────────────────────────
+class _PayMethodBadge extends StatelessWidget {
+  const _PayMethodBadge({required this.method});
+  final String method;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, icon, color) = switch (method) {
+      'card'     => ('Kart',   Icons.credit_card_rounded,     const Color(0xFF5DADE2)),
+      'transfer' => ('Havale', Icons.account_balance_rounded, const Color(0xFFAB84F5)),
+      _          => ('Nakit',  Icons.payments_rounded,        const Color(0xFF52C97F)),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+                fontSize: 11, fontWeight: FontWeight.w600, color: color),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Shared widgets ──────────────────────────────────────────
 
 class _Header extends StatelessWidget {
@@ -444,8 +690,9 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
     return Container(
-      height: 60,
+      padding: EdgeInsets.only(top: topPad),
       decoration: const BoxDecoration(
         color: _card,
         boxShadow: [
@@ -453,23 +700,26 @@ class _Header extends StatelessWidget {
           BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
         ],
       ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                size: 18, color: _textPrimary),
-            onPressed: () => Get.back(),
-          ),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: _textPrimary,
-              letterSpacing: -0.3,
+      child: SizedBox(
+        height: 52,
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 18, color: _textPrimary),
+              onPressed: () => Get.back(),
             ),
-          ),
-        ],
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: _textPrimary,
+                letterSpacing: -0.3,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -503,8 +753,7 @@ class _StatCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 34, height: 34,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -513,7 +762,10 @@ class _StatCard extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(10),
               boxShadow: [
-                BoxShadow(color: accent.withOpacity(0.28), blurRadius: 6, offset: const Offset(0, 2)),
+                BoxShadow(
+                    color: accent.withValues(alpha: 0.28),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2)),
               ],
             ),
             child: Icon(icon, color: Colors.white, size: 16),
@@ -524,7 +776,7 @@ class _StatCard extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Text(
               value,
-              style: TextStyle(
+              style: const TextStyle(
                 color: _textPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.w800,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:adisyos/services/sales_history_service.dart';
+import 'package:adisyos/services/settings_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
@@ -36,11 +37,13 @@ class YearlyReportView extends StatelessWidget {
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
             _Header(title: 'yearly_report'.tr),
             Expanded(
               child: Obx(() {
+                final cs = SettingsService.cs;
                 final sales =
                     SalesHistoryService.to.getSalesForYear(year);
                 final total =
@@ -73,7 +76,7 @@ class YearlyReportView extends StatelessWidget {
                             child: _StatCard(
                               icon: Icons.attach_money_rounded,
                               label: 'total_sales'.tr,
-                              value: '₺${total.toStringAsFixed(2)}',
+                              value: '$cs${total.toStringAsFixed(2)}',
                               accent: AppTheme.successColor,
                             ),
                           ),
@@ -92,8 +95,8 @@ class YearlyReportView extends StatelessWidget {
                               icon: Icons.trending_up_rounded,
                               label: 'Aylık Ort.',
                               value: sales.isEmpty
-                                  ? '₺0.00'
-                                  : '₺${(total / 12).toStringAsFixed(2)}',
+                                  ? '${cs}0.00'
+                                  : '$cs${(total / 12).toStringAsFixed(2)}',
                               accent: AppTheme.warningColor,
                             ),
                           ),
@@ -111,7 +114,7 @@ class YearlyReportView extends StatelessWidget {
                             accent: AppTheme.warningColor),
                         const SizedBox(height: 12),
                         _ChartCard(
-                            child: _buildMonthlyChart(monthlyTotals)),
+                            child: _buildMonthlyChart(monthlyTotals, cs)),
                         const SizedBox(height: 24),
 
                         // Category pie chart + list
@@ -145,7 +148,7 @@ class YearlyReportView extends StatelessWidget {
     );
   }
 
-  Widget _buildMonthlyChart(Map<int, double> monthlyTotals) {
+  Widget _buildMonthlyChart(Map<int, double> monthlyTotals, String cs) {
     final values =
         List.generate(12, (i) => monthlyTotals[i + 1] ?? 0.0);
     final maxY = values.reduce((a, b) => a > b ? a : b);
@@ -153,43 +156,61 @@ class YearlyReportView extends StatelessWidget {
         List.generate(12, (i) => FlSpot(i.toDouble(), values[i]));
 
     return SizedBox(
-      height: 220,
+      height: 240,
       child: LineChart(
         LineChartData(
           lineBarsData: [
             LineChartBarData(
               spots: spots,
               isCurved: true,
-              color: AppTheme.warningColor,
+              curveSmoothness: 0.3,
+              gradient: const LinearGradient(
+                colors: [AppTheme.warningColor, Color(0xFFFF6B00)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
               barWidth: 3,
               dotData: FlDotData(
                 show: true,
-                getDotPainter: (spot, percent, bar, index) {
+                getDotPainter: (spot, pct, bar, idx) {
+                  if (spot.y == 0) {
+                    return FlDotCirclePainter(
+                      radius: 2,
+                      color: _border,
+                      strokeWidth: 0,
+                      strokeColor: Colors.transparent,
+                    );
+                  }
                   return FlDotCirclePainter(
-                    radius: spot.y > 0 ? 4 : 2,
-                    color: spot.y > 0
-                        ? AppTheme.warningColor
-                        : _border,
-                    strokeWidth: 0,
-                    strokeColor: Colors.transparent,
+                    radius: 5,
+                    color: AppTheme.warningColor,
+                    strokeWidth: 2.5,
+                    strokeColor: Colors.white,
                   );
                 },
               ),
               belowBarData: BarAreaData(
                 show: true,
-                color: AppTheme.warningColor.withValues(alpha: 0.12),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppTheme.warningColor.withValues(alpha: 0.20),
+                    AppTheme.warningColor.withValues(alpha: 0.0),
+                  ],
+                ),
               ),
             ),
           ],
           minY: 0,
-          maxY: maxY > 0 ? maxY * 1.2 : 100,
+          maxY: maxY > 0 ? maxY * 1.25 : 100,
           titlesData: FlTitlesData(
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 44,
+                reservedSize: 46,
                 getTitlesWidget: (value, meta) => Text(
-                  '₺${value.toInt()}',
+                  '$cs${value.toInt()}',
                   style: const TextStyle(fontSize: 9, color: _textSec),
                 ),
               ),
@@ -200,9 +221,13 @@ class YearlyReportView extends StatelessWidget {
                 getTitlesWidget: (value, meta) {
                   final idx = value.toInt();
                   if (idx < 0 || idx >= 12) return const SizedBox();
-                  return Text(
-                    _monthNames[idx],
-                    style: const TextStyle(fontSize: 9, color: _textSec),
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      _monthNames[idx],
+                      style:
+                          const TextStyle(fontSize: 9, color: _textSec),
+                    ),
                   );
                 },
               ),
@@ -224,9 +249,13 @@ class YearlyReportView extends StatelessWidget {
             touchTooltipData: LineTouchTooltipData(
               getTooltipItems: (touchedSpots) {
                 return touchedSpots.map((spot) {
+                  if (spot.y == 0) return null;
                   return LineTooltipItem(
-                    '${_monthNames[spot.x.toInt()]}\n₺${spot.y.toStringAsFixed(0)}',
-                    const TextStyle(color: Colors.white, fontSize: 12),
+                    '${_monthNames[spot.x.toInt()]}\n$cs${spot.y.toStringAsFixed(0)}',
+                    const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600),
                   );
                 }).toList();
               },
@@ -419,8 +448,9 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
     return Container(
-      height: 60,
+      padding: EdgeInsets.only(top: topPad),
       decoration: const BoxDecoration(
         color: _card,
         boxShadow: [
@@ -428,23 +458,26 @@ class _Header extends StatelessWidget {
           BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
         ],
       ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                size: 18, color: _textPrimary),
-            onPressed: () => Get.back(),
-          ),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: _textPrimary,
-              letterSpacing: -0.3,
+      child: SizedBox(
+        height: 52,
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 18, color: _textPrimary),
+              onPressed: () => Get.back(),
             ),
-          ),
-        ],
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: _textPrimary,
+                letterSpacing: -0.3,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

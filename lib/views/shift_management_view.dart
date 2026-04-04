@@ -55,6 +55,7 @@ class _ShiftManagementViewState extends State<ShiftManagementView> {
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
             _Header(),
@@ -115,8 +116,9 @@ class _ShiftManagementViewState extends State<ShiftManagementView> {
 class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
     return Container(
-      height: 60,
+      padding: EdgeInsets.only(top: topPad),
       decoration: const BoxDecoration(
         color: _card,
         boxShadow: [
@@ -124,22 +126,25 @@ class _Header extends StatelessWidget {
           BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
         ],
       ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                size: 18, color: _textPrimary),
-            onPressed: () => Get.back(),
-          ),
-          const Text(
-            'Vardiya Yönetimi',
-            style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: _textPrimary,
-                letterSpacing: -0.3),
-          ),
-        ],
+      child: SizedBox(
+        height: 52,
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 18, color: _textPrimary),
+              onPressed: () => Get.back(),
+            ),
+            const Text(
+              'Vardiya Yönetimi',
+              style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: _textPrimary,
+                  letterSpacing: -0.3),
+            ),
+          ],
+        ),
       ),
     );
   }

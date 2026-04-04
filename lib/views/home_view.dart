@@ -732,8 +732,8 @@ class _SalesBanner extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                '₺${amount.toStringAsFixed(2)}',
+              Obx(() => Text(
+                '${SettingsService.cs}${amount.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
@@ -741,7 +741,7 @@ class _SalesBanner extends StatelessWidget {
                   letterSpacing: -0.8,
                   height: 1.0,
                 ),
-              ),
+              )),
             ],
           ),
 

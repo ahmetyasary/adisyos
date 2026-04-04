@@ -158,6 +158,30 @@ class _StaffPicker extends StatelessWidget {
         Expanded(
           child: Obx(() {
             final staff = StaffService.to.staffList;
+            final isLoaded = StaffService.to.isLoaded.value;
+
+            // Not loaded yet — show spinner
+            if (!isLoaded) {
+              return const Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(_orange),
+                  ),
+                ),
+              );
+            }
+
+            // Admin with no staff → auto-navigate to HomeView
+            if (staff.isEmpty && AuthController.to.isAdmin) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Get.offAll(() => const HomeView());
+              });
+              return const SizedBox.shrink();
+            }
+
             if (staff.isEmpty) {
               return Center(
                 child: Column(

@@ -22,10 +22,11 @@ class InventoryManagementView extends StatelessWidget {
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
+        top: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
+            _buildHeader(context),
             _buildAlertsBanner(),
             Expanded(
               child: Obx(() {
@@ -88,9 +89,9 @@ class InventoryManagementView extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Container(
-      height: 60,
+      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
       decoration: const BoxDecoration(
         color: _card,
         boxShadow: [
@@ -98,44 +99,47 @@ class InventoryManagementView extends StatelessWidget {
           BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
         ],
       ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                size: 18, color: _textPrimary),
-            onPressed: () => Get.back(),
-          ),
-          const Text(
-            'Stok Yönetimi',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 17,
-              color: _textPrimary,
-              letterSpacing: -0.3,
+      child: SizedBox(
+        height: 52,
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 18, color: _textPrimary),
+              onPressed: () => Get.back(),
             ),
-          ),
-          const Spacer(),
-          Obx(() {
-            final low = InventoryService.to.lowStockItems.length;
-            if (low == 0) return const SizedBox();
-            return Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: _colOut.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
+            const Text(
+              'Stok Yönetimi',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
+                color: _textPrimary,
+                letterSpacing: -0.3,
               ),
-              child: Text(
-                '$low kritik',
-                style: const TextStyle(
-                    color: _colOut,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12),
-              ),
-            );
-          }),
-        ],
+            ),
+            const Spacer(),
+            Obx(() {
+              final low = InventoryService.to.lowStockItems.length;
+              if (low == 0) return const SizedBox();
+              return Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _colOut.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$low kritik',
+                  style: const TextStyle(
+                      color: _colOut,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12),
+                ),
+              );
+            }),
+          ],
+        ),
       ),
     );
   }

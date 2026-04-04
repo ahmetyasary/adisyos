@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:adisyos/services/day_service.dart';
 import 'package:adisyos/services/sales_history_service.dart';
+import 'package:adisyos/services/settings_service.dart';
 
 // ── Design tokens ─────────────────────────────────────────────
 const _bg          = Color(0xFFF2F2F7);
@@ -56,11 +57,12 @@ class DayManagementView extends StatelessWidget {
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
             // ── Header ─────────────────────────────────────
             Container(
-              height: 60,
+              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
               decoration: const BoxDecoration(
                 color: _card,
                 boxShadow: [
@@ -70,23 +72,26 @@ class DayManagementView extends StatelessWidget {
                       offset: Offset(0, 2)),
                 ],
               ),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                        size: 18, color: _textPrimary),
-                    onPressed: Get.back,
-                  ),
-                  const Text(
-                    'Gün Yönetimi',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: _textPrimary,
-                      letterSpacing: -0.3,
+              child: SizedBox(
+                height: 52,
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                          size: 18, color: _textPrimary),
+                      onPressed: Get.back,
                     ),
-                  ),
-                ],
+                    const Text(
+                      'Gün Yönetimi',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: _textPrimary,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
 
@@ -463,14 +468,14 @@ class _SessionCard extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        '₺${salesTotal.toStringAsFixed(2)}',
+                      Obx(() => Text(
+                        '${SettingsService.cs}${salesTotal.toStringAsFixed(2)}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           color: _orange,
                         ),
-                      ),
+                      )),
                       Text(
                         '$salesCount işlem',
                         style: const TextStyle(

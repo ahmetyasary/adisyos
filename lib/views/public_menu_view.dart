@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:adisyos/services/menu_service.dart';
+import 'package:adisyos/services/settings_service.dart';
 
 const _bg = Color(0xFFF5F6FA);
 const _card = Colors.white;
@@ -78,6 +79,7 @@ class PublicMenuView extends StatelessWidget {
             ),
             Expanded(
               child: Obx(() {
+                final cs = SettingsService.cs;
                 final menus = MenuService.to.menus;
                 if (menus.isEmpty) {
                   return const Center(
@@ -166,7 +168,7 @@ class PublicMenuView extends StatelessWidget {
                                         BorderRadius.circular(20),
                                   ),
                                   child: Text(
-                                    '₺${price.toStringAsFixed(2)}',
+                                    '$cs${price.toStringAsFixed(2)}',
                                     style: const TextStyle(
                                         color: _orange,
                                         fontWeight: FontWeight.bold,

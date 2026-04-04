@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:adisyos/services/sales_history_service.dart';
+import 'package:adisyos/services/settings_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
@@ -23,11 +24,13 @@ class MonthlyReportView extends StatelessWidget {
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
             _Header(title: 'monthly_report'.tr),
             Expanded(
               child: Obx(() {
+                final cs = SettingsService.cs;
                 final sales = SalesHistoryService.to
                     .getSalesForMonth(now.year, now.month);
                 final total =
@@ -63,7 +66,7 @@ class MonthlyReportView extends StatelessWidget {
                             child: _StatCard(
                               icon: Icons.attach_money_rounded,
                               label: 'total_sales'.tr,
-                              value: '₺${total.toStringAsFixed(2)}',
+                              value: '$cs${total.toStringAsFixed(2)}',
                               accent: AppTheme.successColor,
                             ),
                           ),
@@ -99,7 +102,7 @@ class MonthlyReportView extends StatelessWidget {
                             accent: _orange),
                         const SizedBox(height: 12),
                         _ChartCard(
-                            child: _buildDailyChart(dailyTotals, now)),
+                            child: _buildDailyChart(dailyTotals, now, cs)),
                         const SizedBox(height: 24),
 
                         // Top items
@@ -124,10 +127,10 @@ class MonthlyReportView extends StatelessWidget {
     );
   }
 
-  Widget _buildDailyChart(Map<int, double> dailyTotals, DateTime now) {
+  Widget _buildDailyChart(Map<int, double> dailyTotals, DateTime now, String cs) {
     if (dailyTotals.isEmpty) {
       return const SizedBox(
-          height: 200, child: Center(child: Text('Veri yok')));
+          height: 220, child: Center(child: Text('Veri yok')));
     }
 
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
@@ -136,32 +139,47 @@ class MonthlyReportView extends StatelessWidget {
     final barGroups = List.generate(daysInMonth, (i) {
       final day = i + 1;
       final val = dailyTotals[day] ?? 0.0;
+      final hasData = val > 0;
       return BarChartGroupData(
         x: day,
         barRods: [
           BarChartRodData(
             toY: val,
-            color: val > 0 ? AppTheme.successColor : _border,
-            width: 8,
-            borderRadius: BorderRadius.circular(4),
+            gradient: hasData
+                ? LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      _orange.withValues(alpha: 0.70),
+                      _orange,
+                    ],
+                  )
+                : null,
+            color: hasData ? null : _border,
+            width: 7,
+            borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(5)),
           ),
         ],
       );
     });
 
     return SizedBox(
-      height: 220,
+      height: 230,
       child: BarChart(
         BarChartData(
           alignment: BarChartAlignment.spaceAround,
-          maxY: maxY * 1.2,
+          maxY: maxY * 1.25,
           barTouchData: BarTouchData(
             touchTooltipData: BarTouchTooltipData(
               getTooltipItem: (group, groupIndex, rod, rodIndex) {
                 if (rod.toY == 0) return null;
                 return BarTooltipItem(
-                  '${group.x}. Gün\n₺${rod.toY.toStringAsFixed(0)}',
-                  const TextStyle(color: Colors.white, fontSize: 11),
+                  '${group.x}. Gün\n$cs${rod.toY.toStringAsFixed(0)}',
+                  const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600),
                 );
               },
             ),
@@ -170,9 +188,9 @@ class MonthlyReportView extends StatelessWidget {
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 44,
+                reservedSize: 46,
                 getTitlesWidget: (value, meta) => Text(
-                  '₺${value.toInt()}',
+                  '$cs${value.toInt()}',
                   style: const TextStyle(fontSize: 9, color: _textSec),
                 ),
               ),
@@ -307,8 +325,9 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
     return Container(
-      height: 60,
+      padding: EdgeInsets.only(top: topPad),
       decoration: const BoxDecoration(
         color: _card,
         boxShadow: [
@@ -316,23 +335,26 @@ class _Header extends StatelessWidget {
           BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
         ],
       ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                size: 18, color: _textPrimary),
-            onPressed: () => Get.back(),
-          ),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: _textPrimary,
-              letterSpacing: -0.3,
+      child: SizedBox(
+        height: 52,
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 18, color: _textPrimary),
+              onPressed: () => Get.back(),
             ),
-          ),
-        ],
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: _textPrimary,
+                letterSpacing: -0.3,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

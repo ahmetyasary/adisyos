@@ -5,7 +5,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class SettingsService extends GetxService {
   static SettingsService get to => Get.find();
 
-  final RxString companyName = ''.obs;
+  // Reactive value — read inside Obx to subscribe to changes
+  static String get cs => SettingsService.to.currencySymbol.value;
+
+  final RxString companyName      = ''.obs;
+  final RxString currencySymbol   = '₺'.obs;
 
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
@@ -14,7 +18,14 @@ class SettingsService extends GetxService {
   void onInit() {
     super.onInit();
     _db.auth.onAuthStateChange.listen((data) {
-      if (data.event == AuthChangeEvent.signedIn) _load();
+      if (data.event == AuthChangeEvent.signedIn) {
+        _load();
+        _resubscribeRealtime(); // re-auth ensures Postgres Changes events are delivered
+      }
+      if (data.event == AuthChangeEvent.signedOut) {
+        currencySymbol.value = '₺';
+        companyName.value = '';
+      }
     });
     _load();
     _subscribeRealtime();
@@ -38,6 +49,12 @@ class SettingsService extends GetxService {
         .subscribe();
   }
 
+  void _resubscribeRealtime() {
+    _channel?.unsubscribe();
+    _channel = null;
+    _subscribeRealtime();
+  }
+
   // ── Lifecycle refresh ────────────────────────────────────────
 
   Future<void> refresh() => _load();
@@ -46,8 +63,11 @@ class SettingsService extends GetxService {
     try {
       final rows = await _db.from('app_settings').select();
       for (final row in rows) {
-        if (row['key'] == 'company_name') {
-          companyName.value = row['value'] as String? ?? '';
+        switch (row['key'] as String?) {
+          case 'company_name':
+            companyName.value = row['value'] as String? ?? '';
+          case 'currency_symbol':
+            currencySymbol.value = row['value'] as String? ?? '₺';
         }
       }
     } catch (e) {
@@ -64,6 +84,17 @@ class SettingsService extends GetxService {
       ]);
     } catch (e) {
       if (kDebugMode) print('[SettingsService] save error: $e');
+    }
+  }
+
+  Future<void> setCurrency(String symbol) async {
+    currencySymbol.value = symbol;
+    try {
+      await _db.from('app_settings').upsert([
+        {'key': 'currency_symbol', 'value': symbol},
+      ]);
+    } catch (e) {
+      if (kDebugMode) print('[SettingsService] setCurrency error: $e');
     }
   }
 }

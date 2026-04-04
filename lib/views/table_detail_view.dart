@@ -6,6 +6,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:adisyos/services/menu_service.dart';
 import 'package:adisyos/services/table_service.dart';
+import 'package:adisyos/services/section_service.dart';
 import 'package:adisyos/services/inventory_service.dart';
 import 'package:adisyos/services/settings_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
@@ -81,6 +82,19 @@ class _TableDetailViewState extends State<TableDetailView> {
   List<Map<String, dynamic>> get _partialPayments =>
       TableService.to.getPartialPayments(widget.tableIndex);
 
+  /// Returns "Section · TableName" when a section exists, otherwise just TableName.
+  /// Used in every place where the user needs to identify which table they're on.
+  String get _fullTableLabel {
+    final tables = TableService.to.tables;
+    if (widget.tableIndex >= tables.length) return widget.tableName;
+    final sectionId = tables[widget.tableIndex]['sectionId'] as String?;
+    final sectionName = SectionService.to.nameById(sectionId);
+    if (sectionName != null && sectionName.isNotEmpty) {
+      return '$sectionName · ${widget.tableName}';
+    }
+    return widget.tableName;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -102,9 +116,7 @@ class _TableDetailViewState extends State<TableDetailView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg,
-      body: SafeArea(
-        bottom: false,
-        child: LayoutBuilder(
+      body: LayoutBuilder(
           builder: (context, constraints) {
             final isMobile = constraints.maxWidth < 650;
             return Column(
@@ -128,7 +140,6 @@ class _TableDetailViewState extends State<TableDetailView> {
             );
           },
         ),
-      ),
     );
   }
 
@@ -339,7 +350,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    widget.tableName,
+                    _fullTableLabel,
                     style: const TextStyle(
                       fontSize: 13,
                       color: _orange,
@@ -489,7 +500,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                         const SizedBox(width: 8),
                         // ── Price ──
                         Text(
-                          '₺${lineTotal.toStringAsFixed(2)}',
+                          '${SettingsService.cs}${lineTotal.toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
@@ -566,12 +577,12 @@ class _TableDetailViewState extends State<TableDetailView> {
                 children: [
                   _SummaryRow(
                     label: 'Ara Toplam',
-                    value: '₺${subtotal.toStringAsFixed(2)}',
+                    value: '${SettingsService.cs}${subtotal.toStringAsFixed(2)}',
                   ),
                   if (discount > 0)
                     _SummaryRow(
                       label: 'İndirim',
-                      value: '-₺${discount.toStringAsFixed(2)}',
+                      value: '-${SettingsService.cs}${discount.toStringAsFixed(2)}',
                       valueColor: _orange,
                     ),
                   const SizedBox(height: 8),
@@ -587,7 +598,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                         ),
                       ),
                       Text(
-                        '₺${finalTotal.toStringAsFixed(2)}',
+                        '${SettingsService.cs}${finalTotal.toStringAsFixed(2)}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 22,
@@ -608,7 +619,6 @@ class _TableDetailViewState extends State<TableDetailView> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _ActionBtn(icon: Icons.add_circle_outline, label: 'new'.tr,      color: AppTheme.accentColor,    onTap: _handleNewOrder),
-                _ActionBtn(icon: Icons.call_split,         label: 'split'.tr,    color: AppTheme.infoColor,      onTap: _handleSplit),
                 _ActionBtn(icon: Icons.discount,           label: 'discount'.tr, color: AppTheme.warningColor,   onTap: _handleDiscount),
                 _ActionBtn(icon: Icons.print,              label: 'print'.tr,    color: const Color(0xFF616161), onTap: _handlePrint),
                 _ActionBtn(icon: Icons.compare_arrows,     label: 'move'.tr,     color: AppTheme.accentColor,    onTap: _handleMove),
@@ -645,7 +655,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                               const SizedBox(width: 8),
                               Text(
                                 hasSelected
-                                    ? '${_partialSelected.values.fold(0, (s, v) => s + v)} ürün seçildi · ₺${selTotal.toStringAsFixed(2)}'
+                                    ? '${_partialSelected.values.fold(0, (s, v) => s + v)} ürün seçildi · ${SettingsService.cs}${selTotal.toStringAsFixed(2)}'
                                     : 'Ödemek istediğiniz ürüne dokunun',
                                 style: TextStyle(
                                   fontSize: 13,
@@ -699,7 +709,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                       ),
                                       onPressed: _confirmPartialPayments,
                                       child: Text(
-                                        'Öde · ₺${_selectedTotal.toStringAsFixed(2)}',
+                                        'Öde · ${SettingsService.cs}${_selectedTotal.toStringAsFixed(2)}',
                                         style: const TextStyle(
                                             fontWeight: FontWeight.w700,
                                             fontSize: 14),
@@ -1108,7 +1118,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                       children: [
                                         _buildMenuCard(
                                           name,
-                                          '₺${price.toStringAsFixed(2)}',
+                                          '${SettingsService.cs}${price.toStringAsFixed(2)}',
                                           imageUrl: imageUrl,
                                           dimmed: isOut,
                                         ),
@@ -1154,8 +1164,8 @@ class _TableDetailViewState extends State<TableDetailView> {
   }
 
   Widget _buildTopBar(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
     return Container(
-      height: 60,
       decoration: const BoxDecoration(
         color: _card,
         boxShadow: [
@@ -1163,77 +1173,73 @@ class _TableDetailViewState extends State<TableDetailView> {
           BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
         ],
       ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                size: 18, color: _textPrimary),
-            onPressed: () => Get.back(),
-          ),
-          Text(
-            widget.tableName,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 17,
-              color: _textPrimary,
-              letterSpacing: -0.3,
+      // Absorb status bar so white extends seamlessly behind system UI
+      padding: EdgeInsets.only(top: topPad),
+      child: SizedBox(
+        height: 52,
+        child: Row(
+          children: [
+            // Back button
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 18, color: _textPrimary),
+              onPressed: () => Get.back(),
             ),
-          ),
-          const Spacer(),
-          IconButton(
-            icon: Icon(
-              _isSearching ? Icons.search_off : Icons.search,
-              color: _textSecondary,
-            ),
-            onPressed: () {
-              setState(() {
-                _isSearching = !_isSearching;
-                if (!_isSearching) {
-                  _searchQuery = '';
-                  _searchController.clear();
-                }
-              });
-            },
-          ),
-          Obx(() {
-            final orders = TableService.to.getOrders(widget.tableIndex);
-            final count = orders.fold<int>(
-                0, (sum, o) => sum + (o['quantity'] as int));
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: const Icon(Icons.receipt_long, color: _textSecondary),
+            // Centered title
+            Expanded(
+              child: Text(
+                _fullTableLabel,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 17,
+                  color: _textPrimary,
+                  letterSpacing: -0.3,
                 ),
-                if (count > 0)
-                  Positioned(
-                    top: -4,
-                    right: 2,
-                    child: Container(
-                      width: 18,
-                      height: 18,
-                      decoration: const BoxDecoration(
-                        color: _orange,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          '$count',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            // Order count badge
+            Obx(() {
+              final orders = TableService.to.getOrders(widget.tableIndex);
+              final count = orders.fold<int>(
+                  0, (sum, o) => sum + (o['quantity'] as int));
+              return Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.receipt_long_rounded,
+                        color: _textSecondary, size: 22),
+                    if (count > 0)
+                      Positioned(
+                        top: -5,
+                        right: -7,
+                        child: Container(
+                          width: 17,
+                          height: 17,
+                          decoration: const BoxDecoration(
+                            color: _orange,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '$count',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-              ],
-            );
-          }),
-          const SizedBox(width: 8),
-        ],
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
       ),
     );
   }
@@ -1481,7 +1487,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                   children: [
                     _buildMenuCard(
                       name,
-                      '₺${(item['price'] as double).toStringAsFixed(2)}',
+                      '${SettingsService.cs}${(item['price'] as double).toStringAsFixed(2)}',
                       imageUrl: item['imageUrl'] as String?,
                       dimmed: isOut,
                     ),
@@ -1680,7 +1686,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    widget.tableName,
+                    _fullTableLabel,
                     style: const TextStyle(
                       fontSize: 12,
                       color: _orange,
@@ -1823,7 +1829,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                         const SizedBox(width: 8),
                         // Price
                         Text(
-                          '₺${lineTotal.toStringAsFixed(2)}',
+                          '${SettingsService.cs}${lineTotal.toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
@@ -1890,12 +1896,12 @@ class _TableDetailViewState extends State<TableDetailView> {
                 children: [
                   _SummaryRow(
                     label: 'Ara Toplam',
-                    value: '₺${subtotal.toStringAsFixed(2)}',
+                    value: '${SettingsService.cs}${subtotal.toStringAsFixed(2)}',
                   ),
                   if (discount > 0)
                     _SummaryRow(
                       label: 'İndirim',
-                      value: '-₺${discount.toStringAsFixed(2)}',
+                      value: '-${SettingsService.cs}${discount.toStringAsFixed(2)}',
                       valueColor: _orange,
                     ),
                   const SizedBox(height: 8),
@@ -1914,7 +1920,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                             ),
                       ),
                       Text(
-                        '₺${finalTotal.toStringAsFixed(2)}',
+                        '${SettingsService.cs}${finalTotal.toStringAsFixed(2)}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 20,
@@ -1940,12 +1946,6 @@ class _TableDetailViewState extends State<TableDetailView> {
                     label: 'new'.tr,
                     color: AppTheme.accentColor,
                     onTap: _handleNewOrder,
-                  ),
-                  _ActionBtn(
-                    icon: Icons.call_split,
-                    label: 'split'.tr,
-                    color: AppTheme.infoColor,
-                    onTap: _handleSplit,
                   ),
                   _ActionBtn(
                     icon: Icons.discount,
@@ -1997,7 +1997,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                               const SizedBox(width: 8),
                               Text(
                                 hasSelected
-                                    ? '${_partialSelected.values.fold(0, (s, v) => s + v)} ürün seçildi · ₺${selTotal.toStringAsFixed(2)}'
+                                    ? '${_partialSelected.values.fold(0, (s, v) => s + v)} ürün seçildi · ${SettingsService.cs}${selTotal.toStringAsFixed(2)}'
                                     : 'Ödemek istediğiniz ürüne dokunun',
                                 style: TextStyle(
                                   fontSize: 12,
@@ -2053,7 +2053,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                       ),
                                       onPressed: _confirmPartialPayments,
                                       child: Text(
-                                        'Öde · ₺${_selectedTotal.toStringAsFixed(2)}',
+                                        'Öde · ${SettingsService.cs}${_selectedTotal.toStringAsFixed(2)}',
                                         style: const TextStyle(
                                             fontWeight: FontWeight.w700,
                                             fontSize: 13),
@@ -2208,119 +2208,6 @@ class _TableDetailViewState extends State<TableDetailView> {
     );
   }
 
-  // Split bill
-  void _handleSplit() {
-    final orders = TableService.to.getOrders(widget.tableIndex);
-    if (orders.isEmpty) {
-      AppToast.warning('empty_no_split'.tr, title: 'warning'.tr);
-      return;
-    }
-
-    final TextEditingController peopleController = TextEditingController();
-
-    Get.dialog(
-      AlertDialog(
-        title: Text('split_bill'.tr),
-        content: SizedBox(
-          width: 300,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '${'total'.tr}: ₺${TableService.to.getTotalWithDiscount(widget.tableIndex).toStringAsFixed(2)}',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: peopleController,
-                keyboardType: TextInputType.number,
-                autofocus: true,
-                decoration: InputDecoration(
-                  labelText: 'how_many_people'.tr,
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.people),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text('cancel'.tr),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.infoColor,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              final people = int.tryParse(peopleController.text);
-              if (people != null && people > 1) {
-                final total = TableService.to
-                    .getTotalWithDiscount(widget.tableIndex);
-                final perPerson = total / people;
-                Get.back();
-
-                Get.dialog(
-                  AlertDialog(
-                    title: Text('bill_split_result'.tr),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'total_amount'.tr,
-                          style: TextStyle(
-                              fontSize: 14, color: Colors.grey[600]),
-                        ),
-                        Text(
-                          '₺${total.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                              fontSize: 24, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 16),
-                        const Divider(),
-                        const SizedBox(height: 8),
-                        Text(
-                          '$people Kişi',
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'per_person'.tr,
-                          style: TextStyle(
-                              fontSize: 14, color: Colors.grey[600]),
-                        ),
-                        Text(
-                          '₺${perPerson.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.successColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    actions: [
-                      ElevatedButton(
-                        onPressed: () => Get.back(),
-                        child: Text('close'.tr),
-                      ),
-                    ],
-                  ),
-                );
-              } else {
-                AppToast.error('valid_people_count'.tr, title: 'error'.tr);
-              }
-            },
-            child: Text('calculate'.tr),
-          ),
-        ],
-      ),
-    );
-  }
-
   // Apply discount
   void _handleDiscount() {
     final orders = TableService.to.getOrders(widget.tableIndex);
@@ -2340,7 +2227,7 @@ class _TableDetailViewState extends State<TableDetailView> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '${'total'.tr}: ₺${TableService.to.getTotal(widget.tableIndex).toStringAsFixed(2)}',
+                '${'total'.tr}: ${SettingsService.cs}${TableService.to.getTotal(widget.tableIndex).toStringAsFixed(2)}',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
@@ -2424,7 +2311,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                 ),
                 pw.Center(
                   child: pw.Text(
-                    widget.tableName,
+                    _fullTableLabel,
                     style: pw.TextStyle(font: regularFont, fontSize: 12),
                   ),
                 ),
@@ -2698,7 +2585,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                               ),
                             ),
                             Text(
-                              '₺${(p['total'] as double).toStringAsFixed(2)}',
+                              '${SettingsService.cs}${(p['total'] as double).toStringAsFixed(2)}',
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
@@ -2735,7 +2622,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                             ),
                           ),
                           Text(
-                            '₺${payments.fold<double>(0, (s, p) => s + (p['total'] as double)).toStringAsFixed(2)}',
+                            '${SettingsService.cs}${payments.fold<double>(0, (s, p) => s + (p['total'] as double)).toStringAsFixed(2)}',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
@@ -2860,7 +2747,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                       ),
                     ),
                     Text(
-                      '₺${(item['total'] as double).toStringAsFixed(2)}',
+                      '${SettingsService.cs}${(item['total'] as double).toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -2883,7 +2770,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                     ),
                   ),
                   Text(
-                    '₺${totalAmount.toStringAsFixed(2)}',
+                    '${SettingsService.cs}${totalAmount.toStringAsFixed(2)}',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -2982,13 +2869,13 @@ class _TableDetailViewState extends State<TableDetailView> {
                     });
 
                     AppToast.info(
-                      '${toProcess.length} kalem · ₺${totalAmount.toStringAsFixed(2)}',
+                      '${toProcess.length} kalem · ${SettingsService.cs}${totalAmount.toStringAsFixed(2)}',
                       title: 'Parça Ödeme Alındı',
                       duration: const Duration(seconds: 2),
                     );
                   },
                   child: Text(
-                    'Öde · ₺${totalAmount.toStringAsFixed(2)}',
+                    'Öde · ${SettingsService.cs}${totalAmount.toStringAsFixed(2)}',
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 16),
                   ),
@@ -3008,118 +2895,406 @@ class _TableDetailViewState extends State<TableDetailView> {
       return;
     }
 
-    final total = TableService.to.getTotal(widget.tableIndex);
+    final total    = TableService.to.getTotal(widget.tableIndex);
     final discount = TableService.to.getDiscount(widget.tableIndex);
     final finalTotal = TableService.to.getTotalWithDiscount(widget.tableIndex);
     String selectedMethod = 'cash';
+    bool splitEnabled = false;
+    int splitCount = 2;
 
-    Get.dialog(
+    Get.bottomSheet(
       StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text('pay_title'.tr),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${'table_label'.tr}: ${widget.tableName}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('subtotal'.tr),
-                  Text('₺${total.toStringAsFixed(2)}'),
-                ],
-              ),
-              if (discount > 0)
+        builder: (context, setState) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            24, 0, 24,
+            MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── drag handle ─────────────────────────────────
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    width: 36, height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+
+                // ── header ──────────────────────────────────────
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('discount'.tr),
-                    Text(
-                      '-₺${discount.toStringAsFixed(2)}',
-                      style: const TextStyle(color: AppTheme.warningColor),
+                    Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: AppTheme.successColor.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.receipt_long_rounded,
+                          color: AppTheme.successColor, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'pay_title'.tr,
+                          style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold,
+                            color: _textPrimary,
+                          ),
+                        ),
+                        Text(
+                          _fullTableLabel,
+                          style: const TextStyle(
+                            fontSize: 13, color: _textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              const Divider(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'total'.tr,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 18),
+                const SizedBox(height: 20),
+
+                // ── total summary card ───────────────────────────
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: _bg,
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  Text(
-                    '₺${finalTotal.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.successColor,
+                  child: Column(
+                    children: [
+                      if (discount > 0) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('subtotal'.tr,
+                                style: const TextStyle(
+                                    color: _textSecondary, fontSize: 13)),
+                            Text('${SettingsService.cs}${total.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                    color: _textSecondary, fontSize: 13)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('discount'.tr,
+                                style: const TextStyle(
+                                    color: AppTheme.warningColor,
+                                    fontSize: 13)),
+                            Text('-${SettingsService.cs}${discount.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                    color: AppTheme.warningColor,
+                                    fontSize: 13)),
+                          ],
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Divider(height: 1,
+                              color: Colors.grey.shade300),
+                        ),
+                      ],
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'total'.tr,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                              color: _textPrimary,
+                            ),
+                          ),
+                          Text(
+                            '${SettingsService.cs}${finalTotal.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.successColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // ── Böl toggle row ───────────────────────────────
+                GestureDetector(
+                  onTap: () =>
+                      setState(() => splitEnabled = !splitEnabled),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 13),
+                    decoration: BoxDecoration(
+                      color: splitEnabled
+                          ? AppTheme.infoColor.withValues(alpha: 0.08)
+                          : _bg,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: splitEnabled
+                            ? AppTheme.infoColor
+                            : Colors.transparent,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.call_split_rounded,
+                          color: splitEnabled
+                              ? AppTheme.infoColor
+                              : _textSecondary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'split'.tr,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: splitEnabled
+                                ? AppTheme.infoColor
+                                : _textPrimary,
+                          ),
+                        ),
+                        const Spacer(),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: splitEnabled
+                              ? const Icon(Icons.keyboard_arrow_up_rounded,
+                                  color: AppTheme.infoColor,
+                                  key: ValueKey('up'))
+                              : const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  color: _textSecondary,
+                                  key: ValueKey('down')),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'pay_method'.tr,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 13),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: [
-                  _PayMethodChip(
-                    label: 'pay_cash'.tr,
-                    icon: Icons.payments_rounded,
-                    value: 'cash',
-                    selected: selectedMethod == 'cash',
-                    onTap: () => setState(() => selectedMethod = 'cash'),
+                ),
+
+                // ── Split expanded panel ─────────────────────────
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeInOut,
+                  child: splitEnabled
+                      ? Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Column(
+                            children: [
+                              // stepper
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.center,
+                                children: [
+                                  _StepperBtn(
+                                    icon: Icons.remove_rounded,
+                                    onTap: splitCount > 2
+                                        ? () => setState(
+                                            () => splitCount--)
+                                        : null,
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 28),
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          '$splitCount',
+                                          style: const TextStyle(
+                                            fontSize: 36,
+                                            fontWeight: FontWeight.bold,
+                                            color: _textPrimary,
+                                          ),
+                                        ),
+                                        Text(
+                                          'how_many_people'.tr,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: _textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  _StepperBtn(
+                                    icon: Icons.add_rounded,
+                                    onTap: () =>
+                                        setState(() => splitCount++),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              // per-person result
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 16),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      AppTheme.infoColor
+                                          .withValues(alpha: 0.12),
+                                      AppTheme.infoColor
+                                          .withValues(alpha: 0.05),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius:
+                                      BorderRadius.circular(14),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      'per_person'.tr,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: _textSecondary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${SettingsService.cs}${(finalTotal / splitCount).toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        fontSize: 30,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.infoColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+                const SizedBox(height: 20),
+
+                // ── Payment method label ─────────────────────────
+                Text(
+                  'pay_method'.tr,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: _textPrimary,
                   ),
-                  _PayMethodChip(
-                    label: 'pay_card'.tr,
-                    icon: Icons.credit_card_rounded,
-                    value: 'card',
-                    selected: selectedMethod == 'card',
-                    onTap: () => setState(() => selectedMethod = 'card'),
-                  ),
-                  _PayMethodChip(
-                    label: 'pay_transfer'.tr,
-                    icon: Icons.account_balance_rounded,
-                    value: 'transfer',
-                    selected: selectedMethod == 'transfer',
-                    onTap: () => setState(() => selectedMethod = 'transfer'),
-                  ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(height: 10),
+
+                // ── Payment method 3-card row ────────────────────
+                Row(
+                  children: [
+                    _PayCard(
+                      label: 'pay_cash'.tr,
+                      icon: Icons.payments_rounded,
+                      selected: selectedMethod == 'cash',
+                      onTap: () =>
+                          setState(() => selectedMethod = 'cash'),
+                    ),
+                    const SizedBox(width: 8),
+                    _PayCard(
+                      label: 'pay_card'.tr,
+                      icon: Icons.credit_card_rounded,
+                      selected: selectedMethod == 'card',
+                      onTap: () =>
+                          setState(() => selectedMethod = 'card'),
+                    ),
+                    const SizedBox(width: 8),
+                    _PayCard(
+                      label: 'pay_transfer'.tr,
+                      icon: Icons.account_balance_rounded,
+                      selected: selectedMethod == 'transfer',
+                      onTap: () =>
+                          setState(() => selectedMethod = 'transfer'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // ── Action buttons ───────────────────────────────
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 15),
+                          side:
+                              BorderSide(color: Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        onPressed: () => Get.back(),
+                        child: Text(
+                          'cancel'.tr,
+                          style: const TextStyle(
+                            color: _textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.successColor,
+                          foregroundColor: Colors.white,
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 15),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        onPressed: () {
+                          TableService.to.recordPayment(
+                              widget.tableIndex,
+                              paymentMethod: selectedMethod);
+                          Get.back();
+                          Get.back();
+                          AppToast.success('payment_received'.tr,
+                              title: 'success'.tr);
+                        },
+                        child: Text(
+                          'pay'.tr,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: Text('cancel'.tr),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.successColor,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                TableService.to.recordPayment(widget.tableIndex,
-                    paymentMethod: selectedMethod);
-                Get.back();
-                Get.back();
-                AppToast.success('payment_received'.tr, title: 'success'.tr);
-              },
-              child: Text('pay'.tr),
-            ),
-          ],
         ),
       ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
     );
   }
 }
@@ -3226,62 +3401,6 @@ class _PartialPayMethodBtn extends StatelessWidget {
   }
 }
 
-class _PayMethodChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final String value;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _PayMethodChip({
-    required this.label,
-    required this.icon,
-    required this.value,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: selected
-              ? const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFFFBF4D), _orange],
-                )
-              : null,
-          color: selected ? null : _bg,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: selected
-              ? [BoxShadow(color: _orange.withOpacity(0.30), blurRadius: 8, offset: const Offset(0, 3))]
-              : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon,
-                size: 16, color: selected ? Colors.white : _textSecondary),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : _textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _QtyBtn extends StatelessWidget {
   final IconData icon;
@@ -3301,6 +3420,94 @@ class _QtyBtn extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, size: 16, color: _textSecondary),
+      ),
+    );
+  }
+}
+
+// ── Stepper button used in the split panel ────────────────────────────────────
+class _StepperBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  const _StepperBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 44, height: 44,
+        decoration: BoxDecoration(
+          color: enabled ? _bg : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: enabled ? _border : Colors.grey.shade200,
+          ),
+        ),
+        child: Icon(icon,
+            size: 20,
+            color: enabled ? _textPrimary : _textSecondary),
+      ),
+    );
+  }
+}
+
+// ── Payment method card used in the payment bottom sheet ─────────────────────
+class _PayCard extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _PayCard({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: selected ? AppTheme.successColor : _bg,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: AppTheme.successColor.withValues(alpha: 0.25),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    )
+                  ]
+                : null,
+          ),
+          child: Column(
+            children: [
+              Icon(icon,
+                  size: 22,
+                  color: selected ? Colors.white : _textSecondary),
+              const SizedBox(height: 5),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? Colors.white : _textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

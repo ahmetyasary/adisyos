@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:adisyos/services/sales_history_service.dart';
+import 'package:adisyos/services/settings_service.dart';
 import 'package:adisyos/themes/app_theme.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
@@ -19,6 +20,7 @@ class NotificationsView extends StatelessWidget {
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
             _PageHeader(title: 'notifications'.tr),
@@ -83,8 +85,9 @@ class _PageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
     return Container(
-      height: 60,
+      padding: EdgeInsets.only(top: topPad),
       decoration: const BoxDecoration(
         color: _card,
         boxShadow: [
@@ -92,25 +95,28 @@ class _PageHeader extends StatelessWidget {
           BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
         ],
       ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                size: 18, color: _textPrimary),
-            onPressed: () => Get.back(),
-          ),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: _textPrimary,
-              letterSpacing: -0.3,
+      child: SizedBox(
+        height: 52,
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 18, color: _textPrimary),
+              onPressed: () => Get.back(),
             ),
-          ),
-          const Spacer(),
-          const SizedBox(width: 8),
-        ],
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: _textPrimary,
+                letterSpacing: -0.3,
+              ),
+            ),
+            const Spacer(),
+            const SizedBox(width: 8),
+          ],
+        ),
       ),
     );
   }
@@ -235,14 +241,14 @@ class _NotificationCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      '₺${total.toStringAsFixed(2)}',
+                    Obx(() => Text(
+                      '${SettingsService.cs}${total.toStringAsFixed(2)}',
                       style: TextStyle(
                         color: AppTheme.successColor,
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                       ),
-                    ),
+                    )),
                     Text(
                       timeLabel,
                       style: const TextStyle(color: _textSec, fontSize: 11),

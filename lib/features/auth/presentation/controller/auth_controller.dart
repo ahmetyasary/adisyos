@@ -32,6 +32,7 @@ class AuthController extends GetxService {
   // ── Reactive state ────────────────────────────────────────
   final Rx<AuthUser?> user = Rx(null);
   final RxBool isLoading = false.obs;
+  final RxBool isRestoringSession = true.obs;
 
   // ── Convenience getters ───────────────────────────────────
   bool get isAuthenticated => user.value != null;
@@ -47,17 +48,21 @@ class AuthController extends GetxService {
   }
 
   Future<void> _restoreSession() async {
-    final supaUser = Supabase.instance.client.auth.currentUser;
-    if (supaUser == null) return;
+    try {
+      final supaUser = Supabase.instance.client.auth.currentUser;
+      if (supaUser == null) return;
 
-    final role = await _getUserRole(supaUser.id);
-    if (role == null) return;
+      final role = await _getUserRole(supaUser.id);
+      if (role == null) return;
 
-    user.value = AuthUser(
-      id: supaUser.id,
-      email: supaUser.email ?? '',
-      role: role,
-    );
+      user.value = AuthUser(
+        id: supaUser.id,
+        email: supaUser.email ?? '',
+        role: role,
+      );
+    } finally {
+      isRestoringSession.value = false;
+    }
   }
 
   // ── Public API ────────────────────────────────────────────

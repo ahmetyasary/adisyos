@@ -140,6 +140,15 @@ class _AuthScreenState extends State<AuthScreen>
 
   @override
   Widget build(BuildContext context) {
+    return Obx(() {
+      if (AuthController.to.isRestoringSession.value) {
+        return const _SplashScreen();
+      }
+      return _buildLoginScaffold(context);
+    });
+  }
+
+  Widget _buildLoginScaffold(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg,
       body: Stack(
@@ -189,6 +198,71 @@ class _AuthScreenState extends State<AuthScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// _SplashScreen — shown while session is being restored
+// ─────────────────────────────────────────────────────────────
+
+class _SplashScreen extends StatelessWidget {
+  const _SplashScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: _bg,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // App icon
+            _SplashIcon(),
+            SizedBox(height: 32),
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                valueColor: AlwaysStoppedAnimation<Color>(_orange),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SplashIcon extends StatelessWidget {
+  const _SplashIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFBF4D), _orange],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color:  Color(0x55FF9500),
+            blurRadius: 28,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
+      child: const Icon(
+        Icons.receipt_long_rounded,
+        color: Colors.white,
+        size:  40,
       ),
     );
   }
