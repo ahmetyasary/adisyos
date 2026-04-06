@@ -11,10 +11,8 @@ import 'yearly_report_view.dart';
 const _bg          = Color(0xFFF2F2F7);
 const _card        = Colors.white;
 const _orange      = Color(0xFFFF9500);
-const _orangeLight = Color(0xFFFFF4E0);
 const _textPrimary = Color(0xFF1C1C1E);
 const _textSec     = Color(0xFF8E8E93);
-const _border      = Color(0xFFE5E5EA);
 
 class ReportsView extends StatelessWidget {
   const ReportsView({super.key});

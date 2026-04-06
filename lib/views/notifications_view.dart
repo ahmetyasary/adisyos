@@ -10,7 +10,6 @@ const _bg          = Color(0xFFF2F2F7);
 const _card        = Colors.white;
 const _textPrimary = Color(0xFF1C1C1E);
 const _textSec     = Color(0xFF8E8E93);
-const _border      = Color(0xFFE5E5EA);
 
 class NotificationsView extends StatelessWidget {
   const NotificationsView({super.key});

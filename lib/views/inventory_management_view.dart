@@ -9,7 +9,6 @@ const _card        = Colors.white;
 const _orange      = Color(0xFFFF9500);
 const _textPrimary = Color(0xFF1C1C1E);
 const _textSec     = Color(0xFF8E8E93);
-const _border      = Color(0xFFE5E5EA);
 const _colLow      = Color(0xFFFF9500);
 const _colOut      = Color(0xFFFF3B30);
 const _colOk       = Color(0xFF34C759);

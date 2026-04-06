@@ -15,7 +15,6 @@ const _textPrimary = Color(0xFF1C1C1E);
 const _textSec     = Color(0xFF8E8E93);
 const _separator   = Color(0xFFE5E5EA);
 const _red         = Color(0xFFFF3B30);
-const _green       = Color(0xFF34C759);
 
 class PinScreen extends StatefulWidget {
   const PinScreen({super.key});

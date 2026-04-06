@@ -2414,61 +2414,324 @@ class _TableDetailViewState extends State<TableDetailView> {
       return;
     }
 
-    Get.dialog(
-      AlertDialog(
-        title: Text('move_orders'.tr),
-        content: SizedBox(
-          width: 300,
-          height: 350,
-          child: Obx(
-            () {
-              final otherTables = TableService.to.tables
-                  .asMap()
-                  .entries
-                  .where((e) =>
-                      e.key != widget.tableIndex &&
-                      !(e.value['isOccupied'] as bool))
-                  .toList();
-
-              if (otherTables.isEmpty) {
-                return Center(
-                  child: Text(
-                    'Boş masa yok.',
-                    style: TextStyle(color: Colors.grey[600]),
+    showDialog(
+      context: context,
+      barrierColor: const Color(0x70000000),
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 44),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 420),
+            decoration: BoxDecoration(
+              color: _card,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x1F000000),
+                  blurRadius: 48,
+                  offset: Offset(0, 16),
+                ),
+                BoxShadow(
+                  color: Color(0x0A000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── Header ──────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 14, 20),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              _orange.withValues(alpha: 0.18),
+                              _orange.withValues(alpha: 0.08),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: const Icon(
+                          Icons.swap_horiz_rounded,
+                          size: 22,
+                          color: _orange,
+                        ),
+                      ),
+                      const SizedBox(width: 13),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'move_orders'.tr,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                color: _textPrimary,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              '${orders.length} sipariş · ${_fullTableLabel}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: _textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(ctx),
+                        child: Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            color: _bg,
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            size: 16,
+                            color: _textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                );
-              }
+                ),
 
-              return ListView.builder(
-                itemCount: otherTables.length,
-                itemBuilder: (context, i) {
-                  final entry = otherTables[i];
-                  final tableIdx = entry.key;
-                  final table = entry.value;
-                  return ListTile(
-                    title: Text(table['name'] as String),
-                    trailing: const Icon(Icons.arrow_forward),
-                    onTap: () {
-                      final tName = table['name'] as String;
-                      TableService.to
-                          .moveAllOrdersToTable(widget.tableIndex, tableIdx);
-                      Get.back();
-                      Get.back();
-                      AppToast.success('$tName ${'moved_to_table'.tr}', title: 'success'.tr);
-                    },
-                  );
-                },
-              );
-            },
+                const Divider(height: 1, color: _border),
+
+                // ── Grouped table list ───────────────────────────
+                Flexible(
+                  child: Obx(() {
+                    // Only empty tables are valid move targets
+                    final emptyTables = TableService.to.tables
+                        .asMap()
+                        .entries
+                        .where((e) =>
+                            e.key != widget.tableIndex &&
+                            !(e.value['isOccupied'] as bool))
+                        .toList();
+
+                    if (emptyTables.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 44),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: _bg,
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              child: const Icon(
+                                Icons.table_restaurant_rounded,
+                                size: 28,
+                                color: Color(0xFFC7C7CC),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            const Text(
+                              'Boş masa bulunamadı',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: _textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Tüm masalar dolu.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: _textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    // Group by section — tables without a section go under null key
+                    final Map<String?, List<MapEntry<int, Map<String, dynamic>>>> grouped = {};
+                    for (final entry in emptyTables) {
+                      final sectionId = entry.value['sectionId'] as String?;
+                      final sectionName = SectionService.to.nameById(sectionId);
+                      grouped.putIfAbsent(sectionName, () => []).add(entry);
+                    }
+
+                    // Sort: named sections alphabetically first, null last
+                    final sectionKeys = grouped.keys.toList()
+                      ..sort((a, b) {
+                        if (a == null) return 1;
+                        if (b == null) return -1;
+                        return a.compareTo(b);
+                      });
+
+                    return ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 340),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                        shrinkWrap: true,
+                        itemCount: sectionKeys.length,
+                        itemBuilder: (_, sectionIdx) {
+                          final sectionName = sectionKeys[sectionIdx];
+                          final sectionTables = grouped[sectionName]!;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Section header
+                              if (sectionName != null) ...[
+                                if (sectionIdx > 0) const SizedBox(height: 16),
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                      left: 4, bottom: 8),
+                                  child: Text(
+                                    sectionName.toUpperCase(),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: _textSecondary,
+                                      letterSpacing: 0.7,
+                                    ),
+                                  ),
+                                ),
+                              ] else if (sectionIdx > 0)
+                                const SizedBox(height: 16),
+
+                              // 2-column grid of table cards for this section
+                              GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  crossAxisSpacing: 10,
+                                  mainAxisSpacing: 10,
+                                  childAspectRatio: 2.8,
+                                ),
+                                itemCount: sectionTables.length,
+                                itemBuilder: (_, i) {
+                                  final entry = sectionTables[i];
+                                  final tableIdx = entry.key;
+                                  final table = entry.value;
+                                  final tableName = table['name'] as String;
+
+                                  return Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(14),
+                                      splashColor:
+                                          _orange.withValues(alpha: 0.08),
+                                      highlightColor:
+                                          _orange.withValues(alpha: 0.04),
+                                      onTap: () {
+                                        TableService.to.moveAllOrdersToTable(
+                                            widget.tableIndex, tableIdx);
+                                        Navigator.pop(ctx);
+                                        Get.back();
+                                        AppToast.success(
+                                          '$tableName ${'moved_to_table'.tr}',
+                                          title: 'success'.tr,
+                                        );
+                                      },
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: _card,
+                                          borderRadius:
+                                              BorderRadius.circular(14),
+                                          border: Border.all(
+                                              color: _border, width: 1),
+                                          boxShadow: const [
+                                            BoxShadow(
+                                              color: Color(0x08000000),
+                                              blurRadius: 8,
+                                              offset: Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 13, vertical: 0),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                tableName,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: _textPrimary,
+                                                  letterSpacing: -0.2,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            const Icon(
+                                              Icons.chevron_right_rounded,
+                                              size: 18,
+                                              color: _textSecondary,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    );
+                  }),
+                ),
+
+                // ── Footer ──────────────────────────────────────
+                const Divider(height: 1, color: _border),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: TextButton.styleFrom(
+                      foregroundColor: _textSecondary,
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'cancel'.tr,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text('cancel'.tr),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

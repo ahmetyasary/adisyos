@@ -5,7 +5,6 @@ import 'package:adisyos/features/auth/presentation/controller/auth_controller.da
 import 'package:adisyos/services/settings_service.dart';
 import 'package:adisyos/services/staff_service.dart';
 import 'package:adisyos/services/section_service.dart';
-import 'package:adisyos/themes/app_theme.dart';
 import 'package:adisyos/widgets/app_toast.dart';
 
 // ── Design tokens ─────────────────────────────────────────────

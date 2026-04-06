@@ -28,7 +28,6 @@ import 'package:adisyos/views/day_management_view.dart';
 const _bg             = Color(0xFFF2F2F7); // iOS system grouped background
 const _card           = Colors.white;
 const _orange         = Color(0xFFFF9500); // iOS system orange (brand)
-const _orangeLight    = Color(0xFFFFF4E0);
 const _labelPrimary   = Color(0xFF1C1C1E); // iOS primary label
 const _labelSecondary = Color(0xFF8E8E93); // iOS secondary label
 const _separator      = Color(0xFFE5E5EA); // iOS separator

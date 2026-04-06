@@ -129,8 +129,7 @@ class KitchenService extends GetxService {
                 tickets[idx] = _rowToTicket(row);
                 tickets.refresh();
               }
-            })
-            .catchError((e) => _err('addOrUpdateTicket(insert)', e));
+            }, onError: (e) => _err('addOrUpdateTicket(insert)', e));
       }
     } catch (e) {
       _err('addOrUpdateTicket', e);

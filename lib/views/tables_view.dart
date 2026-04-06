@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:adisyos/views/pin_screen.dart';
 import 'package:adisyos/views/table_detail_view.dart';
-import 'package:adisyos/views/public_menu_view.dart';
 import 'package:adisyos/services/table_service.dart';
 import 'package:adisyos/services/settings_service.dart';
 import 'package:adisyos/services/section_service.dart';
@@ -19,7 +17,7 @@ const _card          = Colors.white;
 const _orange        = Color(0xFFFF9500);
 const _textPrimary   = Color(0xFF1C1C1E);
 const _textSecondary = Color(0xFF8E8E93);
-const _separator     = Color(0xFFE5E5EA);
+const _border        = Color(0xFFE5E5EA);
 const _occupied      = Color(0xFFFF3B30);
 const _available     = Color(0xFF34C759);
 
@@ -333,29 +331,272 @@ class _TablesViewState extends State<TablesView> {
 
   void _showEditTableDialog(int index, String currentName) {
     final ctrl = TextEditingController(text: currentName);
-    Get.dialog(AlertDialog(
-      title: Text('edit_table'.tr),
-      content: TextField(
-        controller: ctrl,
-        decoration: InputDecoration(
-            labelText: 'table_name'.tr, border: const OutlineInputBorder()),
-        textCapitalization: TextCapitalization.characters,
-        autofocus: true,
+    final table = TableService.to.tables[index];
+    // Track the section selection locally inside the dialog
+    String? selectedSectionId = table['sectionId'] as String?;
+    final originalSectionId   = selectedSectionId;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final sections = SectionService.to.sections;
+
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 80),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 400),
+              decoration: BoxDecoration(
+                color: _card,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: const [
+                  BoxShadow(
+                      color: Color(0x1F000000),
+                      blurRadius: 40,
+                      offset: Offset(0, 12)),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ── Header ──────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 14, 20),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: _orange.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.edit_rounded,
+                              size: 20, color: _orange),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'edit_table'.tr,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: _textPrimary,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.pop(ctx),
+                          child: Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: _bg,
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: const Icon(Icons.close_rounded,
+                                size: 15, color: _textSecondary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const Divider(height: 1, color: _border),
+
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ── Table name field ─────────────────────
+                        const Text(
+                          'MASA ADI',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: _textSecondary,
+                            letterSpacing: 0.7,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: _bg,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: _border),
+                          ),
+                          child: TextField(
+                            controller: ctrl,
+                            textCapitalization:
+                                TextCapitalization.characters,
+                            autofocus: true,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: _textPrimary,
+                            ),
+                            decoration: const InputDecoration(
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
+
+                        // ── Section picker ───────────────────────
+                        if (sections.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          const Text(
+                            'BÖLÜM',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: _textSecondary,
+                              letterSpacing: 0.7,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                // "No section" chip
+                                _sectionChip(
+                                  label: 'Bölümsüz',
+                                  icon: Icons.block_rounded,
+                                  selected: selectedSectionId == null,
+                                  onTap: () => setDialogState(
+                                      () => selectedSectionId = null),
+                                ),
+                                const SizedBox(width: 8),
+                                ...sections.map((s) {
+                                  final sid = s['id'] as String;
+                                  final name = s['name'] as String;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: _sectionChip(
+                                      label: name,
+                                      icon: _getSectionIcon(name),
+                                      selected: selectedSectionId == sid,
+                                      onTap: () => setDialogState(
+                                          () => selectedSectionId = sid),
+                                    ),
+                                  );
+                                }),
+                              ],
+                            ),
+                          ),
+                        ],
+
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+
+                  // ── Footer ──────────────────────────────────
+                  const Divider(height: 1, color: _border),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            style: TextButton.styleFrom(
+                              foregroundColor: _textSecondary,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Text('cancel'.tr),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              final name = ctrl.text.trim();
+                              if (name.isEmpty) return;
+                              final sectionChanged =
+                                  selectedSectionId != originalSectionId;
+                              TableService.to.updateTable(
+                                index,
+                                name.toUpperCase(),
+                                sectionId: selectedSectionId,
+                                sectionChanged: sectionChanged,
+                              );
+                              Navigator.pop(ctx);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _orange,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Text('save'.tr),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
-      actions: [
-        TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
-        ElevatedButton(
-          onPressed: () {
-            if (ctrl.text.trim().isNotEmpty) {
-              TableService.to
-                  .updateTableName(index, ctrl.text.trim().toUpperCase());
-              Get.back();
-            }
-          },
-          child: Text('save'.tr),
+    );
+  }
+
+  Widget _sectionChip({
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? _orange : _bg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? _orange : _border,
+            width: 1,
+          ),
         ),
-      ],
-    ));
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 13,
+                color: selected ? Colors.white : _textSecondary),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight:
+                    selected ? FontWeight.w600 : FontWeight.w500,
+                color: selected ? Colors.white : _textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showDeleteConfirmation(int index) {
@@ -378,49 +619,10 @@ class _TablesViewState extends State<TablesView> {
     ));
   }
 
-  void _showQrDialog(BuildContext context, int index) {
-    final tableName = TableService.to.tables[index]['name'] as String;
-    Get.dialog(AlertDialog(
-      title: Row(children: [
-        const Icon(Icons.qr_code_2_rounded, color: Colors.purple),
-        const SizedBox(width: 8),
-        Expanded(
-            child: Text('QR — $tableName',
-                style: const TextStyle(fontSize: 16),
-                overflow: TextOverflow.ellipsis)),
-      ]),
-      content: Column(mainAxisSize: MainAxisSize.min, children: [
-        QrImageView(
-            data: 'adisyos://menu?table=$tableName',
-            version: QrVersions.auto,
-            size: 200),
-        const SizedBox(height: 8),
-        Text('adisyos://menu?table=$tableName',
-            style: const TextStyle(fontSize: 10, color: Colors.grey),
-            textAlign: TextAlign.center),
-        const SizedBox(height: 4),
-        const Text(
-            'Bu kodu masaya yerleştirerek müşterilerin menüyü görmesini sağlayabilirsiniz.',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
-            textAlign: TextAlign.center),
-      ]),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Get.back();
-            Get.to(() => PublicMenuView(tableName: tableName));
-          },
-          child: const Text('Menüyü Önizle'),
-        ),
-        ElevatedButton(
-            onPressed: Get.back, child: const Text('Kapat')),
-      ],
-    ));
-  }
-
   void _showTableContextMenu(
       BuildContext context, int index, Offset position) {
     final tableName = TableService.to.tables[index]['name'] as String;
+    final isAdmin   = AuthController.to.isAdmin;
     showMenu(
       context: context,
       position: RelativeRect.fromLTRB(
@@ -434,27 +636,19 @@ class _TablesViewState extends State<TablesView> {
             Text('edit'.tr),
           ]),
         ),
-        PopupMenuItem(
-          value: 'qr',
-          child: Row(children: [
-            const Icon(Icons.qr_code_2_rounded, color: Colors.purple),
-            const SizedBox(width: 8),
-            const Text('QR Kod'),
-          ]),
-        ),
-        PopupMenuItem(
-          value: 'delete',
-          child: Row(children: [
-            const Icon(Icons.delete, color: Colors.red),
-            const SizedBox(width: 8),
-            Text('delete'.tr),
-          ]),
-        ),
+        if (isAdmin)
+          PopupMenuItem(
+            value: 'delete',
+            child: Row(children: [
+              const Icon(Icons.delete, color: Colors.red),
+              const SizedBox(width: 8),
+              Text('delete'.tr),
+            ]),
+          ),
       ],
     ).then((value) {
       if (value == 'delete') _showDeleteConfirmation(index);
       else if (value == 'edit') _showEditTableDialog(index, tableName);
-      else if (value == 'qr') _showQrDialog(context, index);
     });
   }
 
@@ -605,7 +799,7 @@ class _TablesViewState extends State<TablesView> {
                 final allTables = TableService.to.tables;
                 final sectionId = _selectedSectionId.value;
                 
-                List<Map<String, dynamic>> tables = allTables;
+                List<Map<String, dynamic>> tables;
 
                 if (sectionId != null) {
                   final sections = SectionService.to.sections;
@@ -619,6 +813,15 @@ class _TablesViewState extends State<TablesView> {
                     // Match by exact sectionId OR if the table's name contains the section's name
                     return tSectionId == sectionId || (sectionName.isNotEmpty && tName.contains(sectionName));
                   }).toList();
+                } else {
+                  // "Tümü" view: occupied tables first, available tables after
+                  tables = List<Map<String, dynamic>>.from(allTables)
+                    ..sort((a, b) {
+                      final aOccupied = a['isOccupied'] as bool;
+                      final bOccupied = b['isOccupied'] as bool;
+                      if (aOccupied == bOccupied) return 0;
+                      return aOccupied ? -1 : 1;
+                    });
                 }
 
                 if (allTables.isEmpty) {

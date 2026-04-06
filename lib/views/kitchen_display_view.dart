@@ -9,7 +9,6 @@ const _bg           = Color(0xFFF2F2F7);
 const _card         = Colors.white;
 const _textPrimary  = Color(0xFF1C1C1E);
 const _textSec      = Color(0xFF8E8E93);
-const _border       = Color(0xFFE5E5EA);
 const _colPending   = Color(0xFFFF9500);
 const _colPreparing = Color(0xFF007AFF);
 const _colReady     = Color(0xFF34C759);

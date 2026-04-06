@@ -268,6 +268,19 @@ class TableService extends GetxService {
         .catchError((e) => _err('updateTableName', e));
   }
 
+  /// Updates both the name and section of a table in a single DB write.
+  void updateTable(int index, String newName, {String? sectionId, required bool sectionChanged}) {
+    tables[index]['name'] = newName;
+    if (sectionChanged) tables[index]['sectionId'] = sectionId;
+    tables.refresh();
+    final data = <String, dynamic>{'name': newName};
+    if (sectionChanged) data['section_id'] = sectionId;
+    _db.from('tables')
+        .update(data)
+        .eq('id', _id(index))
+        .catchError((e) => _err('updateTable', e));
+  }
+
   void toggleTableStatus(int index) {
     tables[index]['isOccupied'] = !(tables[index]['isOccupied'] as bool);
     tables.refresh();
@@ -505,7 +518,7 @@ class TableService extends GetxService {
     Future.wait([
       _db.from('orders').delete().eq('table_id', tableId),
       _syncTableHeader(tableIndex),
-    ]).catchError((e) => _err('clearTable', e));
+    ]).then((_) {}, onError: (e) => _err('clearTable', e));
   }
 
   void recordPayment(int tableIndex, {String paymentMethod = 'cash'}) {
@@ -697,8 +710,7 @@ class TableService extends GetxService {
       _db.from('orders')
           .update({'table_id': destTableId})
           .eq('id', srcOrderId)
-          .then((_) => movedOrder['id'] = srcOrderId)
-          .catchError((e) => _err('moveOrder reparent', e));
+          .then((_) { movedOrder['id'] = srcOrderId; }, onError: (e) => _err('moveOrder reparent', e));
     }
     tables[toTableIndex]['total'] =
         (tables[toTableIndex]['total'] as double) + price * qty;
@@ -720,7 +732,7 @@ class TableService extends GetxService {
     Future.wait([
       _syncTableHeader(fromTableIndex),
       _syncTableHeader(toTableIndex),
-    ]).catchError((e) => _err('moveOrder sync', e));
+    ]).then((_) {}, onError: (e) => _err('moveOrder sync', e));
   }
 
   void moveAllOrdersToTable(int fromTableIndex, int toTableIndex) {
@@ -749,7 +761,7 @@ class TableService extends GetxService {
         Future.wait([
           _db.from('orders').update({'quantity': newQty}).eq('id', destOrderId),
           _db.from('orders').delete().eq('id', srcOrderId),
-        ]).catchError((e) => _err('moveAll merge', e));
+        ]).then((_) {}, onError: (e) => _err('moveAll merge', e));
       } else {
         final movedAllOrder = <String, dynamic>{
           'id': srcOrderId,
@@ -789,9 +801,25 @@ class TableService extends GetxService {
     tables[fromTableIndex]['isOccupied'] = false;
     tables[fromTableIndex]['staffEmail'] = '';
     tables.refresh();
+
+    // ── Transfer partial payments ─────────────────────────────
+    final srcPartials = List<Map<String, dynamic>>.from(
+        partialPaymentsByTable[fromTableIndex] ?? []);
+    if (srcPartials.isNotEmpty) {
+      (partialPaymentsByTable[toTableIndex] ??= []).addAll(srcPartials);
+      partialPaymentsByTable.remove(fromTableIndex);
+      partialPaymentsByTable.refresh();
+      _db.from('table_partial_payments')
+          .update({'table_id': destTableId})
+          .eq('table_id', _id(fromTableIndex))
+          .then((_) {}, onError: (e) => _err('moveAll partials', e));
+    } else {
+      partialPaymentsByTable.remove(fromTableIndex);
+    }
+
     Future.wait([
       _syncTableHeader(fromTableIndex),
       _syncTableHeader(toTableIndex),
-    ]).catchError((e) => _err('moveAll sync', e));
+    ]).then((_) {}, onError: (e) => _err('moveAll sync', e));
   }
 }
