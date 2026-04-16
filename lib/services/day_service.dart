@@ -20,6 +20,8 @@ class DayService extends GetxService {
 
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
+
+  String get _tenantId => _db.auth.currentUser!.id;
   static final _dateFmt = DateFormat('yyyy-MM-dd');
 
   @override
@@ -108,6 +110,7 @@ class DayService extends GetxService {
             'started_by': email,
             'started_at': now.toIso8601String(),
             'day_date': _dateFmt.format(now),
+            'tenant_id': _tenantId,
           })
           .select()
           .single();

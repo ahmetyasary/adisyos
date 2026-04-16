@@ -5,29 +5,31 @@ import 'package:get/get.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:adisyos/themes/app_theme.dart';
-import 'package:adisyos/translations/app_translations.dart';
-import 'package:adisyos/views/home_view.dart';
-import 'package:adisyos/views/auth_screen.dart';
-import 'package:adisyos/services/sales_history_service.dart';
-import 'package:adisyos/services/kitchen_service.dart';
-import 'package:adisyos/services/inventory_service.dart';
-import 'package:adisyos/services/shift_service.dart';
-import 'package:adisyos/services/day_service.dart';
-import 'package:adisyos/services/menu_service.dart';
-import 'package:adisyos/services/table_service.dart';
-import 'package:adisyos/services/settings_service.dart';
-import 'package:adisyos/services/staff_service.dart';
-import 'package:adisyos/services/section_service.dart';
-import 'package:adisyos/guards/auth_middleware.dart';
+import 'package:orderix/themes/app_theme.dart';
+import 'package:orderix/translations/app_translations.dart';
+import 'package:orderix/views/home_view.dart';
+import 'package:orderix/views/auth_screen.dart';
+import 'package:orderix/services/sales_history_service.dart';
+import 'package:orderix/services/kitchen_service.dart';
+import 'package:orderix/services/inventory_service.dart';
+import 'package:orderix/services/shift_service.dart';
+import 'package:orderix/services/day_service.dart';
+import 'package:orderix/services/menu_service.dart';
+import 'package:orderix/services/table_service.dart';
+import 'package:orderix/services/settings_service.dart';
+import 'package:orderix/services/staff_service.dart';
+import 'package:orderix/services/section_service.dart';
+import 'package:orderix/guards/auth_middleware.dart';
 // Clean architecture layers
-import 'package:adisyos/features/auth/data/datasources/supabase_auth_datasource.dart';
-import 'package:adisyos/features/auth/data/repositories/auth_repository_impl.dart';
-import 'package:adisyos/features/auth/domain/usecases/login_usecase.dart';
-import 'package:adisyos/features/auth/domain/usecases/logout_usecase.dart';
-import 'package:adisyos/features/auth/domain/usecases/get_current_user_usecase.dart';
-import 'package:adisyos/features/auth/domain/usecases/get_user_role_usecase.dart';
-import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/features/auth/data/datasources/supabase_auth_datasource.dart';
+import 'package:orderix/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:orderix/features/auth/domain/usecases/login_usecase.dart';
+import 'package:orderix/features/auth/domain/usecases/logout_usecase.dart';
+import 'package:orderix/features/auth/domain/usecases/get_current_user_usecase.dart';
+import 'package:orderix/features/auth/domain/usecases/get_user_role_usecase.dart';
+import 'package:orderix/features/auth/domain/usecases/signup_usecase.dart';
+import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/views/signup_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -83,6 +85,7 @@ void _registerAuth() {
     logoutUseCase:         LogoutUseCase(repository),
     getCurrentUserUseCase: GetCurrentUserUseCase(repository),
     getUserRoleUseCase:    GetUserRoleUseCase(repository),
+    signUpUseCase:         SignUpUseCase(repository),
   ));
 }
 
@@ -127,7 +130,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'Adisyos',
+      title: 'Orderix',
       debugShowCheckedModeBanner: false,
       scrollBehavior: _SmoothScrollBehavior(),
       theme: AppTheme.lightTheme,
@@ -159,6 +162,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         GetPage(
           name: AppRoutes.login,
           page: () => const AuthScreen(),
+        ),
+        GetPage(
+          name: AppRoutes.signup,
+          page: () => const SignUpScreen(),
         ),
         GetPage(
           name: AppRoutes.home,

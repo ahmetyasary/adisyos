@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
-import 'package:adisyos/models/app_role.dart';
-import 'package:adisyos/widgets/app_toast.dart';
+import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/models/app_role.dart';
+import 'package:orderix/widgets/app_toast.dart';
 
 // ── Named routes ──────────────────────────────────────────────
 
 abstract class AppRoutes {
   static const login     = '/login';
+  static const signup    = '/signup';
   static const home      = '/home';
   static const tables    = '/tables';
   static const orders    = '/orders';

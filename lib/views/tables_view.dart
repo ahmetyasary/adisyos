@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:adisyos/views/pin_screen.dart';
-import 'package:adisyos/views/table_detail_view.dart';
-import 'package:adisyos/services/table_service.dart';
-import 'package:adisyos/services/settings_service.dart';
-import 'package:adisyos/services/section_service.dart';
-import 'package:adisyos/services/staff_service.dart';
-import 'package:adisyos/services/day_service.dart';
-import 'package:adisyos/widgets/app_toast.dart';
-import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/views/pin_screen.dart';
+import 'package:orderix/views/table_detail_view.dart';
+import 'package:orderix/services/table_service.dart';
+import 'package:orderix/services/settings_service.dart';
+import 'package:orderix/services/section_service.dart';
+import 'package:orderix/services/staff_service.dart';
+import 'package:orderix/services/day_service.dart';
+import 'package:orderix/widgets/app_toast.dart';
+import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // ── Design tokens ─────────────────────────────────────────────

@@ -3,26 +3,26 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
-import 'package:adisyos/services/settings_service.dart';
-import 'package:adisyos/services/staff_service.dart';
-import 'package:adisyos/models/app_role.dart';
-import 'package:adisyos/views/auth_screen.dart';
-import 'package:adisyos/services/sales_history_service.dart';
-import 'package:adisyos/services/table_service.dart';
-import 'package:adisyos/services/day_service.dart';
-import 'package:adisyos/views/kitchen_display_view.dart';
-import 'package:adisyos/views/inventory_management_view.dart';
-import 'package:adisyos/widgets/app_toast.dart';
-import 'package:adisyos/views/staff_report_view.dart';
-import 'package:adisyos/views/shift_management_view.dart';
-import 'package:adisyos/views/dashboard_view.dart';
-import 'package:adisyos/views/menu_management_view.dart';
-import 'package:adisyos/views/notifications_view.dart';
-import 'package:adisyos/views/reports_view.dart';
-import 'package:adisyos/views/settings_view.dart';
-import 'package:adisyos/views/tables_view.dart';
-import 'package:adisyos/views/day_management_view.dart';
+import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/services/settings_service.dart';
+import 'package:orderix/services/staff_service.dart';
+import 'package:orderix/models/app_role.dart';
+import 'package:orderix/views/auth_screen.dart';
+import 'package:orderix/services/sales_history_service.dart';
+import 'package:orderix/services/table_service.dart';
+import 'package:orderix/services/day_service.dart';
+import 'package:orderix/views/kitchen_display_view.dart';
+import 'package:orderix/views/inventory_management_view.dart';
+import 'package:orderix/widgets/app_toast.dart';
+import 'package:orderix/views/staff_report_view.dart';
+import 'package:orderix/views/shift_management_view.dart';
+import 'package:orderix/views/dashboard_view.dart';
+import 'package:orderix/views/menu_management_view.dart';
+import 'package:orderix/views/notifications_view.dart';
+import 'package:orderix/views/reports_view.dart';
+import 'package:orderix/views/settings_view.dart';
+import 'package:orderix/views/tables_view.dart';
+import 'package:orderix/views/day_management_view.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _bg             = Color(0xFFF2F2F7); // iOS system grouped background
@@ -501,7 +501,7 @@ class _TopBar extends StatelessWidget {
         children: [
           // ── Brand ─────────────────────────────────────
           Text(
-            'adisyos',
+            'orderix',
             style: GoogleFonts.righteous(
               fontSize: 22,
               color: _orange,
@@ -1476,7 +1476,7 @@ class _Footer extends StatelessWidget {
                 style: TextStyle(fontSize: 10, color: _labelSecondary),
               ),
               const Text(
-                'Adisyos v0.1 Beta · by Smartlogy',
+                'Orderix v0.1 Beta · by Smartlogy',
                 style: TextStyle(fontSize: 10, color: _labelSecondary),
               ),
             ],

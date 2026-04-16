@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:adisyos/services/day_service.dart';
-import 'package:adisyos/services/sales_history_service.dart';
-import 'package:adisyos/services/settings_service.dart';
+import 'package:orderix/services/day_service.dart';
+import 'package:orderix/services/sales_history_service.dart';
+import 'package:orderix/services/settings_service.dart';
 
 // ── Design tokens ─────────────────────────────────────────────
 const _bg          = Color(0xFFF2F2F7);

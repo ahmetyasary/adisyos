@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
-import 'package:adisyos/models/app_role.dart';
+import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/models/app_role.dart';
 
 // ─────────────────────────────────────────────────────────────
 // RoleGuard  –  inline widget guard

@@ -4,13 +4,13 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:adisyos/services/menu_service.dart';
-import 'package:adisyos/services/table_service.dart';
-import 'package:adisyos/services/section_service.dart';
-import 'package:adisyos/services/inventory_service.dart';
-import 'package:adisyos/services/settings_service.dart';
-import 'package:adisyos/themes/app_theme.dart';
-import 'package:adisyos/widgets/app_toast.dart';
+import 'package:orderix/services/menu_service.dart';
+import 'package:orderix/services/table_service.dart';
+import 'package:orderix/services/section_service.dart';
+import 'package:orderix/services/inventory_service.dart';
+import 'package:orderix/services/settings_service.dart';
+import 'package:orderix/themes/app_theme.dart';
+import 'package:orderix/widgets/app_toast.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _bg            = Color(0xFFF2F2F7);
@@ -2289,7 +2289,7 @@ class _TableDetailViewState extends State<TableDetailView> {
     try {
       final companyName = SettingsService.to.companyName.value.isNotEmpty
           ? SettingsService.to.companyName.value
-          : 'Adisyos';
+          : 'Orderix';
 
       final regularFont = await PdfGoogleFonts.notoSansRegular();
       final boldFont = await PdfGoogleFonts.notoSansBold();

@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:adisyos/services/sales_history_service.dart';
-import 'package:adisyos/services/kitchen_service.dart';
-import 'package:adisyos/services/inventory_service.dart';
-import 'package:adisyos/services/staff_service.dart';
+import 'package:orderix/services/sales_history_service.dart';
+import 'package:orderix/services/kitchen_service.dart';
+import 'package:orderix/services/inventory_service.dart';
+import 'package:orderix/services/staff_service.dart';
 
 class TableService extends GetxService {
   static TableService get to => Get.find();
@@ -19,6 +19,8 @@ class TableService extends GetxService {
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
   RealtimeChannel? _partialChannel;
+
+  String get _tenantId => _db.auth.currentUser!.id;
   Timer? _debounce;
   int _loadSeq = 0;
 
@@ -230,6 +232,7 @@ class TableService extends GetxService {
             'total': 0.0,
             'discount': 0.0,
             'staff_email': '',
+            'tenant_id': _tenantId,
             if (sectionId != null) 'section_id': sectionId,
           })
           .select()
@@ -383,6 +386,7 @@ class TableService extends GetxService {
           'name': name,
           'quantity': newOrder['quantity'] as int,
           'price': price,
+          'tenant_id': _tenantId,
         }).select().single();
         newOrder['id'] = row['id'] as int;
         await _syncTableHeader(tableIndex);
@@ -617,6 +621,7 @@ class TableService extends GetxService {
       'qty': record['qty'] as int,
       'total': record['total'] as double,
       'method': record['method'] as String,
+      'tenant_id': _tenantId,
     }).catchError((e) => _err('addPartialPaymentRecord', e));
   }
 

@@ -29,6 +29,11 @@ class RoleNotFoundException extends AuthException {
   const RoleNotFoundException() : super('auth_error_role_not_found');
 }
 
+/// Email is already registered in Supabase auth.
+class EmailAlreadyInUseException extends AuthException {
+  const EmailAlreadyInUseException() : super('auth_error_email_taken');
+}
+
 /// Catch-all for unexpected failures.
 class UnknownAuthException extends AuthException {
   const UnknownAuthException([String? detail])

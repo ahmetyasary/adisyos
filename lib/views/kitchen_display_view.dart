@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:adisyos/services/kitchen_service.dart';
-import 'package:adisyos/services/table_service.dart';
-import 'package:adisyos/services/section_service.dart';
+import 'package:orderix/services/kitchen_service.dart';
+import 'package:orderix/services/table_service.dart';
+import 'package:orderix/services/section_service.dart';
 
 // ── Design tokens ──────────────────────────────────────────────
 const _bg           = Color(0xFFF2F2F7);

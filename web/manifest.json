@@ -1,6 +1,6 @@
 {
-    "name": "adisyos",
-    "short_name": "adisyos",
+    "name": "orderix",
+    "short_name": "orderix",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

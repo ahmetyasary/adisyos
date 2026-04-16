@@ -10,6 +10,8 @@ class SalesHistoryService extends GetxService {
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
 
+  String get _tenantId => _db.auth.currentUser!.id;
+
   @override
   void onInit() {
     super.onInit();
@@ -105,6 +107,7 @@ class SalesHistoryService extends GetxService {
             'total': total,
             'payment_method': paymentMethod,
             'staff_email': staffEmail,
+            'tenant_id': _tenantId,
           })
           .select()
           .single();
@@ -120,6 +123,7 @@ class SalesHistoryService extends GetxService {
                     'name': item['name'] as String,
                     'quantity': item['quantity'] as int,
                     'price': (item['price'] as num).toDouble(),
+                    'tenant_id': _tenantId,
                   })
               .toList(),
         );

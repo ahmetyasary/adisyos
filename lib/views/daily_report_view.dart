@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import 'package:adisyos/services/sales_history_service.dart';
-import 'package:adisyos/services/table_service.dart';
-import 'package:adisyos/services/section_service.dart';
-import 'package:adisyos/themes/app_theme.dart';
-import 'package:adisyos/services/settings_service.dart';
+import 'package:orderix/services/sales_history_service.dart';
+import 'package:orderix/services/table_service.dart';
+import 'package:orderix/services/section_service.dart';
+import 'package:orderix/themes/app_theme.dart';
+import 'package:orderix/services/settings_service.dart';
 
 /// Returns "Section · tableName" when a live table with that name has a section.
 String _resolveTableLabel(String rawName) {

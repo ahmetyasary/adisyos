@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
-import 'package:adisyos/services/settings_service.dart';
-import 'package:adisyos/services/staff_service.dart';
-import 'package:adisyos/services/section_service.dart';
-import 'package:adisyos/widgets/app_toast.dart';
+import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/services/settings_service.dart';
+import 'package:orderix/services/staff_service.dart';
+import 'package:orderix/services/section_service.dart';
+import 'package:orderix/widgets/app_toast.dart';
 
 // ── Design tokens ─────────────────────────────────────────────
 const _bg          = Color(0xFFF2F2F7);

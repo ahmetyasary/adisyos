@@ -10,6 +10,8 @@ class SectionService extends GetxService {
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
 
+  String get _tenantId => _db.auth.currentUser!.id;
+
   @override
   void onInit() {
     super.onInit();
@@ -68,6 +70,7 @@ class SectionService extends GetxService {
           .insert({
             'name': name.trim(),
             'order_index': sections.length,
+            'tenant_id': _tenantId,
           })
           .select()
           .single();

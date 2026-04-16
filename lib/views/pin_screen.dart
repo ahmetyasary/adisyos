@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
-import 'package:adisyos/services/staff_service.dart';
-import 'package:adisyos/services/day_service.dart';
-import 'package:adisyos/views/auth_screen.dart';
-import 'package:adisyos/views/home_view.dart';
-import 'package:adisyos/views/tables_view.dart';
+import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/services/staff_service.dart';
+import 'package:orderix/services/day_service.dart';
+import 'package:orderix/views/auth_screen.dart';
+import 'package:orderix/views/home_view.dart';
+import 'package:orderix/views/tables_view.dart';
 
 const _bg          = Color(0xFFF2F2F7);
 const _card        = Colors.white;
@@ -129,7 +129,7 @@ class _StaffPicker extends StatelessWidget {
         const SizedBox(height: 12),
         // Brand
         Text(
-          'adisyos',
+          'orderix',
           style: GoogleFonts.righteous(
             fontSize: 28,
             color: _orange,

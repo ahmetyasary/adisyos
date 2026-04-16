@@ -12,6 +12,8 @@ class StaffService extends GetxService {
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
 
+  String get _tenantId => _db.auth.currentUser!.id;
+
   bool get hasActiveStaff => currentStaff.value != null;
   String get currentStaffIdentifier =>
       currentStaff.value?['name'] as String? ?? '';
@@ -89,7 +91,7 @@ class StaffService extends GetxService {
     try {
       final row = await _db
           .from('staff_profiles')
-          .insert({'name': name.trim(), 'pin': pin, 'is_active': true})
+          .insert({'name': name.trim(), 'pin': pin, 'is_active': true, 'tenant_id': _tenantId})
           .select()
           .single();
       staffList.add(_rowToStaff(row));

@@ -10,6 +10,8 @@ class ShiftService extends GetxService {
 
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
+
+  String get _tenantId => _db.auth.currentUser!.id;
   static final _dateFmt = DateFormat('yyyy-MM-dd');
 
   @override
@@ -92,6 +94,7 @@ class ShiftService extends GetxService {
             'staff_email': staffEmail,
             'start_time': now.toIso8601String(),
             'shift_date': _dateFmt.format(now),
+            'tenant_id': _tenantId,
           })
           .select()
           .single();
@@ -137,7 +140,7 @@ class ShiftService extends GetxService {
     try {
       final row = await _db
           .from('shift_breaks')
-          .insert({'shift_id': shiftId, 'start_time': now})
+          .insert({'shift_id': shiftId, 'start_time': now, 'tenant_id': _tenantId})
           .select()
           .single();
 

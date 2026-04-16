@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:adisyos/core/errors/auth_exception.dart';
-import 'package:adisyos/features/auth/domain/entities/auth_user.dart';
-import 'package:adisyos/features/auth/presentation/controller/auth_controller.dart';
-import 'package:adisyos/views/pin_screen.dart';
+import 'package:orderix/core/errors/auth_exception.dart';
+import 'package:orderix/features/auth/domain/entities/auth_user.dart';
+import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/guards/auth_middleware.dart';
+import 'package:orderix/views/pin_screen.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _bg          = Color(0xFFF2F2F7);
@@ -175,7 +176,7 @@ class _AuthScreenState extends State<AuthScreen>
                           _BrandHero(),
                           const SizedBox(height: 32),
 
-                          // Login card
+                          // Login card (with sign-up link at the bottom)
                           _LoginCard(
                             formKey:          _formKey,
                             emailCtrl:        _emailCtrl,
@@ -186,6 +187,9 @@ class _AuthScreenState extends State<AuthScreen>
                                 () => _obscurePassword = !_obscurePassword),
                             onLoginPressed:   _onLoginPressed,
                           ),
+
+                          const SizedBox(height: 20),
+                          _SignUpLink(),
 
                           const SizedBox(height: 28),
                           _BottomFooter(),
@@ -354,7 +358,7 @@ class _BrandHero extends StatelessWidget {
 
         // Wordmark
         Text(
-          'adisyos',
+          'orderix',
           style: GoogleFonts.righteous(
             fontSize:    32,
             color:       _textPrimary,
@@ -724,6 +728,37 @@ class _LoginButton extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
+// _SignUpLink — "Don't have an account? Sign Up"
+// ─────────────────────────────────────────────────────────────
+
+class _SignUpLink extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          'auth_no_account'.tr,
+          style: const TextStyle(fontSize: 13, color: _textSec),
+        ),
+        const SizedBox(width: 4),
+        GestureDetector(
+          onTap: () => Get.toNamed(AppRoutes.signup),
+          child: Text(
+            'auth_signup_link'.tr,
+            style: const TextStyle(
+              fontSize:   13,
+              fontWeight: FontWeight.w700,
+              color:      _orange,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // _BottomFooter
 // ─────────────────────────────────────────────────────────────
 
@@ -742,7 +777,7 @@ class _BottomFooter extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         const Text(
-          'Adisyos v0.1 Beta · by Smartlogy',
+          'Orderix v0.1 Beta · by Smartlogy',
           style: TextStyle(fontSize: 12, color: _textSec),
         ),
         const SizedBox(width: 8),

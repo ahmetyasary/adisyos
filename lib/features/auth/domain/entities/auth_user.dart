@@ -1,4 +1,4 @@
-import 'package:adisyos/models/app_role.dart';
+import 'package:orderix/models/app_role.dart';
 
 /// Pure domain entity — no Supabase types here.
 class AuthUser {

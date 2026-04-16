@@ -1,2 +1,0 @@
-C:/Users/yusuf/Desktop/Flutter/Projects/adisyos/android/app/.cxx/Debug/dsc5ho1c/x86/CMakeFiles/edit_cache.dir
-C:/Users/yusuf/Desktop/Flutter/Projects/adisyos/android/app/.cxx/Debug/dsc5ho1c/x86/CMakeFiles/rebuild_cache.dir

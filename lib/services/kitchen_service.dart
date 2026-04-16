@@ -10,6 +10,8 @@ class KitchenService extends GetxService {
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
 
+  String get _tenantId => _db.auth.currentUser!.id;
+
   @override
   void onInit() {
     super.onInit();
@@ -120,6 +122,7 @@ class KitchenService extends GetxService {
               'item_name': itemName,
               'quantity': quantity,
               'status': 'pending',
+              'tenant_id': _tenantId,
             })
             .select()
             .single()

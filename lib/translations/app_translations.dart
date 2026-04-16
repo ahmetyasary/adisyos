@@ -4,7 +4,7 @@ class AppTranslations extends Translations {
   @override
   Map<String, Map<String, String>> get keys => {
         'tr_TR': {
-          'app_name': 'Adisyos',
+          'app_name': 'Orderix',
           'home': 'Ana Sayfa',
           'tables': 'Masalar',
           'quick_sale': 'Hızlı Satış',
@@ -171,6 +171,20 @@ class AppTranslations extends Translations {
           'auth_error_network': 'Bağlantı hatası. İnternetinizi kontrol edin.',
           'auth_error_generic': 'Giriş yapılamadı. Lütfen tekrar deneyin.',
           'auth_error_role_not_found': 'Kullanıcı rolü bulunamadı. Yöneticinizle iletişime geçin.',
+          'auth_error_email_taken': 'Bu e-posta adresi zaten kayıtlı.',
+          'auth_signup': 'Kayıt Ol',
+          'auth_signup_title': 'Hesap Oluştur',
+          'auth_signup_subtitle': 'Yeni hesabınızı oluşturun',
+          'auth_confirm_password': 'Şifre Tekrar',
+          'auth_confirm_password_hint': '••••••••',
+          'auth_password_mismatch': 'Şifreler eşleşmiyor',
+          'auth_no_account': 'Hesabınız yok mu?',
+          'auth_have_account': 'Zaten hesabınız var mı?',
+          'auth_signup_link': 'Kayıt Olun',
+          'auth_login_link': 'Giriş Yapın',
+          'auth_signup_success': 'Hesabınız oluşturuldu! E-postanızı doğrulayın.',
+          'auth_signup_success_body': 'Lütfen e-posta kutunuzu kontrol edin ve hesabınızı doğruladıktan sonra giriş yapın.',
+          'auth_back_to_login': 'Giriş Sayfasına Dön',
 
           // Notifications
           'new_order': 'Ödeme Alındı',
@@ -222,7 +236,7 @@ class AppTranslations extends Translations {
           'active_tables': 'Aktif Masalar',
         },
         'en_US': {
-          'app_name': 'Adisyos',
+          'app_name': 'Orderix',
           'home': 'Home',
           'tables': 'Tables',
           'quick_sale': 'Quick Sale',
@@ -390,6 +404,20 @@ class AppTranslations extends Translations {
           'auth_error_network': 'Connection error. Check your internet.',
           'auth_error_generic': 'Sign in failed. Please try again.',
           'auth_error_role_not_found': 'User role not found. Contact your administrator.',
+          'auth_error_email_taken': 'This email address is already registered.',
+          'auth_signup': 'Sign Up',
+          'auth_signup_title': 'Create Account',
+          'auth_signup_subtitle': 'Create your new account',
+          'auth_confirm_password': 'Confirm Password',
+          'auth_confirm_password_hint': '••••••••',
+          'auth_password_mismatch': 'Passwords do not match',
+          'auth_no_account': "Don't have an account?",
+          'auth_have_account': 'Already have an account?',
+          'auth_signup_link': 'Sign Up',
+          'auth_login_link': 'Sign In',
+          'auth_signup_success': 'Account created! Verify your email.',
+          'auth_signup_success_body': 'Please check your inbox and verify your email address, then sign in.',
+          'auth_back_to_login': 'Back to Sign In',
 
           // Notifications
           'new_order': 'Payment Received',

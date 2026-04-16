@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:adisyos/services/menu_service.dart';
-import 'package:adisyos/services/inventory_service.dart';
+import 'package:orderix/services/menu_service.dart';
+import 'package:orderix/services/inventory_service.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _bg          = Color(0xFFF2F2F7);

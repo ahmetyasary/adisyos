@@ -1,5 +1,5 @@
-import 'package:adisyos/features/auth/domain/repositories/auth_repository.dart';
-import 'package:adisyos/models/app_role.dart';
+import 'package:orderix/features/auth/domain/repositories/auth_repository.dart';
+import 'package:orderix/models/app_role.dart';
 
 class GetUserRoleUseCase {
   const GetUserRoleUseCase(this._repository);

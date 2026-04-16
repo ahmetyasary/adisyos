@@ -11,6 +11,8 @@ class InventoryService extends GetxService {
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
 
+  String get _tenantId => _db.auth.currentUser!.id;
+
   static const int lowStockThreshold = 5;
 
   @override
@@ -91,8 +93,8 @@ class InventoryService extends GetxService {
     stock[itemName] = count;
     stock.refresh();
     _db.from('inventory').upsert(
-      {'item_name': itemName, 'stock': count, 'updated_at': DateTime.now().toIso8601String()},
-      onConflict: 'item_name',
+      {'item_name': itemName, 'stock': count, 'updated_at': DateTime.now().toIso8601String(), 'tenant_id': _tenantId},
+      onConflict: 'item_name,tenant_id',
     ).catchError((e) => _err('setStock', e));
   }
 
@@ -126,9 +128,10 @@ class InventoryService extends GetxService {
                 'item_name': e.key,
                 'stock': e.value,
                 'updated_at': DateTime.now().toIso8601String(),
+                'tenant_id': _tenantId,
               })
           .toList(),
-      onConflict: 'item_name',
+      onConflict: 'item_name,tenant_id',
     ).catchError((e) => _err('incrementForCancellation', e));
   }
 
@@ -156,9 +159,10 @@ class InventoryService extends GetxService {
                 'item_name': e.key,
                 'stock': e.value,
                 'updated_at': DateTime.now().toIso8601String(),
+                'tenant_id': _tenantId,
               })
           .toList(),
-      onConflict: 'item_name',
+      onConflict: 'item_name,tenant_id',
     ).catchError((e) => _err('decrementForSale', e));
   }
 }

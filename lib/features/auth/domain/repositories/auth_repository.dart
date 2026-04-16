@@ -1,5 +1,5 @@
-import 'package:adisyos/features/auth/domain/entities/auth_user.dart';
-import 'package:adisyos/models/app_role.dart';
+import 'package:orderix/features/auth/domain/entities/auth_user.dart';
+import 'package:orderix/models/app_role.dart';
 
 /// Contract — the data layer must fulfil all of these.
 abstract interface class AuthRepository {
@@ -9,6 +9,10 @@ abstract interface class AuthRepository {
     required String email,
     required String password,
   });
+
+  /// Registers a new user.
+  /// Returns `true` when email confirmation is required before the first login.
+  Future<bool> signUp({required String email, required String password});
 
   /// Signs out and clears all local state.
   Future<void> logout();

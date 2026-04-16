@@ -1,5 +1,5 @@
-import 'package:adisyos/features/auth/domain/entities/auth_user.dart';
-import 'package:adisyos/features/auth/domain/repositories/auth_repository.dart';
+import 'package:orderix/features/auth/domain/entities/auth_user.dart';
+import 'package:orderix/features/auth/domain/repositories/auth_repository.dart';
 
 class GetCurrentUserUseCase {
   const GetCurrentUserUseCase(this._repository);

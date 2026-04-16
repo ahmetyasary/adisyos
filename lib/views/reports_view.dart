@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:adisyos/services/sales_history_service.dart';
-import 'package:adisyos/services/settings_service.dart';
-import 'package:adisyos/themes/app_theme.dart';
+import 'package:orderix/services/sales_history_service.dart';
+import 'package:orderix/services/settings_service.dart';
+import 'package:orderix/themes/app_theme.dart';
 import 'daily_report_view.dart';
 import 'monthly_report_view.dart';
 import 'yearly_report_view.dart';

@@ -14,6 +14,8 @@ class SettingsService extends GetxService {
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
 
+  String get _tenantId => _db.auth.currentUser!.id;
+
   @override
   void onInit() {
     super.onInit();
@@ -80,8 +82,8 @@ class SettingsService extends GetxService {
     companyName.value = newCompanyName;
     try {
       await _db.from('app_settings').upsert([
-        {'key': 'company_name', 'value': newCompanyName},
-      ]);
+        {'key': 'company_name', 'value': newCompanyName, 'tenant_id': _tenantId},
+      ], onConflict: 'key,tenant_id');
     } catch (e) {
       if (kDebugMode) print('[SettingsService] save error: $e');
     }
@@ -91,8 +93,8 @@ class SettingsService extends GetxService {
     currencySymbol.value = symbol;
     try {
       await _db.from('app_settings').upsert([
-        {'key': 'currency_symbol', 'value': symbol},
-      ]);
+        {'key': 'currency_symbol', 'value': symbol, 'tenant_id': _tenantId},
+      ], onConflict: 'key,tenant_id');
     } catch (e) {
       if (kDebugMode) print('[SettingsService] setCurrency error: $e');
     }

@@ -1,13 +1,14 @@
 import 'package:get/get.dart';
 // Hide Supabase's AuthUser so our domain entity wins.
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser, AuthException;
-import 'package:adisyos/core/errors/auth_exception.dart';
-import 'package:adisyos/features/auth/domain/entities/auth_user.dart';
-import 'package:adisyos/features/auth/domain/usecases/login_usecase.dart';
-import 'package:adisyos/features/auth/domain/usecases/logout_usecase.dart';
-import 'package:adisyos/features/auth/domain/usecases/get_current_user_usecase.dart';
-import 'package:adisyos/features/auth/domain/usecases/get_user_role_usecase.dart';
-import 'package:adisyos/models/app_role.dart';
+import 'package:orderix/core/errors/auth_exception.dart';
+import 'package:orderix/features/auth/domain/entities/auth_user.dart';
+import 'package:orderix/features/auth/domain/usecases/login_usecase.dart';
+import 'package:orderix/features/auth/domain/usecases/logout_usecase.dart';
+import 'package:orderix/features/auth/domain/usecases/get_current_user_usecase.dart';
+import 'package:orderix/features/auth/domain/usecases/get_user_role_usecase.dart';
+import 'package:orderix/features/auth/domain/usecases/signup_usecase.dart';
+import 'package:orderix/models/app_role.dart';
 
 class AuthController extends GetxService {
   // ── Singleton access ──────────────────────────────────────
@@ -19,19 +20,23 @@ class AuthController extends GetxService {
     required LogoutUseCase logoutUseCase,
     required GetCurrentUserUseCase getCurrentUserUseCase,
     required GetUserRoleUseCase getUserRoleUseCase,
+    required SignUpUseCase signUpUseCase,
   })  : _login = loginUseCase,
         _logout = logoutUseCase,
         _getCurrentUser = getCurrentUserUseCase,
-        _getUserRole = getUserRoleUseCase;
+        _getUserRole = getUserRoleUseCase,
+        _signUp = signUpUseCase;
 
   final LoginUseCase _login;
   final LogoutUseCase _logout;
   final GetCurrentUserUseCase _getCurrentUser;
   final GetUserRoleUseCase _getUserRole;
+  final SignUpUseCase _signUp;
 
   // ── Reactive state ────────────────────────────────────────
   final Rx<AuthUser?> user = Rx(null);
   final RxBool isLoading = false.obs;
+  final RxBool isSigningUp = false.obs;
   final RxBool isRestoringSession = true.obs;
 
   // ── Convenience getters ───────────────────────────────────
@@ -80,6 +85,21 @@ class AuthController extends GetxService {
       return authUser;
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /// Registers a new user.
+  /// Returns `true` when email confirmation is required before the first login.
+  /// Throws a typed [AuthException] on failure.
+  Future<bool> signUp({
+    required String email,
+    required String password,
+  }) async {
+    isSigningUp.value = true;
+    try {
+      return await _signUp(email: email, password: password);
+    } finally {
+      isSigningUp.value = false;
     }
   }
 

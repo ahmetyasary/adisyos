@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:adisyos/services/inventory_service.dart';
-import 'package:adisyos/services/table_service.dart';
+import 'package:orderix/services/inventory_service.dart';
+import 'package:orderix/services/table_service.dart';
 
 class MenuService extends GetxService {
   static MenuService get to => Get.find();
@@ -14,6 +14,8 @@ class MenuService extends GetxService {
 
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
+
+  String get _tenantId => _db.auth.currentUser!.id;
 
   @override
   void onInit() {
@@ -71,7 +73,7 @@ class MenuService extends GetxService {
       }
       menus.assignAll(rows.cast<Map<String, dynamic>>().map(_rowToMenu).toList());
       _syncIconsFromMenus();
-      if (menus.isEmpty) await _seedDefaults();
+      //if (menus.isEmpty && _db.auth.currentUser != null) await _seedDefaults();
     } catch (e) {
       if (kDebugMode) print('[MenuService] load error: $e');
     }
@@ -169,7 +171,7 @@ class MenuService extends GetxService {
     try {
       final row = await _db
           .from('menus')
-          .insert({'name': name, 'icon_key': 'restaurant_menu'})
+          .insert({'name': name, 'icon_key': 'restaurant_menu', 'tenant_id': _tenantId})
           .select()
           .single();
 
@@ -227,7 +229,7 @@ class MenuService extends GetxService {
     final menuId = menus[menuIndex]['id'] as int;
     final row = await _db
         .from('menu_items')
-        .insert({'menu_id': menuId, 'name': name, 'price': price})
+        .insert({'menu_id': menuId, 'name': name, 'price': price, 'tenant_id': _tenantId})
         .select()
         .single();
 
