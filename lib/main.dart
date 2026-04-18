@@ -30,9 +30,12 @@ import 'package:orderix/features/auth/domain/usecases/get_user_role_usecase.dart
 import 'package:orderix/features/auth/domain/usecases/signup_usecase.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/views/signup_screen.dart';
+import 'package:orderix/utils/app_info.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await AppInfo.init();
 
   await dotenv.load(fileName: '.env.local');
 

@@ -7,6 +7,7 @@ import 'package:orderix/features/auth/domain/entities/auth_user.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/guards/auth_middleware.dart';
 import 'package:orderix/views/pin_screen.dart';
+import 'package:orderix/utils/app_info.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _bg          = Color(0xFFF2F2F7);
@@ -776,9 +777,9 @@ class _BottomFooter extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        const Text(
-          'Orderix v0.1 Beta · by Smartlogy',
-          style: TextStyle(fontSize: 12, color: _textSec),
+        Text(
+          AppInfo.brandLine,
+          style: const TextStyle(fontSize: 12, color: _textSec),
         ),
         const SizedBox(width: 8),
         Container(

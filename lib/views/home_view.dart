@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -23,6 +24,8 @@ import 'package:orderix/views/reports_view.dart';
 import 'package:orderix/views/settings_view.dart';
 import 'package:orderix/views/tables_view.dart';
 import 'package:orderix/views/day_management_view.dart';
+import 'package:orderix/utils/app_info.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _bg             = Color(0xFFF2F2F7); // iOS system grouped background
@@ -1442,47 +1445,82 @@ class _Footer extends StatelessWidget {
         color: _card,
         border: Border(top: BorderSide(color: _separator, width: 0.5)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            name,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: _labelPrimary,
+      padding: const EdgeInsets.only(left: 24, right: 24, top: 6),
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.only(bottom: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              name,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: _labelPrimary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.support_agent_outlined, size: 12, color: _labelSecondary),
-                  const SizedBox(width: 4),
-                  Text(
-                    'customer_service'.tr,
-                    style: const TextStyle(fontSize: 10, color: _labelSecondary),
+            const SizedBox(height: 2),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                InkWell(
+                  onTap: _openSupportMail,
+                  borderRadius: BorderRadius.circular(4),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.support_agent_outlined, size: 12, color: _labelSecondary),
+                        const SizedBox(width: 4),
+                        Text(
+                          'customer_service'.tr,
+                          style: const TextStyle(fontSize: 10, color: _labelSecondary),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
-              const Text(
-                '  ·  ',
-                style: TextStyle(fontSize: 10, color: _labelSecondary),
-              ),
-              const Text(
-                'Orderix v0.1 Beta · by Smartlogy',
-                style: TextStyle(fontSize: 10, color: _labelSecondary),
-              ),
-            ],
-          ),
-        ],
+                ),
+                const Text(
+                  '  ·  ',
+                  style: TextStyle(fontSize: 10, color: _labelSecondary),
+                ),
+                Text(
+                  AppInfo.brandLine,
+                  style: const TextStyle(fontSize: 10, color: _labelSecondary),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  static const String _supportEmail = 'info@smartlogy.com.tr';
+
+  Future<void> _openSupportMail() async {
+    final uri = Uri(
+      scheme: 'mailto',
+      path: _supportEmail,
+      query: 'subject=Orderix%20Support',
+    );
+    bool launched = false;
+    try {
+      launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      launched = false;
+    }
+    if (!launched) {
+      await Clipboard.setData(const ClipboardData(text: _supportEmail));
+      AppToast.info(
+        _supportEmail,
+        title: 'E-posta adresi kopyalandı',
+        duration: const Duration(seconds: 3),
+      );
+    }
   }
 }
