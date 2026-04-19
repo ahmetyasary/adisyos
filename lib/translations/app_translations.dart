@@ -141,6 +141,18 @@ class AppTranslations extends Translations {
           'language': 'Dil',
           'save_settings': 'Kaydet',
 
+          // Danger zone / Account deletion (App Store 5.1.1(v))
+          'danger_zone': 'Tehlikeli Bölge',
+          'delete_account': 'Hesabı Sil',
+          'delete_account_subtitle':
+              'Hesabını ve tüm verilerini kalıcı olarak sil',
+          'delete_account_title': 'Hesabı Sil?',
+          'delete_account_warning':
+              'Bu işlem geri alınamaz. Hesabın, tüm siparişlerin, ürünlerin, personelin ve ayarların kalıcı olarak silinecek.',
+          'delete_account_confirm': 'Kalıcı Olarak Sil',
+          'delete_account_success': 'Hesabın silindi',
+          'delete_account_failed': 'Hesap silinemedi, tekrar dene',
+
           // Reports
           'reports_page': 'Raporlar',
           'daily_report': 'Günlük Rapor',
@@ -373,6 +385,18 @@ class AppTranslations extends Translations {
           'default_discount_hint': 'e.g. 10',
           'language': 'Language',
           'save_settings': 'Save',
+
+          // Danger zone / Account deletion (App Store 5.1.1(v))
+          'danger_zone': 'Danger Zone',
+          'delete_account': 'Delete Account',
+          'delete_account_subtitle':
+              'Permanently delete your account and all data',
+          'delete_account_title': 'Delete Account?',
+          'delete_account_warning':
+              'This cannot be undone. Your account and all orders, products, staff, and settings will be permanently deleted.',
+          'delete_account_confirm': 'Permanently Delete',
+          'delete_account_success': 'Your account was deleted',
+          'delete_account_failed': 'Could not delete account, try again',
 
           // Reports
           'reports_page': 'Reports',

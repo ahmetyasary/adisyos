@@ -1,6 +1,7 @@
 # Environment / secrets
 env.json
 .env.local
+.env.server.local
 .env
 
 # Miscellaneous

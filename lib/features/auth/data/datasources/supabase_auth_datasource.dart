@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 // Hide gotrue's AuthException so our sealed class wins.
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 import 'package:orderix/core/errors/auth_exception.dart';
@@ -101,6 +102,43 @@ class SupabaseAuthDataSource {
   }
 
   Future<void> signOut() => _client.auth.signOut();
+
+  /// Permanently deletes the current user via the `delete-account` Edge
+  /// Function (requires service role on the server). Signs out locally
+  /// afterwards so the session is cleared regardless of remote state.
+  Future<void> deleteAccount() async {
+    try {
+      final res = await _client.functions.invoke('delete-account');
+      // functions_client throws FunctionException on non-2xx, so reaching
+      // here means success. Status is sanity-checked anyway.
+      if (res.status >= 400) {
+        throw UnknownAuthException('delete-account returned ${res.status}');
+      }
+      await _client.auth.signOut();
+    } on FunctionException catch (e) {
+      debugPrint(
+        'deleteAccount FunctionException '
+        'status=${e.status} reason=${e.reasonPhrase} details=${e.details}',
+      );
+      throw UnknownAuthException(
+        'delete-account ${e.status}: ${e.details ?? e.reasonPhrase ?? ''}',
+      );
+    } on AuthException {
+      rethrow;
+    } on AuthApiException catch (e) {
+      debugPrint('deleteAccount AuthApiException ${e.statusCode} ${e.message}');
+      throw UnknownAuthException(e.message);
+    } catch (e, st) {
+      debugPrint('deleteAccount generic error: $e\n$st');
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('socket') ||
+          msg.contains('network') ||
+          msg.contains('connection')) {
+        throw const NetworkException();
+      }
+      throw UnknownAuthException(e.toString());
+    }
+  }
 
   User? get currentUser => _client.auth.currentUser;
 

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:orderix/core/errors/auth_exception.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/section_service.dart';
+import 'package:orderix/views/auth_screen.dart';
 import 'package:orderix/widgets/app_toast.dart';
 
 // ── Design tokens ─────────────────────────────────────────────
@@ -146,6 +148,12 @@ class _SettingsViewState extends State<SettingsView> {
 
                     // Save button
                     _SaveButton(saving: _saving, onTap: _save),
+                    const SizedBox(height: 28),
+
+                    // Danger zone — in-app account deletion (App Store 5.1.1(v))
+                    _SectionLabel('danger_zone'.tr),
+                    const SizedBox(height: 10),
+                    const _DeleteAccountCard(),
                   ],
                 ),
               ),
@@ -1055,5 +1063,121 @@ class _SaveButton extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// _DeleteAccountCard — App Store Guideline 5.1.1(v) compliance
+// ──────────────────────────────────────────────────────────────
+
+const _danger = Color(0xFFFF3B30);
+
+class _DeleteAccountCard extends StatelessWidget {
+  const _DeleteAccountCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _confirmDelete(context),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: _danger.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: const Icon(Icons.delete_forever_rounded,
+                      size: 18, color: _danger),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'delete_account'.tr,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: _danger,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'delete_account_subtitle'.tr,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: _textSec,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, color: _textSec),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        title: Text('delete_account_title'.tr),
+        content: Text('delete_account_warning'.tr),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text('cancel'.tr),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Get.back(result: true),
+            child: Text('delete_account_confirm'.tr),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
+    if (confirmed != true) return;
+
+    // Loading dialog — not dismissible while the network call runs.
+    Get.dialog(
+      const Center(
+        child: CircularProgressIndicator(color: _danger),
+      ),
+      barrierDismissible: false,
+    );
+
+    try {
+      await AuthController.to.deleteAccount();
+      StaffService.to.clearCurrentStaff();
+      if (Get.isDialogOpen ?? false) Get.back();
+      Get.offAll(() => const AuthScreen());
+      AppToast.success('delete_account_success'.tr);
+    } catch (e) {
+      if (Get.isDialogOpen ?? false) Get.back();
+      // Surface the raw error for easier debugging during development.
+      final detail = e is UnknownAuthException ? (e.detail ?? '') : e.toString();
+      AppToast.error(
+        detail.isEmpty
+            ? 'delete_account_failed'.tr
+            : '${'delete_account_failed'.tr}\n$detail',
+        duration: const Duration(seconds: 6),
+      );
+    }
   }
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -23,6 +22,7 @@ import 'package:orderix/guards/auth_middleware.dart';
 // Clean architecture layers
 import 'package:orderix/features/auth/data/datasources/supabase_auth_datasource.dart';
 import 'package:orderix/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:orderix/features/auth/domain/usecases/delete_account_usecase.dart';
 import 'package:orderix/features/auth/domain/usecases/login_usecase.dart';
 import 'package:orderix/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:orderix/features/auth/domain/usecases/get_current_user_usecase.dart';
@@ -32,12 +32,16 @@ import 'package:orderix/features/auth/presentation/controller/auth_controller.da
 import 'package:orderix/views/signup_screen.dart';
 import 'package:orderix/utils/app_info.dart';
 
+// Supabase credentials are injected at build time via `--dart-define` (or
+// `--dart-define-from-file=.env.local`). They are NEVER hardcoded and NEVER
+// bundled as an asset, so they cannot be read from the shipped .ipa/.apk.
+const String _kSupabaseUrl = String.fromEnvironment('SUPABASE_URL');
+const String _kSupabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await AppInfo.init();
-
-  await dotenv.load(fileName: '.env.local');
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -47,11 +51,12 @@ Future<void> main() async {
     ),
   );
 
-  final supabaseUrl = _envOrDefine('SUPABASE_URL');
-  final supabaseAnonKey = _envOrDefine('SUPABASE_ANON_KEY');
+  _assertEnv('SUPABASE_URL', _kSupabaseUrl);
+  _assertEnv('SUPABASE_ANON_KEY', _kSupabaseAnonKey);
+
   await Supabase.initialize(
-    url: supabaseUrl,
-    anonKey: supabaseAnonKey,
+    url: _kSupabaseUrl,
+    anonKey: _kSupabaseAnonKey,
   );
 
   _registerAuth();
@@ -72,10 +77,17 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
-String _envOrDefine(String name) {
-  final fromFile = dotenv.env[name]?.trim();
-  if (fromFile != null && fromFile.isNotEmpty) return fromFile;
-  return String.fromEnvironment(name);
+/// Fails fast at startup if a required build-time environment variable is
+/// missing. This prevents accidentally shipping a build without the correct
+/// Supabase credentials and makes the misconfiguration obvious in debug.
+void _assertEnv(String name, String value) {
+  if (value.trim().isEmpty) {
+    throw StateError(
+      'Missing required compile-time env var "$name". '
+      'Pass it via --dart-define=$name=... '
+      'or --dart-define-from-file=.env.local at build/run time.',
+    );
+  }
 }
 
 /// Wires the full clean-architecture auth graph.
@@ -89,6 +101,7 @@ void _registerAuth() {
     getCurrentUserUseCase: GetCurrentUserUseCase(repository),
     getUserRoleUseCase:    GetUserRoleUseCase(repository),
     signUpUseCase:         SignUpUseCase(repository),
+    deleteAccountUseCase:  DeleteAccountUseCase(repository),
   ));
 }
 

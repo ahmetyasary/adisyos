@@ -17,6 +17,10 @@ abstract interface class AuthRepository {
   /// Signs out and clears all local state.
   Future<void> logout();
 
+  /// Permanently deletes the current user's account and clears local state.
+  /// Throws a typed [AuthException] on failure.
+  Future<void> deleteAccount();
+
   /// Returns the cached [AuthUser] without a network call.
   /// Returns `null` if no session is active.
   AuthUser? getCurrentUser();

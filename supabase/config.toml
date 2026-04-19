@@ -1,0 +1,9 @@
+# Supabase project config. Only function-level settings are declared here
+# so the CLI picks them up when running `supabase functions deploy`.
+#
+# The delete-account function validates the caller's JWT itself via
+# `admin.auth.getUser(jwt)`, so Supabase's built-in JWT gate is both
+# redundant and was the source of the 401 we saw in the logs. Turn it off.
+
+[functions.delete-account]
+verify_jwt = false

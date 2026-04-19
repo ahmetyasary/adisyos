@@ -64,6 +64,14 @@ class AuthRepositoryImpl implements AuthRepository {
     _cachedUser = null;
   }
 
+  // ── deleteAccount ─────────────────────────────────────────
+
+  @override
+  Future<void> deleteAccount() async {
+    await _dataSource.deleteAccount();
+    _cachedUser = null;
+  }
+
   // ── getCurrentUser ────────────────────────────────────────
 
   @override

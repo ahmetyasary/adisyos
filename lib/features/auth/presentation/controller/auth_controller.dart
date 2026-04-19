@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser, AuthException;
 import 'package:orderix/core/errors/auth_exception.dart';
 import 'package:orderix/features/auth/domain/entities/auth_user.dart';
+import 'package:orderix/features/auth/domain/usecases/delete_account_usecase.dart';
 import 'package:orderix/features/auth/domain/usecases/login_usecase.dart';
 import 'package:orderix/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:orderix/features/auth/domain/usecases/get_current_user_usecase.dart';
@@ -21,23 +22,27 @@ class AuthController extends GetxService {
     required GetCurrentUserUseCase getCurrentUserUseCase,
     required GetUserRoleUseCase getUserRoleUseCase,
     required SignUpUseCase signUpUseCase,
+    required DeleteAccountUseCase deleteAccountUseCase,
   })  : _login = loginUseCase,
         _logout = logoutUseCase,
         _getCurrentUser = getCurrentUserUseCase,
         _getUserRole = getUserRoleUseCase,
-        _signUp = signUpUseCase;
+        _signUp = signUpUseCase,
+        _deleteAccount = deleteAccountUseCase;
 
   final LoginUseCase _login;
   final LogoutUseCase _logout;
   final GetCurrentUserUseCase _getCurrentUser;
   final GetUserRoleUseCase _getUserRole;
   final SignUpUseCase _signUp;
+  final DeleteAccountUseCase _deleteAccount;
 
   // ── Reactive state ────────────────────────────────────────
   final Rx<AuthUser?> user = Rx(null);
   final RxBool isLoading = false.obs;
   final RxBool isSigningUp = false.obs;
   final RxBool isRestoringSession = true.obs;
+  final RxBool isDeletingAccount = false.obs;
 
   // ── Convenience getters ───────────────────────────────────
   bool get isAuthenticated => user.value != null;
@@ -107,6 +112,18 @@ class AuthController extends GetxService {
   Future<void> logout() async {
     await _logout();
     user.value = null;
+  }
+
+  /// Permanently deletes the current user's account (Apple 5.1.1(v)).
+  /// Clears [user] on success. Throws a typed [AuthException] on failure.
+  Future<void> deleteAccount() async {
+    isDeletingAccount.value = true;
+    try {
+      await _deleteAccount();
+      user.value = null;
+    } finally {
+      isDeletingAccount.value = false;
+    }
   }
 
   /// Returns the cached [AuthUser] (no network call).

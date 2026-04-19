@@ -36,6 +36,13 @@ class EmailAlreadyInUseException extends AuthException {
 
 /// Catch-all for unexpected failures.
 class UnknownAuthException extends AuthException {
-  const UnknownAuthException([String? detail])
+  const UnknownAuthException([this.detail])
       : super('auth_error_generic');
+
+  /// Raw error detail for logging/debugging. Not for end-user display.
+  final String? detail;
+
+  @override
+  String toString() =>
+      detail == null ? 'AuthException($messageKey)' : 'AuthException($messageKey: $detail)';
 }
