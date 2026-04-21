@@ -8,6 +8,8 @@ import 'package:orderix/services/section_service.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/day_service.dart';
 import 'package:orderix/widgets/app_toast.dart';
+import 'package:orderix/widgets/app_dialog.dart';
+import 'package:orderix/widgets/responsive_content.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -303,22 +305,18 @@ class _TablesViewState extends State<TablesView> {
 
   void _showAddTableDialog() {
     final ctrl = TextEditingController();
-    Get.dialog(AlertDialog(
-      title: Text('add_table'.tr),
-      content: TextField(
+    AppDialog.form(
+      title: 'add_table'.tr,
+      confirmText: 'save'.tr,
+      cancelText: 'cancel'.tr,
+      onConfirm: () => _submitAddTable(ctrl),
+      body: AppDialogTextField(
         controller: ctrl,
-        decoration: InputDecoration(
-            labelText: 'table_name'.tr, border: const OutlineInputBorder()),
-        textCapitalization: TextCapitalization.characters,
+        label: 'table_name'.tr,
         autofocus: true,
-        onSubmitted: (_) => _submitAddTable(ctrl),
+        textCapitalization: TextCapitalization.characters,
       ),
-      actions: [
-        TextButton(onPressed: Get.back, child: Text('cancel'.tr)),
-        ElevatedButton(
-            onPressed: () => _submitAddTable(ctrl), child: Text('save'.tr)),
-      ],
-    ));
+    );
   }
 
   void _submitAddTable(TextEditingController ctrl) {
@@ -391,15 +389,22 @@ class _TablesViewState extends State<TablesView> {
                         ),
                         GestureDetector(
                           onTap: () => Navigator.pop(ctx),
-                          child: Container(
-                            width: 30,
-                            height: 30,
-                            decoration: BoxDecoration(
-                              color: _bg,
-                              borderRadius: BorderRadius.circular(15),
+                          behavior: HitTestBehavior.opaque,
+                          child: SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: Center(
+                              child: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: _bg,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: const Icon(Icons.close_rounded,
+                                    size: 15, color: _textSecondary),
+                              ),
                             ),
-                            child: const Icon(Icons.close_rounded,
-                                size: 15, color: _textSecondary),
                           ),
                         ),
                       ],
@@ -599,24 +604,18 @@ class _TablesViewState extends State<TablesView> {
     );
   }
 
-  void _showDeleteConfirmation(int index) {
+  void _showDeleteConfirmation(int index) async {
     final tableName = TableService.to.tables[index]['name'];
-    Get.dialog(AlertDialog(
-      title: Text('delete_table'.tr),
-      content: Text('delete_table_confirmation'.trParams({'s': tableName})),
-      actions: [
-        TextButton(onPressed: Get.back, child: Text('no'.tr)),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red, foregroundColor: Colors.white),
-          onPressed: () {
-            TableService.to.removeTable(index);
-            Get.back();
-          },
-          child: Text('yes'.tr),
-        ),
-      ],
-    ));
+    final ok = await AppDialog.confirm(
+      icon: Icons.delete_outline_rounded,
+      iconColor: const Color(0xFFFF3B30),
+      title: 'delete_table'.tr,
+      message: 'delete_table_confirmation'.trParams({'s': '$tableName'}),
+      confirmText: 'yes'.tr,
+      cancelText: 'no'.tr,
+      destructive: true,
+    );
+    if (ok) TableService.to.removeTable(index);
   }
 
   void _showTableContextMenu(
@@ -631,7 +630,7 @@ class _TablesViewState extends State<TablesView> {
         PopupMenuItem(
           value: 'edit',
           child: Row(children: [
-            const Icon(Icons.edit, color: Colors.blue),
+            const Icon(Icons.edit, color: Color(0xFF007AFF)),
             const SizedBox(width: 8),
             Text('edit'.tr),
           ]),
@@ -640,7 +639,7 @@ class _TablesViewState extends State<TablesView> {
           PopupMenuItem(
             value: 'delete',
             child: Row(children: [
-              const Icon(Icons.delete, color: Colors.red),
+              const Icon(Icons.delete, color: Color(0xFFFF3B30)),
               const SizedBox(width: 8),
               Text('delete'.tr),
             ]),
@@ -746,48 +745,51 @@ class _TablesViewState extends State<TablesView> {
               final free     = total - occupied;
               final sections = SectionService.to.sections;
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    child: Row(
-                      children: [
-                        Expanded(child: _StatBox(label: 'TOPLAM', value: '$total', valueColor: _textPrimary)),
-                        const SizedBox(width: 12),
-                        Expanded(child: _StatBox(label: 'DOLU',   value: '$occupied', valueColor: _occupied)),
-                        const SizedBox(width: 12),
-                        Expanded(child: _StatBox(label: 'BOŞ',    value: '$free',     valueColor: _available)),
-                      ],
-                    ),
-                  ),
-                  if (sections.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Obx(() => Row(
+              return ResponsiveContent(
+                width: ContentWidth.wide,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      child: Row(
                         children: [
-                          _SectionPill(
-                            label: 'Tümü',
-                            icon: Icons.dashboard_rounded,
-                            selected: _selectedSectionId.value == null,
-                            onTap: () => _selectedSectionId.value = null,
-                          ),
-                          ...sections.map((s) => Padding(
-                                padding: const EdgeInsets.only(left: 8),
-                                child: _SectionPill(
-                                  label: s['name'] as String,
-                                  icon: _getSectionIcon(s['name'] as String),
-                                  selected: _selectedSectionId.value == s['id'],
-                                  onTap: () => _selectedSectionId.value = s['id'] as String,
-                                ),
-                              )),
+                          Expanded(child: _StatBox(label: 'TOPLAM', value: '$total', valueColor: _textPrimary)),
+                          const SizedBox(width: 12),
+                          Expanded(child: _StatBox(label: 'DOLU',   value: '$occupied', valueColor: _occupied)),
+                          const SizedBox(width: 12),
+                          Expanded(child: _StatBox(label: 'BOŞ',    value: '$free',     valueColor: _available)),
                         ],
-                      )),
+                      ),
                     ),
+                    if (sections.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Obx(() => Row(
+                          children: [
+                            _SectionPill(
+                              label: 'Tümü',
+                              icon: Icons.dashboard_rounded,
+                              selected: _selectedSectionId.value == null,
+                              onTap: () => _selectedSectionId.value = null,
+                            ),
+                            ...sections.map((s) => Padding(
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: _SectionPill(
+                                    label: s['name'] as String,
+                                    icon: _getSectionIcon(s['name'] as String),
+                                    selected: _selectedSectionId.value == s['id'],
+                                    onTap: () => _selectedSectionId.value = s['id'] as String,
+                                  ),
+                                )),
+                          ],
+                        )),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               );
             }),
 
@@ -795,7 +797,9 @@ class _TablesViewState extends State<TablesView> {
 
             // ── Table grid ─────────────────────────────────
             Expanded(
-              child: Obx(() {
+              child: ResponsiveContent(
+                width: ContentWidth.wide,
+                child: Obx(() {
                 final allTables = TableService.to.tables;
                 final sectionId = _selectedSectionId.value;
                 
@@ -854,7 +858,8 @@ class _TablesViewState extends State<TablesView> {
 
                 return LayoutBuilder(builder: (context, constraints) {
                   final cols = constraints.maxWidth < 500 ? 3
-                      : constraints.maxWidth < 700 ? 4 : 6;
+                      : constraints.maxWidth < 820 ? 4
+                      : constraints.maxWidth < 1040 ? 5 : 6;
                   final compact = cols >= 3 && constraints.maxWidth < 500;
                   return GridView.builder(
                     padding: EdgeInsets.fromLTRB(16, 0, 16, MediaQuery.of(context).padding.bottom + 88),
@@ -900,6 +905,7 @@ class _TablesViewState extends State<TablesView> {
                   );
                 });
               }),
+              ),
             ),
           ],
         ),

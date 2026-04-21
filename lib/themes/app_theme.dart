@@ -2,28 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+/// Orderix uses a single light theme aligned with the iOS-inspired design
+/// language used across all views (orange brand + neutral surfaces).
+/// There is intentionally no dark theme: every screen hard-codes light
+/// surfaces, so exposing a dark theme would silently break contrast.
 class AppTheme {
-  // Profesyonel Renk Paleti
-  static const Color primaryColor = Color(0xFF2C3E50); // Koyu mavi-gri
-  static const Color secondaryColor = Color(0xFF34495E); // Orta ton mavi-gri
-  static const Color accentColor = Color(0xFF3498DB); // Canlı mavi
-  static const Color successColor = Color(0xFF27AE60); // Yeşil
-  static const Color warningColor = Color(0xFFF39C12); // Turuncu
-  static const Color errorColor = Color(0xFFE74C3C); // Kırmızı
-  static const Color infoColor = Color(0xFF5DADE2); // Açık mavi
+  // iOS system palette (brand)
+  static const Color primaryColor   = Color(0xFFFF9500); // iOS orange
+  static const Color secondaryColor = Color(0xFF8E8E93); // iOS secondary label
+  static const Color accentColor    = Color(0xFF007AFF); // iOS blue
+  static const Color successColor   = Color(0xFF34C759); // iOS green
+  static const Color warningColor   = Color(0xFFFF9500); // iOS orange
+  static const Color errorColor     = Color(0xFFFF3B30); // iOS red
+  static const Color infoColor      = Color(0xFF5AC8FA); // iOS teal
+
+  // Neutral surfaces
+  static const Color background     = Color(0xFFF2F2F7);
+  static const Color surface        = Colors.white;
+  static const Color labelPrimary   = Color(0xFF1C1C1E);
+  static const Color labelSecondary = Color(0xFF8E8E93);
+  static const Color separator      = Color(0xFFE5E5EA);
 
   static final ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
+    scaffoldBackgroundColor: background,
     colorScheme: const ColorScheme.light(
-      primary: primaryColor,
-      secondary: secondaryColor,
-      tertiary: accentColor,
-      error: errorColor,
-      surface: Colors.white,
-      onPrimary: Colors.white,
+      primary:     primaryColor,
+      secondary:   accentColor,
+      tertiary:    successColor,
+      error:       errorColor,
+      surface:     surface,
+      onPrimary:   Colors.white,
       onSecondary: Colors.white,
-      onSurface: Color(0xFF2C3E50),
+      onSurface:   labelPrimary,
     ),
     textTheme: GoogleFonts.poppinsTextTheme(),
     appBarTheme: const AppBarTheme(
@@ -34,32 +46,6 @@ class AppTheme {
         statusBarIconBrightness: Brightness.dark,
         statusBarBrightness: Brightness.light,
       ),
-    ),
-    cardTheme: const CardThemeData(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(16)),
-      ),
-    ),
-  );
-
-  static final ThemeData darkTheme = ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.dark,
-    colorScheme: const ColorScheme.dark(
-      primary: primaryColor,
-      secondary: secondaryColor,
-      tertiary: accentColor,
-      error: errorColor,
-      surface: Color(0xFF1A1A1A),
-      onPrimary: Colors.white,
-      onSecondary: Colors.white,
-      onSurface: Colors.white,
-    ),
-    textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
-    appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
     ),
     cardTheme: const CardThemeData(
       elevation: 2,

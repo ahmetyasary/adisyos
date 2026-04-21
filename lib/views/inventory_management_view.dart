@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:orderix/services/menu_service.dart';
 import 'package:orderix/services/inventory_service.dart';
+import 'package:orderix/widgets/app_dialog.dart';
+import 'package:orderix/widgets/responsive_content.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _bg          = Color(0xFFF2F2F7);
@@ -28,7 +30,9 @@ class InventoryManagementView extends StatelessWidget {
             _buildHeader(context),
             _buildAlertsBanner(),
             Expanded(
-              child: Obx(() {
+              child: ResponsiveContent(
+                width: ContentWidth.list,
+                child: Obx(() {
                 final menus = MenuService.to.menus;
                 if (menus.isEmpty) {
                   return Center(
@@ -81,6 +85,7 @@ class InventoryManagementView extends StatelessWidget {
                   },
                 );
               }),
+              ),
             ),
           ],
         ),
@@ -147,7 +152,9 @@ class InventoryManagementView extends StatelessWidget {
     return Obx(() {
       final lowItems = InventoryService.to.lowStockItems;
       if (lowItems.isEmpty) return const SizedBox();
-      return Container(
+      return ResponsiveContent(
+        width: ContentWidth.list,
+        child: Container(
         margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -169,6 +176,7 @@ class InventoryManagementView extends StatelessWidget {
             ),
           ],
         ),
+        ),
       );
     });
   }
@@ -187,62 +195,55 @@ class _InventoryItemCard extends StatelessWidget {
     final controller =
         TextEditingController(text: current == -1 ? '' : '$current');
 
-    Get.dialog(
-      AlertDialog(
-        title: Text(itemName,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Stok miktarı (boş bırakırsanız sınırsız olur)',
-              style: TextStyle(fontSize: 12, color: _textSec),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Miktar',
-                suffixText: 'adet',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          if (service.isTracked(itemName))
+    AppDialog.form(
+      title: itemName,
+      confirmText: 'Kaydet',
+      cancelText: 'İptal',
+      onConfirm: () {
+        final text = controller.text.trim();
+        if (text.isEmpty) {
+          service.removeTracking(itemName);
+        } else {
+          final count = int.tryParse(text);
+          if (count != null && count >= 0) {
+            service.setStock(itemName, count);
+          }
+        }
+        Get.back();
+      },
+      body: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Stok miktarı (boş bırakırsanız sınırsız olur)',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: _textSec),
+          ),
+          const SizedBox(height: 12),
+          AppDialogTextField(
+            controller: controller,
+            label: 'Miktar',
+            hintText: 'örn: 25',
+            autofocus: true,
+            keyboardType: TextInputType.number,
+          ),
+          if (service.isTracked(itemName)) ...[
+            const SizedBox(height: 12),
             TextButton(
               onPressed: () {
                 service.removeTracking(itemName);
                 Get.back();
               },
-              child: const Text('Takibi Kaldır',
-                  style: TextStyle(color: Colors.red)),
+              child: const Text(
+                'Takibi Kaldır',
+                style: TextStyle(
+                  color: Color(0xFFFF3B30),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: _orange, foregroundColor: Colors.white),
-            onPressed: () {
-              final text = controller.text.trim();
-              if (text.isEmpty) {
-                service.removeTracking(itemName);
-              } else {
-                final count = int.tryParse(text);
-                if (count != null && count >= 0) {
-                  service.setStock(itemName, count);
-                }
-              }
-              Get.back();
-            },
-            child: const Text('Kaydet'),
-          ),
+          ],
         ],
       ),
     );

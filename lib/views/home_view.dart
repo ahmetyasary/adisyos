@@ -15,6 +15,7 @@ import 'package:orderix/services/day_service.dart';
 import 'package:orderix/views/kitchen_display_view.dart';
 import 'package:orderix/views/inventory_management_view.dart';
 import 'package:orderix/widgets/app_toast.dart';
+import 'package:orderix/widgets/app_dialog.dart';
 import 'package:orderix/views/staff_report_view.dart';
 import 'package:orderix/views/shift_management_view.dart';
 import 'package:orderix/views/dashboard_view.dart';
@@ -25,6 +26,7 @@ import 'package:orderix/views/settings_view.dart';
 import 'package:orderix/views/tables_view.dart';
 import 'package:orderix/views/day_management_view.dart';
 import 'package:orderix/utils/app_info.dart';
+import 'package:orderix/widgets/responsive_content.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
@@ -247,10 +249,10 @@ class _HomeViewState extends State<HomeView> {
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
-                  height: 46,
+                  height: 50,
                   child: ElevatedButton(
                     onPressed: Get.back,
                     style: ElevatedButton.styleFrom(
@@ -258,10 +260,11 @@ class _HomeViewState extends State<HomeView> {
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(14)),
                     ),
                     child: const Text('Tamam',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 15)),
                   ),
                 ),
               ],
@@ -272,8 +275,17 @@ class _HomeViewState extends State<HomeView> {
       return;
     }
 
-    final confirmed = await Get.dialog<bool>(_EndDayConfirmDialog());
-    if (confirmed != true) return;
+    final confirmed = await AppDialog.confirm(
+      icon: Icons.nights_stay_rounded,
+      iconColor: const Color(0xFFFF3B30),
+      title: 'Günü Bitir',
+      message:
+          'Günü bitirmek istediğinize emin misiniz?\nGün bitince yeni sipariş alınamaz.',
+      confirmText: 'Günü Bitir',
+      cancelText: 'Vazgeç',
+      destructive: true,
+    );
+    if (!confirmed) return;
 
     final success = await DayService.to.endDay(_currentIdentifier);
     if (success) {
@@ -323,7 +335,7 @@ class _HomeViewState extends State<HomeView> {
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -337,7 +349,8 @@ class _HomeViewState extends State<HomeView> {
                           borderRadius: BorderRadius.circular(14)),
                     ),
                     child: const Text('Tamam',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 15)),
                   ),
                 ),
               ],
@@ -532,12 +545,10 @@ class _TopBar extends StatelessWidget {
             icon: Icons.notifications_none_rounded,
             onTap: () => onNavigate('notifications'),
           ),
-          const SizedBox(width: 6),
           _TopBarIconButton(
             icon: Icons.settings_outlined,
             onTap: () => onNavigate('settings'),
           ),
-          const SizedBox(width: 6),
           _TopBarIconButton(
             icon: Icons.logout_rounded,
             onTap: onLogout,
@@ -568,22 +579,30 @@ class _TopBarIconButtonState extends State<_TopBarIconButton> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
       onExit:  (_) => setState(() => _hovered = false),
       child: GestureDetector(
         onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: _hovered ? _separator : _bg,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            widget.icon,
-            color: _hovered ? _labelPrimary : _labelSecondary,
-            size: 18,
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: _hovered ? _separator : _bg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                widget.icon,
+                color: _hovered ? _labelPrimary : _labelSecondary,
+                size: 18,
+              ),
+            ),
           ),
         ),
       ),
@@ -612,20 +631,23 @@ class _MainContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _DayToggleCard(onStartDay: onStartDay, onEndDay: onEndDay),
-          const SizedBox(height: 16),
-          const _SectionHeader(label: 'Genel Bakış'),
-          const SizedBox(height: 12),
-          _StatsRow(),
-          const SizedBox(height: 28),
-          const _SectionHeader(label: 'Modüller'),
-          const SizedBox(height: 12),
-          _FeatureGrid(cards: cards, onNavigate: onNavigate),
-          const SizedBox(height: 8),
-        ],
+      child: ResponsiveContent(
+        width: ContentWidth.dashboard,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _DayToggleCard(onStartDay: onStartDay, onEndDay: onEndDay),
+            const SizedBox(height: 16),
+            const _SectionHeader(label: 'Genel Bakış'),
+            const SizedBox(height: 12),
+            _StatsRow(),
+            const SizedBox(height: 28),
+            const _SectionHeader(label: 'Modüller'),
+            const SizedBox(height: 12),
+            _FeatureGrid(cards: cards, onNavigate: onNavigate),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
@@ -1326,105 +1348,6 @@ class _DayToggleCard extends StatelessWidget {
         ),
       );
     });
-  }
-}
-
-// ──────────────────────────────────────────────────────────────
-// _EndDayConfirmDialog
-// ──────────────────────────────────────────────────────────────
-
-class _EndDayConfirmDialog extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: _card,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF3B30).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: const Icon(
-                Icons.nights_stay_rounded,
-                size: 32,
-                color: Color(0xFFFF3B30),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              'Günü Bitir',
-              style: GoogleFonts.poppins(
-                fontSize: 19,
-                fontWeight: FontWeight.w600,
-                color: _labelPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Günü bitirmek istediğinize emin misiniz?\nGün bitince yeni sipariş alınamaz.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: _labelSecondary,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 46,
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(result: false),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _labelPrimary,
-                        side: const BorderSide(color: _separator),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Vazgeç',
-                        style: TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: SizedBox(
-                    height: 46,
-                    child: ElevatedButton(
-                      onPressed: () => Get.back(result: true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF3B30),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Günü Bitir',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

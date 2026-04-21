@@ -6,6 +6,8 @@ import 'package:orderix/services/menu_service.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/themes/app_theme.dart';
 import 'package:orderix/widgets/app_toast.dart';
+import 'package:orderix/widgets/app_dialog.dart';
+import 'package:orderix/widgets/responsive_content.dart';
 
 // ── Design tokens ──────────────────────────────────────────────
 const _bg          = Color(0xFFF2F2F7);
@@ -96,28 +98,17 @@ class _MenuManagementViewState extends State<MenuManagementView> {
     );
   }
 
-  void _showDeleteMenuConfirmation(int menuIndex, String menuName) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('delete_menu'.tr),
-        content: Text('"$menuName" ${'delete_menu_confirm'.tr}'),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: Text('cancel'.tr)),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.errorColor,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              MenuService.to.removeMenu(menuIndex);
-              Navigator.of(context).pop();
-            },
-            child: Text('delete'.tr),
-          ),
-        ],
-      ),
+  void _showDeleteMenuConfirmation(int menuIndex, String menuName) async {
+    final ok = await AppDialog.confirm(
+      icon: Icons.delete_outline_rounded,
+      iconColor: const Color(0xFFFF3B30),
+      title: 'delete_menu'.tr,
+      message: '"$menuName" ${'delete_menu_confirm'.tr}',
+      confirmText: 'delete'.tr,
+      cancelText: 'cancel'.tr,
+      destructive: true,
     );
+    if (ok) MenuService.to.removeMenu(menuIndex);
   }
 
   void _showAddItemDialog(int menuIndex) {
@@ -229,7 +220,9 @@ class _MenuManagementViewState extends State<MenuManagementView> {
 
             // ── Content ──────────────────────────────────
             Expanded(
-              child: Obx(
+              child: ResponsiveContent(
+                width: ContentWidth.list,
+                child: Obx(
                 () => MenuService.to.menus.isEmpty
                     ? Center(
                         child: Column(
@@ -301,6 +294,7 @@ class _MenuManagementViewState extends State<MenuManagementView> {
                           );
                         },
                       ),
+                ),
               ),
             ),
           ],
@@ -674,9 +668,10 @@ class _ItemFormDialogState extends State<_ItemFormDialog> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _orange,
                       foregroundColor: Colors.white,
-                      minimumSize: const Size(90, 42),
+                      minimumSize: const Size(96, 44),
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(14)),
                     ),
                     onPressed: _isLoading ? null : _save,
                     child: _isLoading

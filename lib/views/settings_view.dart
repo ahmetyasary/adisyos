@@ -10,9 +10,11 @@ import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/section_service.dart';
 import 'package:orderix/views/auth_screen.dart';
 import 'package:orderix/widgets/app_toast.dart';
+import 'package:orderix/widgets/app_dialog.dart';
+import 'package:orderix/widgets/responsive_content.dart';
 
 const _privacyUrl = 'https://orderix.tr/privacy';
-const _termsUrl   = 'https://orderix.tr/termsofuse';
+const _termsUrl   = 'https://orderix.tr/terms';
 
 // ── Design tokens ─────────────────────────────────────────────
 const _bg          = Color(0xFFF2F2F7);
@@ -123,9 +125,11 @@ class _SettingsViewState extends State<SettingsView> {
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
+                child: ResponsiveContent(
+                  width: ContentWidth.form,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                     // Account card
                     _AccountCard(),
                     const SizedBox(height: 28),
@@ -193,7 +197,8 @@ class _SettingsViewState extends State<SettingsView> {
                     _SectionLabel('danger_zone'.tr),
                     const SizedBox(height: 10),
                     const _DeleteAccountCard(),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -696,46 +701,36 @@ class _StaffManagementCard extends StatelessWidget {
   void _showAddStaffDialog(BuildContext context) {
     final nameCtrl = TextEditingController();
     final pinCtrl  = TextEditingController();
-    Get.dialog(AlertDialog(
-      title: const Text('Personel Ekle'),
-      content: Column(
+    AppDialog.form(
+      title: 'Personel Ekle',
+      confirmText: 'Ekle',
+      onConfirm: () async {
+        final name = nameCtrl.text.trim();
+        final pin  = pinCtrl.text.trim();
+        if (name.isEmpty || pin.length != 4) return;
+        await StaffService.to.addStaff(name, pin);
+        Get.back();
+      },
+      body: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(
+          AppDialogTextField(
             controller: nameCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Ad Soyad',
-              border: OutlineInputBorder(),
-            ),
+            label: 'Ad Soyad',
+            autofocus: true,
             textCapitalization: TextCapitalization.words,
           ),
-          const SizedBox(height: 12),
-          TextField(
+          const SizedBox(height: 14),
+          AppDialogTextField(
             controller: pinCtrl,
-            decoration: const InputDecoration(
-              labelText: '4 Haneli PIN',
-              border: OutlineInputBorder(),
-            ),
+            label: '4 Haneli PIN',
             keyboardType: TextInputType.number,
             maxLength: 4,
             obscureText: true,
           ),
         ],
       ),
-      actions: [
-        TextButton(onPressed: Get.back, child: const Text('İptal')),
-        ElevatedButton(
-          onPressed: () async {
-            final name = nameCtrl.text.trim();
-            final pin  = pinCtrl.text.trim();
-            if (name.isEmpty || pin.length != 4) return;
-            await StaffService.to.addStaff(name, pin);
-            Get.back();
-          },
-          child: const Text('Ekle'),
-        ),
-      ],
-    ));
+    );
   }
 }
 
@@ -779,14 +774,14 @@ class _StaffRow extends StatelessWidget {
             icon: const Icon(Icons.edit_outlined, size: 18, color: _textSec),
             onPressed: () => _showEditDialog(context),
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
           // Delete button
           IconButton(
             icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFFF3B30)),
             onPressed: () => _confirmDelete(context),
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
         ],
       ),
@@ -796,71 +791,56 @@ class _StaffRow extends StatelessWidget {
   void _showEditDialog(BuildContext context) {
     final nameCtrl = TextEditingController(text: staff['name'] as String);
     final pinCtrl  = TextEditingController();
-    Get.dialog(AlertDialog(
-      title: const Text('Personeli Düzenle'),
-      content: Column(
+    AppDialog.form(
+      title: 'Personeli Düzenle',
+      confirmText: 'Kaydet',
+      onConfirm: () async {
+        final name = nameCtrl.text.trim();
+        final pin  = pinCtrl.text.trim().isEmpty
+            ? staff['pin'] as String
+            : pinCtrl.text.trim();
+        if (name.isEmpty) return;
+        await StaffService.to.updateStaff(
+          staff['id'] as String,
+          name: name,
+          pin: pin,
+        );
+        Get.back();
+      },
+      body: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(
+          AppDialogTextField(
             controller: nameCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Ad Soyad',
-              border: OutlineInputBorder(),
-            ),
+            label: 'Ad Soyad',
+            autofocus: true,
             textCapitalization: TextCapitalization.words,
           ),
-          const SizedBox(height: 12),
-          TextField(
+          const SizedBox(height: 14),
+          AppDialogTextField(
             controller: pinCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Yeni PIN (boş bırakın = değişmesin)',
-              border: OutlineInputBorder(),
-            ),
+            label: 'Yeni PIN',
+            hintText: 'Boş bırakın = değişmesin',
             keyboardType: TextInputType.number,
             maxLength: 4,
             obscureText: true,
           ),
         ],
       ),
-      actions: [
-        TextButton(onPressed: Get.back, child: const Text('İptal')),
-        ElevatedButton(
-          onPressed: () async {
-            final name = nameCtrl.text.trim();
-            final pin  = pinCtrl.text.trim().isEmpty
-                ? staff['pin'] as String
-                : pinCtrl.text.trim();
-            if (name.isEmpty) return;
-            await StaffService.to.updateStaff(
-              staff['id'] as String,
-              name: name,
-              pin: pin,
-            );
-            Get.back();
-          },
-          child: const Text('Kaydet'),
-        ),
-      ],
-    ));
+    );
   }
 
-  void _confirmDelete(BuildContext context) {
-    Get.dialog(AlertDialog(
-      title: const Text('Personeli Sil'),
-      content: Text('${staff['name']} silinsin mi?'),
-      actions: [
-        TextButton(onPressed: Get.back, child: const Text('İptal')),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red, foregroundColor: Colors.white),
-          onPressed: () async {
-            await StaffService.to.deleteStaff(staff['id'] as String);
-            Get.back();
-          },
-          child: const Text('Sil'),
-        ),
-      ],
-    ));
+  void _confirmDelete(BuildContext context) async {
+    final ok = await AppDialog.confirm(
+      icon: Icons.delete_outline_rounded,
+      iconColor: const Color(0xFFFF3B30),
+      title: 'Personeli Sil',
+      message: '${staff['name']} silinsin mi?',
+      confirmText: 'Sil',
+      cancelText: 'İptal',
+      destructive: true,
+    );
+    if (ok) await StaffService.to.deleteStaff(staff['id'] as String);
   }
 }
 
@@ -923,29 +903,22 @@ class _SectionsCard extends StatelessWidget {
 
   void _showAddDialog(BuildContext context) {
     final ctrl = TextEditingController();
-    Get.dialog(AlertDialog(
-      title: const Text('Bölüm Ekle'),
-      content: TextField(
+    AppDialog.form(
+      title: 'Bölüm Ekle',
+      confirmText: 'Ekle',
+      onConfirm: () async {
+        if (ctrl.text.trim().isEmpty) return;
+        await SectionService.to.addSection(ctrl.text.trim());
+        Get.back();
+      },
+      body: AppDialogTextField(
         controller: ctrl,
-        decoration: const InputDecoration(
-          labelText: 'Bölüm Adı (örn: İç Alan, Bahçe)',
-          border: OutlineInputBorder(),
-        ),
-        textCapitalization: TextCapitalization.words,
+        label: 'Bölüm Adı',
+        hintText: 'örn: İç Alan, Bahçe',
         autofocus: true,
+        textCapitalization: TextCapitalization.words,
       ),
-      actions: [
-        TextButton(onPressed: Get.back, child: const Text('İptal')),
-        ElevatedButton(
-          onPressed: () async {
-            if (ctrl.text.trim().isEmpty) return;
-            await SectionService.to.addSection(ctrl.text.trim());
-            Get.back();
-          },
-          child: const Text('Ekle'),
-        ),
-      ],
-    ));
+    );
   }
 }
 
@@ -981,14 +954,14 @@ class _SectionRow extends StatelessWidget {
             icon: const Icon(Icons.edit_outlined, size: 18, color: _textSec),
             onPressed: () => _showEditDialog(context),
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline_rounded,
                 size: 18, color: Color(0xFFFF3B30)),
             onPressed: () => _confirmDelete(),
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
         ],
       ),
@@ -997,49 +970,35 @@ class _SectionRow extends StatelessWidget {
 
   void _showEditDialog(BuildContext context) {
     final ctrl = TextEditingController(text: section['name'] as String);
-    Get.dialog(AlertDialog(
-      title: const Text('Bölümü Düzenle'),
-      content: TextField(
+    AppDialog.form(
+      title: 'Bölümü Düzenle',
+      confirmText: 'Kaydet',
+      onConfirm: () async {
+        if (ctrl.text.trim().isEmpty) return;
+        await SectionService.to.updateSection(
+            section['id'] as String, ctrl.text.trim());
+        Get.back();
+      },
+      body: AppDialogTextField(
         controller: ctrl,
-        decoration: const InputDecoration(
-          labelText: 'Bölüm Adı',
-          border: OutlineInputBorder(),
-        ),
-        textCapitalization: TextCapitalization.words,
+        label: 'Bölüm Adı',
         autofocus: true,
+        textCapitalization: TextCapitalization.words,
       ),
-      actions: [
-        TextButton(onPressed: Get.back, child: const Text('İptal')),
-        ElevatedButton(
-          onPressed: () async {
-            if (ctrl.text.trim().isEmpty) return;
-            await SectionService.to.updateSection(
-                section['id'] as String, ctrl.text.trim());
-            Get.back();
-          },
-          child: const Text('Kaydet'),
-        ),
-      ],
-    ));
+    );
   }
 
-  void _confirmDelete() {
-    Get.dialog(AlertDialog(
-      title: const Text('Bölümü Sil'),
-      content: Text('"${section['name']}" silinsin mi?'),
-      actions: [
-        TextButton(onPressed: Get.back, child: const Text('İptal')),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red, foregroundColor: Colors.white),
-          onPressed: () async {
-            await SectionService.to.deleteSection(section['id'] as String);
-            Get.back();
-          },
-          child: const Text('Sil'),
-        ),
-      ],
-    ));
+  void _confirmDelete() async {
+    final ok = await AppDialog.confirm(
+      icon: Icons.delete_outline_rounded,
+      iconColor: const Color(0xFFFF3B30),
+      title: 'Bölümü Sil',
+      message: '"${section['name']}" silinsin mi?',
+      confirmText: 'Sil',
+      cancelText: 'İptal',
+      destructive: true,
+    );
+    if (ok) await SectionService.to.deleteSection(section['id'] as String);
   }
 }
 
@@ -1260,28 +1219,16 @@ class _DeleteAccountCard extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
-    final confirmed = await Get.dialog<bool>(
-      AlertDialog(
-        title: Text('delete_account_title'.tr),
-        content: Text('delete_account_warning'.tr),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: Text('cancel'.tr),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _danger,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Get.back(result: true),
-            child: Text('delete_account_confirm'.tr),
-          ),
-        ],
-      ),
-      barrierDismissible: false,
+    final confirmed = await AppDialog.confirm(
+      icon: Icons.warning_amber_rounded,
+      iconColor: _danger,
+      title: 'delete_account_title'.tr,
+      message: 'delete_account_warning'.tr,
+      confirmText: 'delete_account_confirm'.tr,
+      cancelText: 'cancel'.tr,
+      destructive: true,
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     // Loading dialog — not dismissible while the network call runs.
     Get.dialog(

@@ -11,6 +11,7 @@ import 'package:orderix/services/inventory_service.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/themes/app_theme.dart';
 import 'package:orderix/widgets/app_toast.dart';
+import 'package:orderix/widgets/app_dialog.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _bg            = Color(0xFFF2F2F7);
@@ -2182,30 +2183,19 @@ class _TableDetailViewState extends State<TableDetailView> {
       return;
     }
 
-    Get.dialog(
-      AlertDialog(
-        title: Text('clear_table'.tr),
-        content: Text('clear_table_confirm'.tr),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text('cancel'.tr),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.errorColor,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              TableService.to.clearTable(widget.tableIndex);
-              Get.back();
-              AppToast.success('table_cleared'.tr, title: 'success'.tr);
-            },
-            child: Text('clear'.tr),
-          ),
-        ],
-      ),
-    );
+    AppDialog.confirm(
+      icon: Icons.delete_sweep_rounded,
+      iconColor: AppTheme.errorColor,
+      title: 'clear_table'.tr,
+      message: 'clear_table_confirm'.tr,
+      confirmText: 'clear'.tr,
+      cancelText: 'cancel'.tr,
+      destructive: true,
+    ).then((ok) {
+      if (!ok) return;
+      TableService.to.clearTable(widget.tableIndex);
+      AppToast.success('table_cleared'.tr, title: 'success'.tr);
+    });
   }
 
   // Apply discount
@@ -2218,55 +2208,58 @@ class _TableDetailViewState extends State<TableDetailView> {
 
     final TextEditingController discountController = TextEditingController();
 
-    Get.dialog(
-      AlertDialog(
-        title: Text('apply_discount'.tr),
-        content: SizedBox(
-          width: 300,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '${'total'.tr}: ${SettingsService.cs}${TableService.to.getTotal(widget.tableIndex).toStringAsFixed(2)}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: discountController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                autofocus: true,
-                decoration: InputDecoration(
-                  labelText: 'discount_percent'.tr,
-                  border: const OutlineInputBorder(),
-                  suffixText: '%',
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text('cancel'.tr),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.warningColor,
-              foregroundColor: Colors.white,
+    AppDialog.form(
+      title: 'apply_discount'.tr,
+      confirmText: 'apply'.tr,
+      cancelText: 'cancel'.tr,
+      onConfirm: () {
+        final discount = double.tryParse(discountController.text);
+        if (discount != null && discount > 0 && discount <= 100) {
+          TableService.to.applyDiscount(widget.tableIndex, discount);
+          Get.back();
+          AppToast.success('discount_applied'.tr, title: 'success'.tr);
+        } else {
+          AppToast.error('valid_discount'.tr, title: 'error'.tr);
+        }
+      },
+      body: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF2F2F7),
+              borderRadius: BorderRadius.circular(12),
             ),
-            onPressed: () {
-              final discount = double.tryParse(discountController.text);
-              if (discount != null && discount > 0 && discount <= 100) {
-                TableService.to
-                    .applyDiscount(widget.tableIndex, discount);
-                Get.back();
-                AppToast.success('discount_applied'.tr, title: 'success'.tr);
-              } else {
-                AppToast.error('valid_discount'.tr, title: 'error'.tr);
-              }
-            },
-            child: Text('apply'.tr),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'total'.tr,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF8E8E93),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  '${SettingsService.cs}${TableService.to.getTotal(widget.tableIndex).toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1C1C1E),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          AppDialogTextField(
+            controller: discountController,
+            label: 'discount_percent'.tr,
+            autofocus: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
           ),
         ],
       ),
@@ -2495,17 +2488,24 @@ class _TableDetailViewState extends State<TableDetailView> {
                       ),
                       GestureDetector(
                         onTap: () => Navigator.pop(ctx),
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            color: _bg,
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          child: const Icon(
-                            Icons.close_rounded,
-                            size: 16,
-                            color: _textSecondary,
+                        behavior: HitTestBehavior.opaque,
+                        child: SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: Center(
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: _bg,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Icon(
+                                Icons.close_rounded,
+                                size: 16,
+                                color: _textSecondary,
+                              ),
+                            ),
                           ),
                         ),
                       ),

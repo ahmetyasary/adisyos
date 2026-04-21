@@ -9,7 +9,7 @@ import 'package:orderix/views/pin_screen.dart';
 import 'package:orderix/utils/app_info.dart';
 
 const _privacyUrl = 'https://orderix.tr/privacy';
-const _termsUrl   = 'https://orderix.tr/termsofuse';
+const _termsUrl   = 'https://orderix.tr/terms';
 
 // ── Design tokens — identical to AuthScreen ───────────────────
 const _bg          = Color(0xFFF2F2F7);
