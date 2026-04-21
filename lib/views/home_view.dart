@@ -1438,7 +1438,7 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = companyName.isNotEmpty ? companyName : 'Şirket Adınızı Giriniz';
+    final name = companyName.isNotEmpty ? companyName : 'company_name_empty'.tr;
 
     return Container(
       decoration: const BoxDecoration(

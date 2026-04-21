@@ -170,31 +170,33 @@ class _AuthScreenState extends State<AuthScreen>
                     position: _slideAnim,
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 440),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Brand above the card
-                          _BrandHero(),
-                          const SizedBox(height: 32),
+                      child: AutofillGroup(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Brand above the card
+                            _BrandHero(),
+                            const SizedBox(height: 32),
 
-                          // Login card (with sign-up link at the bottom)
-                          _LoginCard(
-                            formKey:          _formKey,
-                            emailCtrl:        _emailCtrl,
-                            passwordCtrl:     _passwordCtrl,
-                            obscurePassword:  _obscurePassword,
-                            errorMessage:     _errorMessage,
-                            onTogglePassword: () => setState(
-                                () => _obscurePassword = !_obscurePassword),
-                            onLoginPressed:   _onLoginPressed,
-                          ),
+                            // Login card (with sign-up link at the bottom)
+                            _LoginCard(
+                              formKey:          _formKey,
+                              emailCtrl:        _emailCtrl,
+                              passwordCtrl:     _passwordCtrl,
+                              obscurePassword:  _obscurePassword,
+                              errorMessage:     _errorMessage,
+                              onTogglePassword: () => setState(
+                                  () => _obscurePassword = !_obscurePassword),
+                              onLoginPressed:   _onLoginPressed,
+                            ),
 
-                          const SizedBox(height: 20),
-                          _SignUpLink(),
+                            const SizedBox(height: 20),
+                            _SignUpLink(),
 
-                          const SizedBox(height: 28),
-                          _BottomFooter(),
-                        ],
+                            const SizedBox(height: 28),
+                            _BottomFooter(),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -436,9 +438,9 @@ class _LoginCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Section heading
-            const Text(
-              'Giriş Yap',
-              style: TextStyle(
+            Text(
+              'auth_login_title'.tr,
+              style: const TextStyle(
                 fontSize:    22,
                 fontWeight:  FontWeight.w800,
                 color:       _textPrimary,
@@ -446,9 +448,9 @@ class _LoginCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
-              'Hesabınıza erişmek için giriş yapın',
-              style: TextStyle(fontSize: 13, color: _textSec),
+            Text(
+              'auth_login_subtitle'.tr,
+              style: const TextStyle(fontSize: 13, color: _textSec),
             ),
             const SizedBox(height: 28),
 
@@ -461,6 +463,7 @@ class _LoginCard extends StatelessWidget {
               prefixIcon:      Icons.alternate_email_rounded,
               keyboardType:    TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
+              autofillHints:   const [AutofillHints.username, AutofillHints.email],
               validator: (v) {
                 if (v == null || v.trim().isEmpty)    return 'auth_email_required'.tr;
                 if (!v.contains('@') || !v.contains('.')) return 'auth_email_invalid'.tr;
@@ -478,6 +481,7 @@ class _LoginCard extends StatelessWidget {
               prefixIcon:      Icons.lock_outline_rounded,
               obscureText:     obscurePassword,
               textInputAction: TextInputAction.done,
+              autofillHints:   const [AutofillHints.password],
               suffixIcon: GestureDetector(
                 onTap: onTogglePassword,
                 child: Padding(
@@ -541,7 +545,7 @@ class _FieldLabel extends StatelessWidget {
 // _AuthTextField
 // ─────────────────────────────────────────────────────────────
 
-class _AuthTextField extends StatelessWidget {
+class _AuthTextField extends StatefulWidget {
   const _AuthTextField({
     required this.controller,
     required this.hint,
@@ -552,6 +556,7 @@ class _AuthTextField extends StatelessWidget {
     this.suffixIcon,
     this.validator,
     this.onFieldSubmitted,
+    this.autofillHints,
   });
 
   final TextEditingController       controller;
@@ -561,32 +566,67 @@ class _AuthTextField extends StatelessWidget {
   final TextInputType?              keyboardType;
   final TextInputAction?            textInputAction;
   final Widget?                     suffixIcon;
-  final String? Function(String?)? validator;
+  final String? Function(String?)?  validator;
   final void Function(String)?      onFieldSubmitted;
+  final Iterable<String>?           autofillHints;
+
+  @override
+  State<_AuthTextField> createState() => _AuthTextFieldState();
+}
+
+class _AuthTextFieldState extends State<_AuthTextField> {
+  final FocusNode _focusNode = FocusNode();
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      if (_focusNode.hasFocus != _isFocused) {
+        setState(() => _isFocused = _focusNode.hasFocus);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
-      controller:      controller,
-      obscureText:     obscureText,
-      keyboardType:    keyboardType,
-      textInputAction: textInputAction,
-      validator:       validator,
-      onFieldSubmitted: onFieldSubmitted,
+      controller:       widget.controller,
+      focusNode:        _focusNode,
+      obscureText:      widget.obscureText,
+      keyboardType:     widget.keyboardType,
+      textInputAction:  widget.textInputAction,
+      validator:        widget.validator,
+      onFieldSubmitted: widget.onFieldSubmitted,
+      autofillHints:    widget.autofillHints,
       style: const TextStyle(
         fontSize:   14,
         color:      _textPrimary,
         fontWeight: FontWeight.w500,
       ),
       decoration: InputDecoration(
-        hintText:  hint,
+        hintText:  widget.hint,
         hintStyle: const TextStyle(color: _textSec, fontSize: 14),
         prefixIcon: Padding(
           padding: const EdgeInsets.only(left: 16, right: 12),
-          child: Icon(prefixIcon, size: 20, color: _textSec),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: Icon(
+              widget.prefixIcon,
+              key:   ValueKey<bool>(_isFocused),
+              size:  20,
+              color: _isFocused ? _orange : _textSec,
+            ),
+          ),
         ),
         prefixIconConstraints: const BoxConstraints(),
-        suffixIcon: suffixIcon,
+        suffixIcon: widget.suffixIcon,
         filled:    true,
         fillColor: const Color(0xFFF9F9FB),
         contentPadding:
@@ -666,61 +706,77 @@ class _ErrorBanner extends StatelessWidget {
 // _LoginButton
 // ─────────────────────────────────────────────────────────────
 
-class _LoginButton extends StatelessWidget {
+class _LoginButton extends StatefulWidget {
   const _LoginButton({required this.onPressed});
   final VoidCallback onPressed;
+
+  @override
+  State<_LoginButton> createState() => _LoginButtonState();
+}
+
+class _LoginButtonState extends State<_LoginButton> {
+  bool _isPressed = false;
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
       final isLoading = AuthController.to.isLoading.value;
+      final disabled  = isLoading;
 
       return GestureDetector(
-        onTap: isLoading ? null : onPressed,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          width:  double.infinity,
-          height: 54,
-          decoration: BoxDecoration(
-            color: isLoading
-                ? _orange.withValues(alpha: 0.55)
-                : _orange,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: isLoading
-                ? []
-                : const [
-                    BoxShadow(
-                      color:      Color(0x55FF9500),
-                      blurRadius: 18,
-                      offset:     Offset(0, 7),
+        onTapDown:   disabled ? null : (_) => setState(() => _isPressed = true),
+        onTapUp:     disabled ? null : (_) => setState(() => _isPressed = false),
+        onTapCancel: disabled ? null : () => setState(() => _isPressed = false),
+        onTap:       disabled ? null : widget.onPressed,
+        child: AnimatedScale(
+          scale:    _isPressed ? 0.97 : 1.0,
+          duration: const Duration(milliseconds: 120),
+          curve:    Curves.easeOut,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width:  double.infinity,
+            height: 54,
+            decoration: BoxDecoration(
+              color: isLoading
+                  ? _orange.withValues(alpha: 0.55)
+                  : _orange,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: isLoading
+                  ? []
+                  : const [
+                      BoxShadow(
+                        color:      Color(0x55FF9500),
+                        blurRadius: 18,
+                        offset:     Offset(0, 7),
+                      ),
+                      BoxShadow(
+                        color:      Color(0x22FF9500),
+                        blurRadius: 5,
+                        offset:     Offset(0, 2),
+                      ),
+                    ],
+            ),
+            child: Center(
+              child: isLoading
+                  ? const SizedBox(
+                      width:  22,
+                      height: 22,
+                      child:  CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      'auth_login'.tr,
+                      style: const TextStyle(
+                        fontSize:    15,
+                        fontWeight:  FontWeight.w700,
+                        color:       Colors.white,
+                        letterSpacing: 0.3,
+                      ),
                     ),
-                    BoxShadow(
-                      color:      Color(0x22FF9500),
-                      blurRadius: 5,
-                      offset:     Offset(0, 2),
-                    ),
-                  ],
-          ),
-          child: Center(
-            child: isLoading
-                ? const SizedBox(
-                    width:  22,
-                    height: 22,
-                    child:  CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : Text(
-                    'auth_login'.tr,
-                    style: const TextStyle(
-                      fontSize:    15,
-                      fontWeight:  FontWeight.w700,
-                      color:       Colors.white,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
+            ),
           ),
         ),
       );

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:orderix/core/errors/auth_exception.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/guards/auth_middleware.dart';
 import 'package:orderix/views/pin_screen.dart';
 import 'package:orderix/utils/app_info.dart';
+
+const _privacyUrl = 'https://orderix.tr/privacy';
+const _termsUrl   = 'https://orderix.tr/termsofuse';
 
 // ── Design tokens — identical to AuthScreen ───────────────────
 const _bg          = Color(0xFFF2F2F7);
@@ -132,48 +136,50 @@ class _SignUpScreenState extends State<SignUpScreen>
                     position: _slideAnim,
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 440),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _BrandHero(),
-                          const SizedBox(height: 32),
+                      child: AutofillGroup(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _BrandHero(),
+                            const SizedBox(height: 32),
 
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 400),
-                            switchInCurve:  Curves.easeOut,
-                            switchOutCurve: Curves.easeIn,
-                            transitionBuilder: (child, animation) =>
-                                FadeTransition(opacity: animation, child: child),
-                            child: _needsEmailConfirmation
-                                ? _SuccessCard(
-                                    key: const ValueKey('success'),
-                                    onBackToLogin: () =>
-                                        Get.offAllNamed(AppRoutes.login),
-                                  )
-                                : _SignUpCard(
-                                    key: const ValueKey('form'),
-                                    formKey:              _formKey,
-                                    emailCtrl:            _emailCtrl,
-                                    passwordCtrl:         _passwordCtrl,
-                                    confirmPassCtrl:      _confirmPassCtrl,
-                                    obscurePassword:      _obscurePassword,
-                                    obscureConfirmPass:   _obscureConfirmPassword,
-                                    errorMessage:         _errorMessage,
-                                    onTogglePassword: () => setState(
-                                        () => _obscurePassword = !_obscurePassword),
-                                    onToggleConfirmPass: () => setState(
-                                        () => _obscureConfirmPassword =
-                                            !_obscureConfirmPassword),
-                                    onSignUpPressed:   _onSignUpPressed,
-                                  ),
-                          ),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 400),
+                              switchInCurve:  Curves.easeOut,
+                              switchOutCurve: Curves.easeIn,
+                              transitionBuilder: (child, animation) =>
+                                  FadeTransition(opacity: animation, child: child),
+                              child: _needsEmailConfirmation
+                                  ? _SuccessCard(
+                                      key: const ValueKey('success'),
+                                      onBackToLogin: () =>
+                                          Get.offAllNamed(AppRoutes.login),
+                                    )
+                                  : _SignUpCard(
+                                      key: const ValueKey('form'),
+                                      formKey:              _formKey,
+                                      emailCtrl:            _emailCtrl,
+                                      passwordCtrl:         _passwordCtrl,
+                                      confirmPassCtrl:      _confirmPassCtrl,
+                                      obscurePassword:      _obscurePassword,
+                                      obscureConfirmPass:   _obscureConfirmPassword,
+                                      errorMessage:         _errorMessage,
+                                      onTogglePassword: () => setState(
+                                          () => _obscurePassword = !_obscurePassword),
+                                      onToggleConfirmPass: () => setState(
+                                          () => _obscureConfirmPassword =
+                                              !_obscureConfirmPassword),
+                                      onSignUpPressed:   _onSignUpPressed,
+                                    ),
+                            ),
 
-                          const SizedBox(height: 20),
-                          if (!_needsEmailConfirmation) _LoginLink(),
+                            const SizedBox(height: 20),
+                            if (!_needsEmailConfirmation) _LoginLink(),
 
-                          const SizedBox(height: 28),
-                          _BottomFooter(),
-                        ],
+                            const SizedBox(height: 28),
+                            _BottomFooter(),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -181,7 +187,56 @@ class _SignUpScreenState extends State<SignUpScreen>
               ),
             ),
           ),
+
+          // Back button (top-left)
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 12, top: 8),
+              child: _BackButton(onTap: () => Get.back()),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// _BackButton — subtle circular back button
+// ─────────────────────────────────────────────────────────────
+
+class _BackButton extends StatelessWidget {
+  const _BackButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          width:  44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: _card,
+            shape: BoxShape.circle,
+            border: Border.all(color: _border),
+            boxShadow: const [
+              BoxShadow(
+                color:      Color(0x0A000000),
+                blurRadius: 10,
+                offset:     Offset(0, 3),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size:  18,
+            color: _textPrimary,
+          ),
+        ),
       ),
     );
   }
@@ -350,9 +405,9 @@ class _SignUpCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            const Text(
-              'Hesap Oluştur',
-              style: TextStyle(
+            Text(
+              'auth_signup_title'.tr,
+              style: const TextStyle(
                 fontSize:      22,
                 fontWeight:    FontWeight.w800,
                 color:         _textPrimary,
@@ -360,9 +415,9 @@ class _SignUpCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
-              'Yeni hesabınızı oluşturun',
-              style: TextStyle(fontSize: 13, color: _textSec),
+            Text(
+              'auth_signup_subtitle'.tr,
+              style: const TextStyle(fontSize: 13, color: _textSec),
             ),
             const SizedBox(height: 28),
 
@@ -375,6 +430,7 @@ class _SignUpCard extends StatelessWidget {
               prefixIcon:      Icons.alternate_email_rounded,
               keyboardType:    TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
+              autofillHints:   const [AutofillHints.username, AutofillHints.email, AutofillHints.newUsername],
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return 'auth_email_required'.tr;
                 if (!v.contains('@') || !v.contains('.')) return 'auth_email_invalid'.tr;
@@ -392,6 +448,7 @@ class _SignUpCard extends StatelessWidget {
               prefixIcon:      Icons.lock_outline_rounded,
               obscureText:     obscurePassword,
               textInputAction: TextInputAction.next,
+              autofillHints:   const [AutofillHints.newPassword],
               suffixIcon: GestureDetector(
                 onTap: onTogglePassword,
                 child: Padding(
@@ -422,6 +479,7 @@ class _SignUpCard extends StatelessWidget {
               prefixIcon:      Icons.lock_outline_rounded,
               obscureText:     obscureConfirmPass,
               textInputAction: TextInputAction.done,
+              autofillHints:   const [AutofillHints.newPassword],
               suffixIcon: GestureDetector(
                 onTap: onToggleConfirmPass,
                 child: Padding(
@@ -453,9 +511,71 @@ class _SignUpCard extends StatelessWidget {
 
             // Submit button
             _SignUpButton(onPressed: onSignUpPressed),
+
+            const SizedBox(height: 18),
+
+            // Legal disclosure — App Store privacy/terms consent
+            const _LegalDisclosure(),
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// _LegalDisclosure — Terms of Use & Privacy Policy consent
+// ─────────────────────────────────────────────────────────────
+
+class _LegalDisclosure extends StatelessWidget {
+  const _LegalDisclosure();
+
+  Future<void> _open(String url) async {
+    final uri = Uri.parse(url);
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const linkStyle = TextStyle(
+      fontSize:       12,
+      fontWeight:     FontWeight.w600,
+      color:          _orange,
+      decoration:     TextDecoration.underline,
+      decorationColor:_orange,
+      height:         1.5,
+    );
+    const textStyle = TextStyle(
+      fontSize: 12,
+      color:    _textSec,
+      height:   1.5,
+    );
+
+    return Column(
+      children: [
+        Text(
+          'legal_agree_prefix'.tr,
+          textAlign: TextAlign.center,
+          style:     textStyle,
+        ),
+        const SizedBox(height: 2),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            GestureDetector(
+              onTap: () => _open(_termsUrl),
+              child: Text('terms_of_use'.tr, style: linkStyle),
+            ),
+            const Text(' · ', style: textStyle),
+            GestureDetector(
+              onTap: () => _open(_privacyUrl),
+              child: Text('privacy_policy'.tr, style: linkStyle),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -533,39 +653,9 @@ class _SuccessCard extends StatelessWidget {
           const SizedBox(height: 32),
 
           // Back to login button
-          GestureDetector(
-            onTap: onBackToLogin,
-            child: Container(
-              width:  double.infinity,
-              height: 54,
-              decoration: BoxDecoration(
-                color:        _orange,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
-                  BoxShadow(
-                    color:      Color(0x55FF9500),
-                    blurRadius: 18,
-                    offset:     Offset(0, 7),
-                  ),
-                  BoxShadow(
-                    color:      Color(0x22FF9500),
-                    blurRadius: 5,
-                    offset:     Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  'auth_back_to_login'.tr,
-                  style: const TextStyle(
-                    fontSize:      15,
-                    fontWeight:    FontWeight.w700,
-                    color:         Colors.white,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ),
-            ),
+          _PrimaryActionButton(
+            label:   'auth_back_to_login'.tr,
+            onPressed: onBackToLogin,
           ),
         ],
       ),
@@ -598,7 +688,7 @@ class _FieldLabel extends StatelessWidget {
 // _SignUpTextField
 // ─────────────────────────────────────────────────────────────
 
-class _SignUpTextField extends StatelessWidget {
+class _SignUpTextField extends StatefulWidget {
   const _SignUpTextField({
     required this.controller,
     required this.hint,
@@ -609,6 +699,7 @@ class _SignUpTextField extends StatelessWidget {
     this.suffixIcon,
     this.validator,
     this.onFieldSubmitted,
+    this.autofillHints,
   });
 
   final TextEditingController      controller;
@@ -620,30 +711,65 @@ class _SignUpTextField extends StatelessWidget {
   final Widget?                    suffixIcon;
   final String? Function(String?)? validator;
   final void Function(String)?     onFieldSubmitted;
+  final Iterable<String>?          autofillHints;
+
+  @override
+  State<_SignUpTextField> createState() => _SignUpTextFieldState();
+}
+
+class _SignUpTextFieldState extends State<_SignUpTextField> {
+  final FocusNode _focusNode = FocusNode();
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      if (_focusNode.hasFocus != _isFocused) {
+        setState(() => _isFocused = _focusNode.hasFocus);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
-      controller:       controller,
-      obscureText:      obscureText,
-      keyboardType:     keyboardType,
-      textInputAction:  textInputAction,
-      validator:        validator,
-      onFieldSubmitted: onFieldSubmitted,
+      controller:       widget.controller,
+      focusNode:        _focusNode,
+      obscureText:      widget.obscureText,
+      keyboardType:     widget.keyboardType,
+      textInputAction:  widget.textInputAction,
+      validator:        widget.validator,
+      onFieldSubmitted: widget.onFieldSubmitted,
+      autofillHints:    widget.autofillHints,
       style: const TextStyle(
         fontSize:   14,
         color:      _textPrimary,
         fontWeight: FontWeight.w500,
       ),
       decoration: InputDecoration(
-        hintText:  hint,
+        hintText:  widget.hint,
         hintStyle: const TextStyle(color: _textSec, fontSize: 14),
         prefixIcon: Padding(
           padding: const EdgeInsets.only(left: 16, right: 12),
-          child:   Icon(prefixIcon, size: 20, color: _textSec),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: Icon(
+              widget.prefixIcon,
+              key:   ValueKey<bool>(_isFocused),
+              size:  20,
+              color: _isFocused ? _orange : _textSec,
+            ),
+          ),
         ),
         prefixIconConstraints: const BoxConstraints(),
-        suffixIcon: suffixIcon,
+        suffixIcon: widget.suffixIcon,
         filled:     true,
         fillColor:  const Color(0xFFF9F9FB),
         contentPadding:
@@ -719,63 +845,148 @@ class _ErrorBanner extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-// _SignUpButton
+// _PrimaryActionButton — generic orange CTA used outside the
+// signup submit flow (e.g. success card "Back to login").
 // ─────────────────────────────────────────────────────────────
 
-class _SignUpButton extends StatelessWidget {
-  const _SignUpButton({required this.onPressed});
-  final VoidCallback onPressed;
+class _PrimaryActionButton extends StatefulWidget {
+  const _PrimaryActionButton({
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String        label;
+  final VoidCallback  onPressed;
+
+  @override
+  State<_PrimaryActionButton> createState() => _PrimaryActionButtonState();
+}
+
+class _PrimaryActionButtonState extends State<_PrimaryActionButton> {
+  bool _isPressed = false;
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      final isLoading = AuthController.to.isSigningUp.value;
-
-      return GestureDetector(
-        onTap: isLoading ? null : onPressed,
+    return GestureDetector(
+      onTapDown:   (_) => setState(() => _isPressed = true),
+      onTapUp:     (_) => setState(() => _isPressed = false),
+      onTapCancel: ()   => setState(() => _isPressed = false),
+      onTap:       widget.onPressed,
+      child: AnimatedScale(
+        scale:    _isPressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve:    Curves.easeOut,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           width:    double.infinity,
           height:   54,
           decoration: BoxDecoration(
-            color: isLoading
-                ? _orange.withValues(alpha: 0.55)
-                : _orange,
+            color:        _orange,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: isLoading
-                ? []
-                : const [
-                    BoxShadow(
-                      color:      Color(0x55FF9500),
-                      blurRadius: 18,
-                      offset:     Offset(0, 7),
-                    ),
-                    BoxShadow(
-                      color:      Color(0x22FF9500),
-                      blurRadius: 5,
-                      offset:     Offset(0, 2),
-                    ),
-                  ],
+            boxShadow: const [
+              BoxShadow(
+                color:      Color(0x55FF9500),
+                blurRadius: 18,
+                offset:     Offset(0, 7),
+              ),
+              BoxShadow(
+                color:      Color(0x22FF9500),
+                blurRadius: 5,
+                offset:     Offset(0, 2),
+              ),
+            ],
           ),
           child: Center(
-            child: isLoading
-                ? const SizedBox(
-                    width:  22,
-                    height: 22,
-                    child:  CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor:  AlwaysStoppedAnimation<Color>(Colors.white),
+            child: Text(
+              widget.label,
+              style: const TextStyle(
+                fontSize:      15,
+                fontWeight:    FontWeight.w700,
+                color:         Colors.white,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// _SignUpButton
+// ─────────────────────────────────────────────────────────────
+
+class _SignUpButton extends StatefulWidget {
+  const _SignUpButton({required this.onPressed});
+  final VoidCallback onPressed;
+
+  @override
+  State<_SignUpButton> createState() => _SignUpButtonState();
+}
+
+class _SignUpButtonState extends State<_SignUpButton> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final isLoading = AuthController.to.isSigningUp.value;
+      final disabled  = isLoading;
+
+      return GestureDetector(
+        onTapDown:   disabled ? null : (_) => setState(() => _isPressed = true),
+        onTapUp:     disabled ? null : (_) => setState(() => _isPressed = false),
+        onTapCancel: disabled ? null : () => setState(() => _isPressed = false),
+        onTap:       disabled ? null : widget.onPressed,
+        child: AnimatedScale(
+          scale:    _isPressed ? 0.97 : 1.0,
+          duration: const Duration(milliseconds: 120),
+          curve:    Curves.easeOut,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width:    double.infinity,
+            height:   54,
+            decoration: BoxDecoration(
+              color: isLoading
+                  ? _orange.withValues(alpha: 0.55)
+                  : _orange,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: isLoading
+                  ? []
+                  : const [
+                      BoxShadow(
+                        color:      Color(0x55FF9500),
+                        blurRadius: 18,
+                        offset:     Offset(0, 7),
+                      ),
+                      BoxShadow(
+                        color:      Color(0x22FF9500),
+                        blurRadius: 5,
+                        offset:     Offset(0, 2),
+                      ),
+                    ],
+            ),
+            child: Center(
+              child: isLoading
+                  ? const SizedBox(
+                      width:  22,
+                      height: 22,
+                      child:  CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor:  AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      'auth_signup'.tr,
+                      style: const TextStyle(
+                        fontSize:      15,
+                        fontWeight:    FontWeight.w700,
+                        color:         Colors.white,
+                        letterSpacing: 0.3,
+                      ),
                     ),
-                  )
-                : Text(
-                    'auth_signup'.tr,
-                    style: const TextStyle(
-                      fontSize:      15,
-                      fontWeight:    FontWeight.w700,
-                      color:         Colors.white,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
+            ),
           ),
         ),
       );

@@ -21,6 +21,7 @@ class AppTranslations extends Translations {
           'internet': 'İnternet',
           'server': 'Sunucu',
           'coming_soon': 'Yakında',
+          'company_name_empty': 'Şirket Adınızı Giriniz',
 
           // Table statuses
           'table': 'MASA',
@@ -142,7 +143,7 @@ class AppTranslations extends Translations {
           'save_settings': 'Kaydet',
 
           // Danger zone / Account deletion (App Store 5.1.1(v))
-          'danger_zone': 'Tehlikeli Bölge',
+          'danger_zone': 'Hesap Silme',
           'delete_account': 'Hesabı Sil',
           'delete_account_subtitle':
               'Hesabını ve tüm verilerini kalıcı olarak sil',
@@ -152,6 +153,13 @@ class AppTranslations extends Translations {
           'delete_account_confirm': 'Kalıcı Olarak Sil',
           'delete_account_success': 'Hesabın silindi',
           'delete_account_failed': 'Hesap silinemedi, tekrar dene',
+
+          // Legal
+          'legal': 'Hukuki',
+          'privacy_policy': 'Gizlilik Politikası',
+          'terms_of_use': 'Kullanım Şartları',
+          'legal_agree_prefix': 'Kayıt olarak şunları kabul etmiş olursunuz:',
+          'legal_link_failed': 'Bağlantı açılamadı',
 
           // Reports
           'reports_page': 'Raporlar',
@@ -169,7 +177,7 @@ class AppTranslations extends Translations {
           'hourly_sales': 'Saatlik Satışlar',
 
           // Auth
-          'auth_subtitle': 'Restoran Yönetim Sistemi',
+          'auth_subtitle': 'Sipariş Yönetim Sistemi',
           'auth_email': 'E-posta',
           'auth_email_hint': 'ornek@sirket.com',
           'auth_email_required': 'E-posta adresi gerekli',
@@ -178,6 +186,8 @@ class AppTranslations extends Translations {
           'auth_password_required': 'Şifre gerekli',
           'auth_password_short': 'Şifre en az 6 karakter olmalı',
           'auth_login': 'Giriş Yap',
+          'auth_login_title': 'Giriş Yap',
+          'auth_login_subtitle': 'Hesabınıza erişmek için giriş yapın',
           'auth_error_invalid': 'E-posta veya şifre hatalı.',
           'auth_error_unconfirmed': 'E-posta adresiniz henüz doğrulanmamış.',
           'auth_error_network': 'Bağlantı hatası. İnternetinizi kontrol edin.',
@@ -265,6 +275,7 @@ class AppTranslations extends Translations {
           'internet': 'Internet',
           'server': 'Server',
           'coming_soon': 'Coming Soon',
+          'company_name_empty': 'Enter Your Company Name',
 
           // Table statuses
           'table': 'TABLE',
@@ -387,7 +398,7 @@ class AppTranslations extends Translations {
           'save_settings': 'Save',
 
           // Danger zone / Account deletion (App Store 5.1.1(v))
-          'danger_zone': 'Danger Zone',
+          'danger_zone': 'Account Deletion',
           'delete_account': 'Delete Account',
           'delete_account_subtitle':
               'Permanently delete your account and all data',
@@ -397,6 +408,13 @@ class AppTranslations extends Translations {
           'delete_account_confirm': 'Permanently Delete',
           'delete_account_success': 'Your account was deleted',
           'delete_account_failed': 'Could not delete account, try again',
+
+          // Legal
+          'legal': 'Legal',
+          'privacy_policy': 'Privacy Policy',
+          'terms_of_use': 'Terms of Use',
+          'legal_agree_prefix': 'By signing up, you agree to our',
+          'legal_link_failed': 'Could not open link',
 
           // Reports
           'reports_page': 'Reports',
@@ -414,7 +432,7 @@ class AppTranslations extends Translations {
           'hourly_sales': 'Hourly Sales',
 
           // Auth
-          'auth_subtitle': 'Restaurant Management System',
+          'auth_subtitle': 'Order Management System',
           'auth_email': 'Email',
           'auth_email_hint': 'you@company.com',
           'auth_email_required': 'Email is required',
@@ -423,6 +441,8 @@ class AppTranslations extends Translations {
           'auth_password_required': 'Password is required',
           'auth_password_short': 'Password must be at least 6 characters',
           'auth_login': 'Sign In',
+          'auth_login_title': 'Sign In',
+          'auth_login_subtitle': 'Sign in to access your account',
           'auth_error_invalid': 'Incorrect email or password.',
           'auth_error_unconfirmed': 'Your email address has not been confirmed.',
           'auth_error_network': 'Connection error. Check your internet.',

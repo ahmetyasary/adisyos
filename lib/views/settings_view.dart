@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:orderix/core/errors/auth_exception.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/services/settings_service.dart';
@@ -8,6 +10,9 @@ import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/section_service.dart';
 import 'package:orderix/views/auth_screen.dart';
 import 'package:orderix/widgets/app_toast.dart';
+
+const _privacyUrl = 'https://orderix.tr/privacy';
+const _termsUrl   = 'https://orderix.tr/termsofuse';
 
 // ── Design tokens ─────────────────────────────────────────────
 const _bg          = Color(0xFFF2F2F7);
@@ -32,6 +37,7 @@ class _SettingsViewState extends State<SettingsView> {
   final _companyCtrl = TextEditingController();
   String _selectedLanguage = 'tr';
   bool _saving = false;
+  Worker? _companyWorker;
 
   @override
   void initState() {
@@ -40,7 +46,7 @@ class _SettingsViewState extends State<SettingsView> {
     _companyCtrl.text = SettingsService.to.companyName.value;
 
     // If service is still loading, sync when it arrives
-    ever(SettingsService.to.companyName, (val) {
+    _companyWorker = ever(SettingsService.to.companyName, (val) {
       if (mounted && _companyCtrl.text.isEmpty && val.isNotEmpty) {
         _companyCtrl.text = val;
       }
@@ -58,20 +64,47 @@ class _SettingsViewState extends State<SettingsView> {
 
   @override
   void dispose() {
+    _companyWorker?.dispose();
     _companyCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
     setState(() => _saving = true);
-    await SettingsService.to.save(newCompanyName: _companyCtrl.text.trim());
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('language', _selectedLanguage);
-    setState(() => _saving = false);
-    if (mounted) {
-      AppToast.success('Ayarlar kaydedildi', title: 'success'.tr);
-      Get.back();
+    try {
+      await SettingsService.to.save(newCompanyName: _companyCtrl.text.trim());
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('language', _selectedLanguage);
+      if (mounted) {
+        AppToast.success('Ayarlar kaydedildi', title: 'success'.tr);
+        Get.back();
+      }
+    } catch (e) {
+      if (mounted) {
+        AppToast.error(
+          _describeSaveError(e),
+          duration: const Duration(seconds: 6),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
+  }
+
+  /// Build a user-facing message that still includes enough detail to
+  /// diagnose Supabase-side failures (missing constraint, RLS block, etc).
+  String _describeSaveError(Object e) {
+    const base = 'Ayarlar kaydedilemedi.';
+    if (e is PostgrestException) {
+      final parts = <String>[
+        if (e.message.isNotEmpty) e.message,
+        if ((e.details?.toString().isNotEmpty ?? false)) e.details.toString(),
+        if ((e.code?.isNotEmpty ?? false)) 'code: ${e.code}',
+      ];
+      return parts.isEmpty ? base : '$base\n${parts.join(' · ')}';
+    }
+    final msg = e.toString();
+    return msg.isEmpty ? base : '$base\n$msg';
   }
 
   @override
@@ -148,6 +181,12 @@ class _SettingsViewState extends State<SettingsView> {
 
                     // Save button
                     _SaveButton(saving: _saving, onTap: _save),
+                    const SizedBox(height: 28),
+
+                    // Legal — privacy policy / terms (App Store requirement)
+                    _SectionLabel('legal'.tr),
+                    const SizedBox(height: 10),
+                    const _LegalCard(),
                     const SizedBox(height: 28),
 
                     // Danger zone — in-app account deletion (App Store 5.1.1(v))
@@ -1060,6 +1099,96 @@ class _SaveButton extends StatelessWidget {
                     letterSpacing: 0.3,
                   ),
                 ),
+        ),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// _LegalCard — privacy policy & terms of use links
+// ──────────────────────────────────────────────────────────────
+
+class _LegalCard extends StatelessWidget {
+  const _LegalCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      child: Column(
+        children: [
+          _LegalRow(
+            icon:  Icons.privacy_tip_outlined,
+            label: 'privacy_policy'.tr,
+            url:   _privacyUrl,
+          ),
+          const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
+          _LegalRow(
+            icon:  Icons.description_outlined,
+            label: 'terms_of_use'.tr,
+            url:   _termsUrl,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegalRow extends StatelessWidget {
+  const _LegalRow({
+    required this.icon,
+    required this.label,
+    required this.url,
+  });
+
+  final IconData icon;
+  final String   label;
+  final String   url;
+
+  Future<void> _open() async {
+    final uri = Uri.parse(url);
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok) AppToast.error('legal_link_failed'.tr);
+    } catch (_) {
+      AppToast.error('legal_link_failed'.tr);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _open,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: _orange.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(icon, size: 17, color: _orange),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: _textPrimary,
+                  ),
+                ),
+              ),
+              const Icon(Icons.open_in_new_rounded, size: 16, color: _textSec),
+            ],
+          ),
         ),
       ),
     );
