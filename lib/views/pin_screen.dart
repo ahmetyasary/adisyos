@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/day_service.dart';
@@ -128,13 +127,9 @@ class _StaffPicker extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         // Brand
-        Text(
-          'orderix',
-          style: GoogleFonts.righteous(
-            fontSize: 28,
-            color: _orange,
-            letterSpacing: 1.5,
-          ),
+        Image.asset(
+          'assets/images/orderix_logo_text.png',
+          height: 48,
         ),
         const SizedBox(height: 8),
         const Text(

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:orderix/core/errors/auth_exception.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
@@ -293,42 +292,35 @@ class _BrandHero extends StatelessWidget {
     return Column(
       children: [
         Container(
-          width:  72,
-          height: 72,
+          width:  10,
+          height: 10,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end:   Alignment.bottomRight,
-              colors: [Color(0xFFFFBF4D), _orange],
-            ),
             borderRadius: BorderRadius.circular(22),
-            boxShadow: const [
-              BoxShadow(
-                color:      Color(0x55FF9500),
-                blurRadius: 24,
-                offset:     Offset(0, 10),
-              ),
-              BoxShadow(
-                color:      Color(0x22FF9500),
-                blurRadius: 6,
-                offset:     Offset(0, 2),
-              ),
-            ],
+            // boxShadow: const [
+            //   BoxShadow(
+            //     color:      Colors.transparent,
+            //     blurRadius: 24,
+            //     offset:     Offset(0, 10),
+            //   ),
+            //   BoxShadow(
+            //     color:      Colors.transparent,
+            //     blurRadius: 6,
+            //     offset:     Offset(0, 2),
+            //   ),
+            // ],
           ),
-          child: const Icon(
-            Icons.receipt_long_rounded,
-            color: Colors.white,
-            size:  36,
-          ),
+          // child: ClipRRect(
+          //   borderRadius: BorderRadius.circular(22),
+          //   child: Image.asset(
+          //     'assets/images/app_logo.png',
+          //     fit: BoxFit.cover,
+          //   ),
+          // ),
         ),
         const SizedBox(height: 14),
-        Text(
-          'orderix',
-          style: GoogleFonts.righteous(
-            fontSize:      32,
-            color:         _textPrimary,
-            letterSpacing: 2,
-          ),
+        Image.asset(
+          'assets/images/orderix_logo_text.png',
+          height: 48,
         ),
         const SizedBox(height: 4),
         Text(

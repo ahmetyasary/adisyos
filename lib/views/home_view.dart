@@ -516,13 +516,9 @@ class _TopBar extends StatelessWidget {
       child: Row(
         children: [
           // ── Brand ─────────────────────────────────────
-          Text(
-            'orderix',
-            style: GoogleFonts.righteous(
-              fontSize: 22,
-              color: _orange,
-              letterSpacing: 1.5,
-            ),
+          Image.asset(
+            'assets/images/orderix_logo_text.png',
+            height: 26,
           ),
 
           const Spacer(),
