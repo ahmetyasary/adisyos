@@ -8,6 +8,8 @@ import 'package:orderix/features/auth/presentation/controller/auth_controller.da
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/section_service.dart';
+import 'package:orderix/services/subscription_service.dart';
+import 'package:orderix/views/paywall_sheet.dart';
 import 'package:orderix/views/auth_screen.dart';
 import 'package:orderix/widgets/app_toast.dart';
 import 'package:orderix/widgets/app_dialog.dart';
@@ -132,6 +134,12 @@ class _SettingsViewState extends State<SettingsView> {
                     children: [
                     // Account card
                     _AccountCard(),
+                    const SizedBox(height: 28),
+
+                    // Subscription section
+                    _SectionLabel('Abonelik'),
+                    const SizedBox(height: 10),
+                    const _SubscriptionCard(),
                     const SizedBox(height: 28),
 
                     // Business section
@@ -1146,6 +1154,178 @@ class _LegalRow extends StatelessWidget {
                 ),
               ),
               const Icon(Icons.open_in_new_rounded, size: 16, color: _textSec),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// _SubscriptionCard — shows plan status, trial countdown, restore
+// ──────────────────────────────────────────────────────────────
+
+const _green = Color(0xFF34C759);
+
+class _SubscriptionCard extends StatelessWidget {
+  const _SubscriptionCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final sub    = SubscriptionService.to;
+      final active = sub.isSubscribed;
+      final trial  = sub.isInTrial;
+      final days   = sub.trialDaysLeft;
+
+      return _Card(
+        child: Column(
+          children: [
+            // Status row
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    width:  34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: active
+                          ? _green.withValues(alpha: 0.12)
+                          : trial
+                              ? _orange.withValues(alpha: 0.12)
+                              : const Color(0xFFFF3B30).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(
+                      active
+                          ? Icons.verified_rounded
+                          : trial
+                              ? Icons.hourglass_top_rounded
+                              : Icons.lock_outline_rounded,
+                      size:  17,
+                      color: active
+                          ? _green
+                          : trial
+                              ? _orange
+                              : const Color(0xFFFF3B30),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          active
+                              ? 'Pro Plan · Aktif'
+                              : trial
+                                  ? 'Deneme Dönemi'
+                                  : 'Abonelik Gerekli',
+                          style: TextStyle(
+                            fontSize:   15,
+                            fontWeight: FontWeight.w600,
+                            color:      active
+                                ? _green
+                                : trial
+                                    ? _orange
+                                    : const Color(0xFFFF3B30),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          active
+                              ? 'Tüm özelliklere erişiminiz var'
+                              : trial
+                                  ? '$days gün kaldı'
+                                  : 'Devam etmek için abone olun',
+                          style: const TextStyle(
+                              fontSize: 12, color: _textSec),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!active)
+                    Builder(
+                      builder: (ctx) => GestureDetector(
+                        onTap: () => showPaywallSheet(ctx),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color:        _orange,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'Abone Ol',
+                            style: TextStyle(
+                              fontSize:   12,
+                              fontWeight: FontWeight.w700,
+                              color:      Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            // Restore purchases row
+            const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
+            _RestoreRow(),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+class _RestoreRow extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () async {
+          final hasAccess =
+              await SubscriptionService.to.restorePurchases();
+          if (hasAccess) {
+            AppToast.success('Abonelik başarıyla geri yüklendi');
+          } else {
+            AppToast.error('Aktif abonelik bulunamadı');
+          }
+        },
+        borderRadius: const BorderRadius.vertical(
+            bottom: Radius.circular(16)),
+        child: Padding(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width:  34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color:        _orange.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(Icons.restore_rounded,
+                    size: 17, color: _orange),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Satın Alımları Geri Yükle',
+                  style: TextStyle(
+                      fontSize:   15,
+                      fontWeight: FontWeight.w500,
+                      color:      _textPrimary),
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  size: 18, color: _textSec),
             ],
           ),
         ),

@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/services/subscription_service.dart';
+import 'package:orderix/views/paywall_sheet.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/models/app_role.dart';
@@ -48,25 +50,91 @@ class HomeView extends StatefulWidget {
   State<HomeView> createState() => _HomeViewState();
 }
 
-class _HomeViewState extends State<HomeView> {
+class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   late Timer _timer;
   DateTime _currentTime = DateTime.now();
+  Worker? _entitlementWorker;
+  bool _paywallShown = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _currentTime = DateTime.now());
+      if (!mounted) return;
+      setState(() => _currentTime = DateTime.now());
+      // Catches the moment the 7-day trial window closes mid-session.
+      _enforcePaywall();
     });
+
+    // Re-evaluate access whenever the customer entitlement changes
+    // (after refreshCustomerInfo on resume, after a successful purchase,
+    // after restorePurchases, etc.).
+    _entitlementWorker = ever(
+      SubscriptionService.to.customerInfo,
+      (_) => _enforcePaywall(),
+    );
+
+    // Hard lockout on first frame: if trial expired and no active
+    // subscription, present a non-dismissible paywall.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _enforcePaywall());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _entitlementWorker?.dispose();
     _timer.cancel();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // The trial may have ended while we were backgrounded, or a
+      // subscription may have been activated externally.
+      SubscriptionService.to.refreshCustomerInfo();
+      _enforcePaywall();
+    }
+  }
+
+  /// Centralised gate. Idempotent — the `_paywallShown` flag prevents
+  /// stacking sheets when multiple triggers fire in quick succession.
+  ///
+  /// The paywall is only meaningful while the user is authenticated. Once
+  /// they log out (e.g. from the paywall itself), the home view briefly
+  /// stays mounted while `Get.offAll(AuthScreen)` tears down the stack —
+  /// without the auth check we'd re-show the paywall on top of the auth
+  /// screen during that window.
+  void _enforcePaywall() {
+    if (!mounted || _paywallShown) return;
+    if (!AuthController.to.isAuthenticated) return;
+    if (SubscriptionService.to.hasAccess) return;
+
+    _paywallShown = true;
+    showPaywallSheet(context, dismissible: false).whenComplete(() {
+      _paywallShown = false;
+      // If the sheet closed without granting access (edge cases like a
+      // system gesture sneaking past PopScope), re-enforce on the next
+      // frame — unless the user has logged out, in which case we're on
+      // our way to AuthScreen and the gate no longer applies.
+      if (mounted &&
+          AuthController.to.isAuthenticated &&
+          !SubscriptionService.to.hasAccess) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _enforcePaywall());
+      }
+    });
+  }
+
   void _navigate(String route) {
+    // Defence in depth: even if the modal paywall is somehow bypassed,
+    // every navigation from home is gated on access.
+    if (AuthController.to.isAuthenticated &&
+        !SubscriptionService.to.hasAccess) {
+      _enforcePaywall();
+      return;
+    }
     switch (route) {
       case 'tables':        Get.to(() => const TablesView()); break;
       case 'menu':          Get.to(() => const MenuManagementView()); break;

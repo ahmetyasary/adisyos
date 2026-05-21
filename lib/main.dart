@@ -19,6 +19,7 @@ import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/section_service.dart';
 import 'package:orderix/guards/auth_middleware.dart';
+import 'package:orderix/services/subscription_service.dart';
 // Clean architecture layers
 import 'package:orderix/features/auth/data/datasources/supabase_auth_datasource.dart';
 import 'package:orderix/features/auth/data/repositories/auth_repository_impl.dart';
@@ -59,7 +60,10 @@ Future<void> main() async {
     anonKey: _kSupabaseAnonKey,
   );
 
+  await SubscriptionService.configure();
+
   _registerAuth();
+  Get.put(SubscriptionService());
 
   // Registration order matters: SalesHistoryService, KitchenService and
   // InventoryService must all exist before TableService starts.
@@ -130,6 +134,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       // App came back from background — refresh all services to catch
       // any changes that arrived while realtime was disconnected.
+      SubscriptionService.to.refreshCustomerInfo();
       SettingsService.to.refresh();
       StaffService.to.load();
       SectionService.to.load();

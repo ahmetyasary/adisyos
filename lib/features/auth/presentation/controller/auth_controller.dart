@@ -10,6 +10,7 @@ import 'package:orderix/features/auth/domain/usecases/get_current_user_usecase.d
 import 'package:orderix/features/auth/domain/usecases/get_user_role_usecase.dart';
 import 'package:orderix/features/auth/domain/usecases/signup_usecase.dart';
 import 'package:orderix/models/app_role.dart';
+import 'package:orderix/services/subscription_service.dart';
 
 class AuthController extends GetxService {
   // ── Singleton access ──────────────────────────────────────
@@ -70,6 +71,7 @@ class AuthController extends GetxService {
         email: supaUser.email ?? '',
         role: role,
       );
+      await SubscriptionService.to.loginCustomer(supaUser.id);
     } finally {
       isRestoringSession.value = false;
     }
@@ -87,6 +89,7 @@ class AuthController extends GetxService {
     try {
       final authUser = await _login(email: email, password: password);
       user.value = authUser;
+      await SubscriptionService.to.loginCustomer(authUser.id);
       return authUser;
     } finally {
       isLoading.value = false;
@@ -111,6 +114,7 @@ class AuthController extends GetxService {
   /// Signs out and clears [user].
   Future<void> logout() async {
     await _logout();
+    await SubscriptionService.to.logoutCustomer();
     user.value = null;
   }
 
@@ -120,6 +124,7 @@ class AuthController extends GetxService {
     isDeletingAccount.value = true;
     try {
       await _deleteAccount();
+      await SubscriptionService.to.logoutCustomer();
       user.value = null;
     } finally {
       isDeletingAccount.value = false;
