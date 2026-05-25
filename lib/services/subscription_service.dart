@@ -12,7 +12,7 @@ const String _kGoogleKey = String.fromEnvironment('REVENUECAT_GOOGLE_KEY');
 // Must match the entitlement identifier in your RevenueCat dashboard.
 const String kEntitlementId = 'premium';
 
-const int kTrialDays = 7;
+const int kTrialDays = 14;
 
 class SubscriptionService extends GetxService {
   static SubscriptionService get to => Get.find();

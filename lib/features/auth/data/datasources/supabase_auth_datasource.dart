@@ -50,6 +50,7 @@ class SupabaseAuthDataSource {
       final response = await _client.auth.signUp(
         email:    email,
         password: password,
+        emailRedirectTo: 'orderix://login-callback/',
       );
       final user = response.user;
       if (user == null) throw const UnknownAuthException();

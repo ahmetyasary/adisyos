@@ -309,7 +309,7 @@ class _TrialExpiredBanner extends StatelessWidget {
           SizedBox(width: 8),
           Expanded(
             child: Text(
-              '7 günlük deneme süreniz sona erdi.',
+              '14 günlük deneme süreniz sona erdi.',
               style: TextStyle(
                 fontSize:   13,
                 fontWeight: FontWeight.w600,
