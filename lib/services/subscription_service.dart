@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -10,7 +11,7 @@ const String _kAppleKey  = String.fromEnvironment('REVENUECAT_APPLE_KEY');
 const String _kGoogleKey = String.fromEnvironment('REVENUECAT_GOOGLE_KEY');
 
 // Must match the entitlement identifier in your RevenueCat dashboard.
-const String kEntitlementId = 'premium';
+const String kEntitlementId = 'Orderix Pro';
 
 const int kTrialDays = 14;
 
@@ -26,12 +27,22 @@ class SubscriptionService extends GetxService {
 
   static Future<void> configure() async {
     final key = Platform.isIOS ? _kAppleKey : _kGoogleKey;
-    if (key.trim().isEmpty) return;
+    debugPrint('[RC] configure() platform=${Platform.operatingSystem} '
+        'keyPresent=${key.trim().isNotEmpty} '
+        'keyPrefix=${key.isEmpty ? "<empty>" : key.substring(0, key.length.clamp(0, 5))}');
+    if (key.trim().isEmpty) {
+      debugPrint('[RC] ⚠️ API key is EMPTY — did you pass '
+          '--dart-define=REVENUECAT_APPLE_KEY / _GOOGLE_KEY for this platform?');
+      return;
+    }
     try {
-      await Purchases.setLogLevel(LogLevel.info);
+      await Purchases.setLogLevel(LogLevel.debug);
       await Purchases.configure(PurchasesConfiguration(key));
       _sdkReady = true;
-    } catch (_) {}
+      debugPrint('[RC] ✅ configured, sdkReady=true');
+    } catch (e, st) {
+      debugPrint('[RC] ❌ configure failed: $e\n$st');
+    }
   }
 
   // ── Access gate ───────────────────────────────────────────────
@@ -104,10 +115,22 @@ class SubscriptionService extends GetxService {
   // ── Purchases ─────────────────────────────────────────────────
 
   Future<Offerings?> getOfferings() async {
-    if (!_sdkReady) return null;
+    if (!_sdkReady) {
+      debugPrint('[RC] getOfferings() skipped — sdkReady=false');
+      return null;
+    }
     try {
-      return await Purchases.getOfferings();
-    } catch (_) {
+      final offerings = await Purchases.getOfferings();
+      final current = offerings.current;
+      debugPrint('[RC] getOfferings() ok — '
+          'all=${offerings.all.keys.toList()} '
+          'current=${current?.identifier} '
+          'monthly=${current?.monthly?.storeProduct.identifier} '
+          'annual=${current?.annual?.storeProduct.identifier} '
+          'pkgCount=${current?.availablePackages.length ?? 0}');
+      return offerings;
+    } catch (e, st) {
+      debugPrint('[RC] ❌ getOfferings failed: $e\n$st');
       return null;
     }
   }
@@ -117,9 +140,10 @@ class SubscriptionService extends GetxService {
   Future<bool> purchasePackage(Package package) async {
     isPurchasing.value = true;
     try {
-      final info = await Purchases.purchasePackage(package);
-      customerInfo.value = info;
-      return info.entitlements.active.containsKey(kEntitlementId);
+      final result = await Purchases.purchase(PurchaseParams.package(package));
+      customerInfo.value = result.customerInfo;
+      return result.customerInfo.entitlements.active
+          .containsKey(kEntitlementId);
     } on PurchasesError catch (e) {
       if (e.code == PurchasesErrorCode.purchaseCancelledError) return false;
       rethrow;

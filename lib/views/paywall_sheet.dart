@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/services/subscription_service.dart';
 import 'package:orderix/views/auth_screen.dart';
@@ -13,6 +14,10 @@ const _textSec     = Color(0xFF8E8E93);
 const _surface     = Color(0xFFF2F2F7);
 const _border      = Color(0xFFE5E5EA);
 const _green       = Color(0xFF34C759);
+
+// Legal links (App Store Guideline 3.1.2 — must be functional on the paywall).
+const _privacyUrl = 'https://orderix.tr/privacy';
+const _termsUrl   = 'https://orderix.tr/terms';
 
 // ──────────────────────────────────────────────────────────────
 // Public entry point
@@ -228,19 +233,9 @@ class _BrandHero extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
+        SizedBox(
           width:  68,
           height: 68,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color:      _orange.withValues(alpha: 0.30),
-                blurRadius: 24,
-                offset:     const Offset(0, 10),
-              ),
-            ],
-          ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(18),
             child: Image.asset(
@@ -664,6 +659,24 @@ class _Footer extends StatelessWidget {
       final loading = SubscriptionService.to.isPurchasing.value;
       return Column(
         children: [
+          // Auto-renew + cancellation disclosure
+          const Text(
+            'Abonelik otomatik olarak yenilenir. Dönem bitiminden en az '
+            '24 saat önce iptal etmezseniz aynı ücretten yenilenir. '
+            'İstediğiniz zaman App Store ayarlarından iptal edebilirsiniz.',
+            textAlign: TextAlign.center,
+            style:     TextStyle(
+              fontSize: 11,
+              color:    _textSec,
+              height:   1.45,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Legal consent — App Store Guideline 3.1.2
+          const _PaywallLegal(),
+          const SizedBox(height: 14),
+
           GestureDetector(
             onTap: loading ? null : onRestore,
             child: Text(
@@ -676,18 +689,65 @@ class _Footer extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 6),
-          const Text(
-            'Otomatik yenilenir · İstediğiniz zaman iptal edebilirsiniz',
-            textAlign: TextAlign.center,
-            style:     TextStyle(
-              fontSize: 11,
-              color:    _textSec,
-              height:   1.4,
-            ),
-          ),
         ],
       );
     });
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// _PaywallLegal — EULA + Privacy consent with functional links
+// ──────────────────────────────────────────────────────────────
+
+class _PaywallLegal extends StatelessWidget {
+  const _PaywallLegal();
+
+  Future<void> _open(String url) async {
+    final uri = Uri.parse(url);
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const textStyle = TextStyle(
+      fontSize: 11,
+      color:    _textSec,
+      height:   1.5,
+    );
+    const linkStyle = TextStyle(
+      fontSize:        11,
+      fontWeight:      FontWeight.w600,
+      color:           _orange,
+      decoration:      TextDecoration.underline,
+      decorationColor: _orange,
+      height:          1.5,
+    );
+
+    return Column(
+      children: [
+        const Text(
+          'Aboneliği başlatarak aşağıdakileri kabul etmiş olursunuz:',
+          textAlign: TextAlign.center,
+          style:     textStyle,
+        ),
+        const SizedBox(height: 2),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            GestureDetector(
+              onTap: () => _open(_termsUrl),
+              child: const Text('Kullanım Koşulları (EULA)', style: linkStyle),
+            ),
+            const Text(' · ', style: textStyle),
+            GestureDetector(
+              onTap: () => _open(_privacyUrl),
+              child: const Text('Gizlilik Politikası', style: linkStyle),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }
