@@ -64,7 +64,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() => _currentTime = DateTime.now());
-      // Catches the moment the 7-day trial window closes mid-session.
+      // Re-checks the entitlement gate mid-session (e.g. if it lapsed since
+      // the last customerInfo refresh).
       _enforcePaywall();
     });
 

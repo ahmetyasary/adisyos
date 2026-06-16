@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
@@ -13,7 +15,6 @@ const _textPrimary = Color(0xFF1C1C1E);
 const _textSec     = Color(0xFF8E8E93);
 const _surface     = Color(0xFFF2F2F7);
 const _border      = Color(0xFFE5E5EA);
-const _green       = Color(0xFF34C759);
 
 // Legal links (App Store Guideline 3.1.2 — must be functional on the paywall).
 const _privacyUrl = 'https://orderix.tr/privacy';
@@ -93,6 +94,68 @@ class _PaywallSheetState extends State<_PaywallSheet> {
     return pct > 0 ? '%$pct İndirim' : null;
   }
 
+  /// Per-month equivalent of the yearly plan, e.g. "≈ ₺16,66/ay", shown under
+  /// the yearly price so the annual value reads at a glance (Apple-style).
+  ///
+  /// We mirror the storefront's own formatting by lifting the currency symbol
+  /// and decimal separator out of the yearly `priceString`, so it matches the
+  /// locale shown elsewhere on the sheet without hard-coding a currency.
+  String? get _yearlyPerMonth {
+    final y = _yearly?.storeProduct;
+    if (y == null || y.price <= 0) return null;
+    final perMonth = y.price / 12.0;
+    final symbol = y.priceString.replaceAll(RegExp(r'[\d.,\s ]'), '').trim();
+    final ps = y.priceString;
+    final dec = RegExp(r'[.,]\d{1,2}(?!\d)').allMatches(ps).toList();
+    final usesComma =
+        dec.isNotEmpty ? ps[dec.last.start] == ',' : ps.contains('.');
+    final number =
+        NumberFormat('#,##0.00', usesComma ? 'tr' : 'en').format(perMonth);
+    if (symbol.isEmpty) return '≈ $number/ay';
+    final symbolFirst = y.priceString.trimLeft().startsWith(symbol);
+    return symbolFirst ? '≈ $symbol$number/ay' : '≈ $number $symbol/ay';
+  }
+
+  // ── StoreKit introductory free-trial offer (selected plan) ──────
+
+  IntroductoryPrice? get _selectedIntro =>
+      _selected?.storeProduct.introductoryPrice;
+
+  /// Whether the selected plan carries a *free* introductory trial.
+  bool get _hasFreeTrial {
+    final intro = _selectedIntro;
+    return intro != null && intro.price <= 0;
+  }
+
+  /// Localised free-trial headline for the selected plan, e.g.
+  /// "İlk 14 gün ücretsiz". Null when the plan has no free trial.
+  String? get _trialHeadline {
+    final intro = _selectedIntro;
+    if (intro == null || intro.price > 0) return null;
+    return 'İlk ${intro.periodNumberOfUnits} '
+        '${_unitLabel(intro.periodUnit)} ücretsiz';
+  }
+
+  /// What the trial converts to, e.g. "Sonra ₺149,99/ay olarak yenilenir".
+  String? get _renewLine {
+    final pkg = _selected;
+    if (pkg == null) return null;
+    return 'Sonra ${pkg.storeProduct.priceString}/$_selectedPeriodLabel '
+        'olarak yenilenir';
+  }
+
+  String get _selectedPeriodLabel => _selectedIdx == 0 ? 'ay' : 'yıl';
+
+  String _unitLabel(PeriodUnit unit) {
+    switch (unit) {
+      case PeriodUnit.day:   return 'gün';
+      case PeriodUnit.week:  return 'hafta';
+      case PeriodUnit.month: return 'ay';
+      case PeriodUnit.year:  return 'yıl';
+      case PeriodUnit.unknown: return 'gün';
+    }
+  }
+
   Future<void> _onPurchase() async {
     final pkg = _selected;
     if (pkg == null) return;
@@ -102,10 +165,16 @@ class _PaywallSheetState extends State<_PaywallSheet> {
         Navigator.of(context).pop();
         AppToast.success('Abonelik başarıyla başlatıldı');
       }
-    } on PurchasesError catch (e) {
-      if (e.code != PurchasesErrorCode.purchaseCancelledError) {
-        AppToast.error(e.message);
+    } on PlatformException catch (e) {
+      // Cancellation/already-purchased are handled inside purchasePackage;
+      // anything that reaches here is a genuine failure.
+      if (PurchasesErrorHelper.getErrorCode(e) ==
+          PurchasesErrorCode.purchaseCancelledError) {
+        return;
       }
+      AppToast.error(
+        e.message ?? 'Satın alma tamamlanamadı. Lütfen tekrar deneyin.',
+      );
     } catch (_) {
       AppToast.error('Bir hata oluştu. Lütfen tekrar deneyin.');
     }
@@ -141,44 +210,50 @@ class _PaywallSheetState extends State<_PaywallSheet> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const _Handle(),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
 
                 // App icon + brand
                 const _BrandHero(),
-                const SizedBox(height: 22),
+                const SizedBox(height: 16),
 
                 // Trial expired banner (lockout only)
                 if (!widget.dismissible) ...[
                   const _TrialExpiredBanner(),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 12),
                 ],
 
                 // Feature list
                 const _FeatureList(),
-                const SizedBox(height: 22),
+                const SizedBox(height: 16),
 
                 // Plan selector
                 if (_loading)
                   const _PlanLoading()
                 else
                   _PlanRow(
-                    monthly:       _monthly,
-                    yearly:        _yearly,
-                    savingsBadge:  _savingsBadge,
-                    selectedIndex: _selectedIdx,
-                    onSelect:      (i) => setState(() => _selectedIdx = i),
+                    monthly:        _monthly,
+                    yearly:         _yearly,
+                    savingsBadge:   _savingsBadge,
+                    yearlyPerMonth: _yearlyPerMonth,
+                    selectedIndex:  _selectedIdx,
+                    onSelect:       (i) => setState(() => _selectedIdx = i),
                   ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
 
-                // CTA
+                // CTA — the free-trial offer is surfaced directly on the button
+                // (headline + what it renews to), StoreKit-driven.
                 _CtaButton(
                   package:    _selected,
                   onPurchase: _onPurchase,
+                  title:      _hasFreeTrial
+                      ? (_trialHeadline ?? 'Ücretsiz Denemeyi Başlat')
+                      : 'Aboneliği Başlat',
+                  subtitle:   _hasFreeTrial ? _renewLine : null,
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
                 // Restore + legal
-                _Footer(onRestore: _onRestore),
+                _Footer(onRestore: _onRestore, showTrialTerms: _hasFreeTrial),
 
                 // Logout (lockout only)
                 if (!widget.dismissible) ...[
@@ -234,21 +309,21 @@ class _BrandHero extends StatelessWidget {
     return Column(
       children: [
         SizedBox(
-          width:  68,
-          height: 68,
+          width:  56,
+          height: 56,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             child: Image.asset(
               'assets/images/app_logo.png',
               fit: BoxFit.cover,
             ),
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
         RichText(
           text: const TextSpan(
             style: TextStyle(
-              fontSize:      26,
+              fontSize:      25,
               fontWeight:    FontWeight.w800,
               color:         _textPrimary,
               letterSpacing: -0.6,
@@ -289,26 +364,23 @@ class _TrialExpiredBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
-        color:        const Color(0xFFFF3B30).withValues(alpha: 0.08),
+        color:        _surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFFFF3B30).withValues(alpha: 0.20),
-        ),
       ),
       child: const Row(
         children: [
-          Icon(Icons.timer_off_outlined,
-              size: 16, color: Color(0xFFFF3B30)),
-          SizedBox(width: 8),
+          Icon(Icons.lock_outline_rounded, size: 16, color: _orange),
+          SizedBox(width: 10),
           Expanded(
             child: Text(
-              '14 günlük deneme süreniz sona erdi.',
+              'Orderix\'i kullanmaya devam etmek için aboneliğinizi başlatın.',
               style: TextStyle(
                 fontSize:   13,
-                fontWeight: FontWeight.w600,
-                color:      Color(0xFFFF3B30),
+                fontWeight: FontWeight.w500,
+                color:      _textPrimary,
+                height:     1.3,
               ),
             ),
           ),
@@ -339,18 +411,18 @@ class _FeatureList extends StatelessWidget {
       children: _items
           .map(
             (f) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
+              padding: const EdgeInsets.symmetric(vertical: 5),
               child: Row(
                 children: [
                   Container(
                     width:  22,
                     height: 22,
                     decoration: BoxDecoration(
-                      color: _green.withValues(alpha: 0.12),
+                      color: _orange.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.check_rounded,
-                        size: 14, color: _green),
+                        size: 14, color: _orange),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -400,6 +472,7 @@ class _PlanRow extends StatelessWidget {
     required this.monthly,
     required this.yearly,
     required this.savingsBadge,
+    required this.yearlyPerMonth,
     required this.selectedIndex,
     required this.onSelect,
   });
@@ -407,6 +480,7 @@ class _PlanRow extends StatelessWidget {
   final Package? monthly;
   final Package? yearly;
   final String?  savingsBadge;
+  final String?  yearlyPerMonth;
   final int      selectedIndex;
   final void Function(int) onSelect;
 
@@ -428,35 +502,40 @@ class _PlanRow extends StatelessWidget {
       );
     }
 
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (monthly != null)
-            Expanded(
-              child: _PlanCard(
-                label:    'Aylık',
-                price:    monthly!.storeProduct.priceString,
-                period:   'her ay',
-                selected: selectedIndex == 0,
-                badge:    null,
-                onTap:    () => onSelect(0),
+    // Top padding leaves room for the yearly card's "best value" ribbon,
+    // which is positioned to overhang the card's top edge.
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (monthly != null)
+              Expanded(
+                child: _PlanCard(
+                  label:    'Aylık',
+                  price:    monthly!.storeProduct.priceString,
+                  period:   'her ay',
+                  selected: selectedIndex == 0,
+                  onTap:    () => onSelect(0),
+                ),
               ),
-            ),
-          if (monthly != null && yearly != null)
-            const SizedBox(width: 10),
-          if (yearly != null)
-            Expanded(
-              child: _PlanCard(
-                label:    'Yıllık',
-                price:    yearly!.storeProduct.priceString,
-                period:   'her yıl',
-                selected: selectedIndex == 1,
-                badge:    savingsBadge,
-                onTap:    () => onSelect(1),
+            if (monthly != null && yearly != null)
+              const SizedBox(width: 12),
+            if (yearly != null)
+              Expanded(
+                child: _PlanCard(
+                  label:    'Yıllık',
+                  price:    yearly!.storeProduct.priceString,
+                  period:   'her yıl',
+                  selected: selectedIndex == 1,
+                  ribbon:   savingsBadge,
+                  subPrice: yearlyPerMonth,
+                  onTap:    () => onSelect(1),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -472,128 +551,189 @@ class _PlanCard extends StatelessWidget {
     required this.price,
     required this.period,
     required this.selected,
-    required this.badge,
     required this.onTap,
+    this.ribbon,
+    this.subPrice,
   });
 
   final String  label;
   final String  price;
   final String  period;
   final bool    selected;
-  final String? badge;
   final VoidCallback onTap;
+
+  /// "Best value" pill that overhangs the top edge (e.g. "%17 İNDİRİM").
+  final String? ribbon;
+
+  /// Secondary price line under the period (e.g. "≈ ₺16,66/ay").
+  final String? subPrice;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve:    Curves.easeOut,
-        padding:  const EdgeInsets.fromLTRB(14, 14, 14, 16),
-        decoration: BoxDecoration(
-          color:        selected ? Colors.white : _surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected ? _orange : _border,
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Top row: label + radio
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      behavior: HitTestBehavior.opaque,
+      child: Stack(
+        clipBehavior: Clip.none,
+        fit: StackFit.passthrough,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve:    Curves.easeOut,
+            padding:  const EdgeInsets.fromLTRB(14, 16, 14, 16),
+            decoration: BoxDecoration(
+              color:        Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: selected ? _orange : _border,
+                width: selected ? 2 : 1,
+              ),
+              boxShadow: selected
+                  ? [
+                      BoxShadow(
+                        color:      _orange.withValues(alpha: 0.16),
+                        blurRadius: 18,
+                        offset:     const Offset(0, 8),
+                      ),
+                    ]
+                  : [
+                      BoxShadow(
+                        color:      const Color(0x08000000),
+                        blurRadius: 10,
+                        offset:     const Offset(0, 3),
+                      ),
+                    ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
+                // Top row: label + radio
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize:   13,
+                        fontWeight: FontWeight.w600,
+                        color:      selected ? _orange : _textSec,
+                      ),
+                    ),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width:  18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: selected ? _orange : Colors.transparent,
+                        border: Border.all(
+                          color: selected ? _orange : _border,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: selected
+                          ? const Icon(Icons.check_rounded,
+                              size: 12, color: Colors.white)
+                          : null,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Price
                 Text(
-                  label,
-                  style: TextStyle(
-                    fontSize:   13,
-                    fontWeight: FontWeight.w600,
-                    color:      selected ? _orange : _textSec,
+                  price,
+                  style: const TextStyle(
+                    fontSize:      21,
+                    fontWeight:    FontWeight.w800,
+                    color:         _textPrimary,
+                    letterSpacing: -0.5,
                   ),
                 ),
-                Container(
-                  width:  18,
-                  height: 18,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: selected ? _orange : Colors.transparent,
-                    border: Border.all(
-                      color: selected ? _orange : _border,
-                      width: 1.5,
+                const SizedBox(height: 3),
+
+                // Period
+                Text(
+                  period,
+                  style: const TextStyle(
+                    fontSize:   12,
+                    fontWeight: FontWeight.w500,
+                    color:      _textSec,
+                  ),
+                ),
+
+                // Per-month equivalent (yearly only)
+                if (subPrice != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    subPrice!,
+                    style: TextStyle(
+                      fontSize:   11.5,
+                      fontWeight: FontWeight.w700,
+                      color:      selected ? _orange : _textSec,
                     ),
                   ),
-                  child: selected
-                      ? const Icon(Icons.check_rounded,
-                          size: 12, color: Colors.white)
-                      : null,
-                ),
+                ],
               ],
             ),
-            const SizedBox(height: 10),
+          ),
 
-            // Price
-            Text(
-              price,
-              style: const TextStyle(
-                fontSize:      20,
-                fontWeight:    FontWeight.w800,
-                color:         _textPrimary,
-                letterSpacing: -0.4,
-              ),
-            ),
-            const SizedBox(height: 2),
-
-            // Period
-            Text(
-              period,
-              style: const TextStyle(
-                fontSize:   12,
-                fontWeight: FontWeight.w500,
-                color:      _textSec,
-              ),
-            ),
-
-            // Savings badge
-            if (badge != null) ...[
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color:        _orange.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  badge!,
-                  style: const TextStyle(
-                    fontSize:      10,
-                    fontWeight:    FontWeight.w800,
-                    color:         _orange,
-                    letterSpacing: 0.3,
+          // "Best value" ribbon, overhanging the top edge.
+          if (ribbon != null)
+            Positioned(
+              top:   -11,
+              left:  0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color:        _orange,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color:      _orange.withValues(alpha: 0.35),
+                        blurRadius: 8,
+                        offset:     const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    ribbon!.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize:      10,
+                      fontWeight:    FontWeight.w800,
+                      color:         Colors.white,
+                      letterSpacing: 0.4,
+                    ),
                   ),
                 ),
               ),
-            ],
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
 }
 
 // ──────────────────────────────────────────────────────────────
-// _CtaButton
+// _CtaButton — two-line: headline + (optional) renewal note
 // ──────────────────────────────────────────────────────────────
 
 class _CtaButton extends StatelessWidget {
-  const _CtaButton({required this.package, required this.onPurchase});
+  const _CtaButton({
+    required this.package,
+    required this.onPurchase,
+    required this.title,
+    this.subtitle,
+  });
 
   final Package?     package;
   final VoidCallback onPurchase;
+  final String       title;
+  final String?      subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -605,16 +745,17 @@ class _CtaButton extends StatelessWidget {
         onTap: enabled ? onPurchase : null,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          height: 52,
+          height: subtitle != null ? 62 : 54,
+          width:  double.infinity,
           decoration: BoxDecoration(
             color:        enabled ? _orange : const Color(0xFFD1D1D6),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: enabled
                 ? [
                     BoxShadow(
-                      color:      _orange.withValues(alpha: 0.35),
-                      blurRadius: 16,
-                      offset:     const Offset(0, 6),
+                      color:      _orange.withValues(alpha: 0.30),
+                      blurRadius: 18,
+                      offset:     const Offset(0, 8),
                     ),
                   ]
                 : [],
@@ -629,14 +770,30 @@ class _CtaButton extends StatelessWidget {
                       strokeWidth: 2.5,
                     ),
                   )
-                : const Text(
-                    'Aboneliği Başlat',
-                    style: TextStyle(
-                      fontSize:      15,
-                      fontWeight:    FontWeight.w700,
-                      color:         Colors.white,
-                      letterSpacing: 0.2,
-                    ),
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize:      16,
+                          fontWeight:    FontWeight.w700,
+                          color:         Colors.white,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle!,
+                          style: TextStyle(
+                            fontSize:   11.5,
+                            fontWeight: FontWeight.w500,
+                            color:      Colors.white.withValues(alpha: 0.85),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
           ),
         ),
@@ -650,8 +807,9 @@ class _CtaButton extends StatelessWidget {
 // ──────────────────────────────────────────────────────────────
 
 class _Footer extends StatelessWidget {
-  const _Footer({required this.onRestore});
+  const _Footer({required this.onRestore, this.showTrialTerms = false});
   final VoidCallback onRestore;
+  final bool         showTrialTerms;
 
   @override
   Widget build(BuildContext context) {
@@ -659,23 +817,27 @@ class _Footer extends StatelessWidget {
       final loading = SubscriptionService.to.isPurchasing.value;
       return Column(
         children: [
-          // Auto-renew + cancellation disclosure
-          const Text(
-            'Abonelik otomatik olarak yenilenir. Dönem bitiminden en az '
-            '24 saat önce iptal etmezseniz aynı ücretten yenilenir. '
-            'İstediğiniz zaman App Store ayarlarından iptal edebilirsiniz.',
+          // Auto-renew + cancellation disclosure (App Store Guideline 3.1.2).
+          // The trial→paid conversion and renewal price are already on the CTA,
+          // so this stays to the essential consumer-protection wording.
+          Text(
+            showTrialTerms
+                ? 'Deneme bitmeden iptal etmezsen otomatik olarak ücretli '
+                    'plana geçer. İstediğin zaman App Store\'dan iptal edebilirsin.'
+                : 'Abonelik otomatik yenilenir. İstediğin zaman App Store\'dan '
+                    'iptal edebilirsin.',
             textAlign: TextAlign.center,
-            style:     TextStyle(
+            style:     const TextStyle(
               fontSize: 11,
               color:    _textSec,
-              height:   1.45,
+              height:   1.4,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           // Legal consent — App Store Guideline 3.1.2
           const _PaywallLegal(),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
           GestureDetector(
             onTap: loading ? null : onRestore,
@@ -725,28 +887,23 @@ class _PaywallLegal extends StatelessWidget {
       height:          1.5,
     );
 
-    return Column(
+    // Single wrapped line keeps the required EULA + Privacy links functional
+    // (Guideline 3.1.2) without spending two extra rows of vertical space.
+    return Wrap(
+      alignment:          WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        const Text(
-          'Aboneliği başlatarak aşağıdakileri kabul etmiş olursunuz:',
-          textAlign: TextAlign.center,
-          style:     textStyle,
+        const Text('Devam ederek ', style: textStyle),
+        GestureDetector(
+          onTap: () => _open(_termsUrl),
+          child: const Text('Kullanım Koşulları', style: linkStyle),
         ),
-        const SizedBox(height: 2),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            GestureDetector(
-              onTap: () => _open(_termsUrl),
-              child: const Text('Kullanım Koşulları (EULA)', style: linkStyle),
-            ),
-            const Text(' · ', style: textStyle),
-            GestureDetector(
-              onTap: () => _open(_privacyUrl),
-              child: const Text('Gizlilik Politikası', style: linkStyle),
-            ),
-          ],
+        const Text(' ve ', style: textStyle),
+        GestureDetector(
+          onTap: () => _open(_privacyUrl),
+          child: const Text('Gizlilik Politikası', style: linkStyle),
         ),
+        const Text('\'nı kabul edersin.', style: textStyle),
       ],
     );
   }

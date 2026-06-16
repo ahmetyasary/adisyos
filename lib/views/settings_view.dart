@@ -1175,9 +1175,10 @@ class _SubscriptionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(() {
       final sub    = SubscriptionService.to;
-      final active = sub.isSubscribed;
       final trial  = sub.isInTrial;
-      final days   = sub.trialDaysLeft;
+      // "active" here means a full paid subscription (trial shown separately).
+      final active = sub.isSubscribed && !trial;
+      final days   = sub.daysLeft;
 
       return _Card(
         child: Column(
@@ -1238,7 +1239,7 @@ class _SubscriptionCard extends StatelessWidget {
                           active
                               ? 'Tüm özelliklere erişiminiz var'
                               : trial
-                                  ? '$days gün kaldı'
+                                  ? 'Ücretsiz deneme · $days gün kaldı'
                                   : 'Devam etmek için abone olun',
                           style: const TextStyle(
                               fontSize: 12, color: _textSec),
@@ -1246,7 +1247,7 @@ class _SubscriptionCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (!active)
+                  if (!sub.isSubscribed)
                     Builder(
                       builder: (ctx) => GestureDetector(
                         onTap: () => showPaywallSheet(ctx),

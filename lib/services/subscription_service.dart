@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Set these via --dart-define at build/run time:
 //   --dart-define=REVENUECAT_APPLE_KEY=appl_xxxx
@@ -13,6 +13,9 @@ const String _kGoogleKey = String.fromEnvironment('REVENUECAT_GOOGLE_KEY');
 // Must match the entitlement identifier in your RevenueCat dashboard.
 const String kEntitlementId = 'Orderix Pro';
 
+// The free-trial length is defined by the StoreKit introductory offer
+// configured on the products in App Store Connect / Google Play — NOT here.
+// This constant is only used for display fallbacks.
 const int kTrialDays = 14;
 
 class SubscriptionService extends GetxService {
@@ -47,43 +50,38 @@ class SubscriptionService extends GetxService {
 
   // ── Access gate ───────────────────────────────────────────────
 
-  /// True when the user may use the app (trial active OR subscription active).
+  /// The active premium entitlement, or null when the user has none.
   ///
-  /// Trial is derived purely from Supabase `created_at`, so it works even if
-  /// the RevenueCat SDK never initialises. Once the trial window is over the
-  /// user MUST have an active entitlement — we never fall back to allowing
-  /// access just because RC hasn't synced yet (that was the previous bug
-  /// that silently unlocked expired trials).
-  bool get hasAccess {
-    if (isInTrial) return true;
-    return isSubscribed;
-  }
+  /// During an Apple-managed introductory free trial RevenueCat reports the
+  /// entitlement as active (with `periodType == trial`), so a single
+  /// entitlement check covers both the trial and the paid period.
+  EntitlementInfo? get _entitlement =>
+      customerInfo.value?.entitlements.active[kEntitlementId];
 
-  bool get isSubscribed =>
-      customerInfo.value?.entitlements.active.containsKey(kEntitlementId) ??
-      false;
+  /// True when the user may use the app: an active entitlement, whether that
+  /// is a free trial, an introductory price, or a full paid subscription.
+  ///
+  /// We never fall back to allowing access just because RC hasn't synced yet —
+  /// no entitlement means no access.
+  bool get hasAccess => isSubscribed;
 
-  /// True when the account is within the 7-day free trial window.
+  bool get isSubscribed => _entitlement != null;
+
+  /// True while the active entitlement is still in its StoreKit free-trial
+  /// (or introductory) period rather than the full-price paid period.
   bool get isInTrial {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return false;
-    final createdAt = DateTime.tryParse(user.createdAt);
-    if (createdAt == null) return false;
-    return DateTime.now()
-        .isBefore(createdAt.add(const Duration(days: kTrialDays)));
+    final type = _entitlement?.periodType;
+    return type == PeriodType.trial || type == PeriodType.intro;
   }
 
-  /// Whole days remaining in the trial (0 when trial has ended).
-  int get trialDaysLeft {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return 0;
-    final createdAt = DateTime.tryParse(user.createdAt);
-    if (createdAt == null) return 0;
-    final remaining = createdAt
-        .add(const Duration(days: kTrialDays))
-        .difference(DateTime.now())
-        .inDays;
-    return remaining.clamp(0, kTrialDays);
+  /// Whole days remaining before the current period (trial or paid) renews
+  /// or expires. Returns 0 when there is no active entitlement.
+  int get daysLeft {
+    final exp = _entitlement?.expirationDate;
+    if (exp == null) return 0;
+    final end = DateTime.tryParse(exp);
+    if (end == null) return 0;
+    return end.difference(DateTime.now()).inDays.clamp(0, 99999);
   }
 
   // ── Customer lifecycle ────────────────────────────────────────
@@ -122,11 +120,15 @@ class SubscriptionService extends GetxService {
     try {
       final offerings = await Purchases.getOfferings();
       final current = offerings.current;
+      final m = current?.monthly?.storeProduct;
+      final a = current?.annual?.storeProduct;
       debugPrint('[RC] getOfferings() ok — '
           'all=${offerings.all.keys.toList()} '
           'current=${current?.identifier} '
-          'monthly=${current?.monthly?.storeProduct.identifier} '
-          'annual=${current?.annual?.storeProduct.identifier} '
+          'monthly=${m?.identifier} '
+          '(${m?.priceString} ${m?.currencyCode}) '
+          'annual=${a?.identifier} '
+          '(${a?.priceString} ${a?.currencyCode}) '
           'pkgCount=${current?.availablePackages.length ?? 0}');
       return offerings;
     } catch (e, st) {
@@ -136,7 +138,11 @@ class SubscriptionService extends GetxService {
   }
 
   /// Returns true when the purchase grants the premium entitlement.
-  /// Throws [PurchasesError] on non-cancellation failures.
+  ///
+  /// `Purchases.purchase` throws a [PlatformException]; the RevenueCat error
+  /// code is decoded via [PurchasesErrorHelper.getErrorCode]. We swallow the
+  /// two non-error outcomes (user cancelled, already subscribed) and only
+  /// rethrow genuine failures for the caller to surface.
   Future<bool> purchasePackage(Package package) async {
     isPurchasing.value = true;
     try {
@@ -144,8 +150,17 @@ class SubscriptionService extends GetxService {
       customerInfo.value = result.customerInfo;
       return result.customerInfo.entitlements.active
           .containsKey(kEntitlementId);
-    } on PurchasesError catch (e) {
-      if (e.code == PurchasesErrorCode.purchaseCancelledError) return false;
+    } on PlatformException catch (e) {
+      final code = PurchasesErrorHelper.getErrorCode(e);
+      // User dismissed the purchase sheet — not an error.
+      if (code == PurchasesErrorCode.purchaseCancelledError) return false;
+      // Re-tapped "subscribe" after already owning it: sync the latest
+      // entitlement instead of showing an error (this is the iOS
+      // "You're currently subscribed to this" case).
+      if (code == PurchasesErrorCode.productAlreadyPurchasedError) {
+        await refreshCustomerInfo();
+        return isSubscribed;
+      }
       rethrow;
     } finally {
       isPurchasing.value = false;
