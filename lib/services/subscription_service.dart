@@ -26,6 +26,14 @@ class SubscriptionService extends GetxService {
 
   static bool _sdkReady = false;
 
+  // Tracks whether we've reconciled the current session against the Apple
+  // receipt yet. The free trial / subscription belongs to the Apple ID
+  // (the StoreKit receipt), not to the Supabase user we logged in with, so
+  // before we ever lock a user out we recover any entitlement the Apple ID
+  // already owns. See [syncFromReceipt] / [receiptSyncSettled].
+  bool _receiptSyncDone = false;
+  bool _receiptSyncing = false;
+
   // ── SDK init (call before runApp) ─────────────────────────────
 
   static Future<void> configure() async {
@@ -75,18 +83,26 @@ class SubscriptionService extends GetxService {
   }
 
   /// Whole days remaining before the current period (trial or paid) renews
-  /// or expires. Returns 0 when there is no active entitlement.
+  /// or expires. Returns 0 only when there is no active/remaining entitlement.
+  ///
+  /// We round the remaining time *up* so a freshly started 14-day trial reads
+  /// "14" (not 13 from truncation) and a still-active period in its final <24h
+  /// reads "1" — never "0 gün kaldı" while access is genuinely still valid.
   int get daysLeft {
     final exp = _entitlement?.expirationDate;
     if (exp == null) return 0;
     final end = DateTime.tryParse(exp);
     if (end == null) return 0;
-    return end.difference(DateTime.now()).inDays.clamp(0, 99999);
+    final remaining = end.difference(DateTime.now());
+    if (remaining.inMinutes <= 0) return 0;
+    return (remaining.inMinutes / (60 * 24)).ceil().clamp(1, 99999);
   }
 
   // ── Customer lifecycle ────────────────────────────────────────
 
   Future<void> loginCustomer(String userId) async {
+    // A new session must re-reconcile with the Apple receipt.
+    _receiptSyncDone = false;
     if (!_sdkReady) return;
     try {
       final result = await Purchases.logIn(userId);
@@ -95,6 +111,7 @@ class SubscriptionService extends GetxService {
   }
 
   Future<void> logoutCustomer() async {
+    _receiptSyncDone = false;
     if (!_sdkReady) return;
     try {
       customerInfo.value = await Purchases.logOut();
@@ -102,6 +119,39 @@ class SubscriptionService extends GetxService {
       customerInfo.value = null;
     }
   }
+
+  /// Reconciles the signed-in RevenueCat customer with the Apple receipt so
+  /// that an entitlement already owned by this Apple ID — e.g. a free trial
+  /// started earlier, or a subscription bought under a *different* Supabase
+  /// account on the same device — is recovered and attached to the current
+  /// user. This is what prevents the paywall from re-appearing on every
+  /// login once the Apple ID has started its trial.
+  ///
+  /// Silent (no spinner, no user-facing restore prompt) and runs at most once
+  /// per session. [receiptSyncSettled] reports `true` once an attempt has
+  /// completed so the access gate knows it may proceed.
+  Future<void> syncFromReceipt() async {
+    if (!_sdkReady) {
+      _receiptSyncDone = true;
+      return;
+    }
+    if (_receiptSyncing || _receiptSyncDone) return;
+    _receiptSyncing = true;
+    try {
+      customerInfo.value = await Purchases.restorePurchases();
+    } catch (_) {
+      // A failed reconciliation must not trap the user behind the paywall
+      // forever; we mark it settled and fall back to whatever RC already knows.
+    } finally {
+      _receiptSyncing = false;
+      _receiptSyncDone = true;
+    }
+  }
+
+  /// True once [syncFromReceipt] has finished an attempt for this session.
+  /// While `false`, the access gate must not show the lockout paywall yet —
+  /// we may still recover an Apple-ID-owned entitlement.
+  bool get receiptSyncSettled => _receiptSyncDone;
 
   Future<void> refreshCustomerInfo() async {
     if (!_sdkReady) return;

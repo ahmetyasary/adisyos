@@ -113,6 +113,20 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     if (!AuthController.to.isAuthenticated) return;
     if (SubscriptionService.to.hasAccess) return;
 
+    // Before locking the user out, reconcile with the Apple receipt once per
+    // session. The trial/subscription belongs to the Apple ID, not the
+    // Supabase account, so an Apple ID that already started its trial must
+    // never be shown the paywall again — even after a logout/login or when
+    // signing in with a different account on the same device. While the
+    // (silent) sync is pending we hold off; it re-triggers this gate on
+    // completion, and customerInfo updates also fire it via the `ever` worker.
+    if (!SubscriptionService.to.receiptSyncSettled) {
+      SubscriptionService.to.syncFromReceipt().then((_) {
+        if (mounted) _enforcePaywall();
+      });
+      return;
+    }
+
     _paywallShown = true;
     showPaywallSheet(context, dismissible: false).whenComplete(() {
       _paywallShown = false;
