@@ -1,22 +1,27 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:orderix/services/menu_service.dart';
 import 'package:orderix/services/inventory_service.dart';
 import 'package:orderix/widgets/app_dialog.dart';
 import 'package:orderix/widgets/responsive_content.dart';
+import 'package:orderix/widgets/shell_leading.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _bg          = Color(0xFFF2F2F7);
-const _card        = Colors.white;
-const _orange      = Color(0xFFFF9500);
+const _bg = Colors.white;
+const _card = Colors.white;
+const _border = Color(0xFFECECEF);
+const _orange = Color(0xFFFF9500);
 const _textPrimary = Color(0xFF1C1C1E);
-const _textSec     = Color(0xFF8E8E93);
-const _colLow      = Color(0xFFFF9500);
-const _colOut      = Color(0xFFFF3B30);
-const _colOk       = Color(0xFF34C759);
+const _textSec = Color(0xFF8E8E93);
+const _colLow = Color(0xFFFF9500);
+const _colOut = Color(0xFFFF3B30);
+const _colOk = Color(0xFF34C759);
 
 class InventoryManagementView extends StatelessWidget {
-  const InventoryManagementView({super.key});
+  const InventoryManagementView({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
@@ -33,58 +38,58 @@ class InventoryManagementView extends StatelessWidget {
               child: ResponsiveContent(
                 width: ContentWidth.list,
                 child: Obx(() {
-                final menus = MenuService.to.menus;
-                if (menus.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'Menü tanımlı değil.',
-                      style: const TextStyle(color: _textSec, fontSize: 16),
-                    ),
-                  );
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: menus.length,
-                  itemBuilder: (context, menuIdx) {
-                    final menu = menus[menuIdx];
-                    final items = menu['items'] as List;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 4,
-                                height: 18,
-                                decoration: BoxDecoration(
-                                  color: _orange,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                menu['name'] as String,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: _textPrimary),
-                              ),
-                            ],
-                          ),
-                        ),
-                        ...items.map((item) {
-                          final itemMap = item as Map<String, dynamic>;
-                          return _InventoryItemCard(
-                              itemName: itemMap['name'] as String);
-                        }),
-                        const SizedBox(height: 8),
-                      ],
+                  final menus = MenuService.to.menus;
+                  if (menus.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'Menü tanımlı değil.',
+                        style: const TextStyle(color: _textSec, fontSize: 16),
+                      ),
                     );
-                  },
-                );
-              }),
+                  }
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: menus.length,
+                    itemBuilder: (context, menuIdx) {
+                      final menu = menus[menuIdx];
+                      final items = menu['items'] as List;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 4,
+                                  height: 18,
+                                  decoration: BoxDecoration(
+                                    color: _orange,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  menu['name'] as String,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: _textPrimary),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ...items.map((item) {
+                            final itemMap = item as Map<String, dynamic>;
+                            return _InventoryItemCard(
+                                itemName: itemMap['name'] as String);
+                          }),
+                          const SizedBox(height: 8),
+                        ],
+                      );
+                    },
+                  );
+                }),
               ),
             ),
           ],
@@ -98,20 +103,13 @@ class InventoryManagementView extends StatelessWidget {
       padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
       decoration: const BoxDecoration(
         color: _card,
-        boxShadow: [
-          BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
-          BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
-        ],
+        border: Border(bottom: BorderSide(color: _border, width: 1)),
       ),
       child: SizedBox(
         height: 52,
         child: Row(
           children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                  size: 18, color: _textPrimary),
-              onPressed: () => Get.back(),
-            ),
+            ShellLeading(embedded: embedded, color: _textPrimary),
             const Text(
               'Stok Yönetimi',
               style: TextStyle(
@@ -155,27 +153,30 @@ class InventoryManagementView extends StatelessWidget {
       return ResponsiveContent(
         width: ContentWidth.list,
         child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: _colOut.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.warning_rounded, color: _colOut, size: 20),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                '${lowItems.length} ürün kritik stok seviyesinde: '
-                '${lowItems.map((e) => '${e.key} (${e.value})').join(', ')}',
-                style: const TextStyle(
-                    color: _colOut, fontSize: 12, fontWeight: FontWeight.w500),
+          margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: _colOut.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(CupertinoIcons.exclamationmark_triangle_fill,
+                  color: _colOut, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '${lowItems.length} ürün kritik stok seviyesinde: '
+                  '${lowItems.map((e) => '${e.key} (${e.value})').join(', ')}',
+                  style: const TextStyle(
+                      color: _colOut,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500),
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
       );
     });
@@ -258,8 +259,13 @@ class _InventoryItemCard extends StatelessWidget {
       final isOut = service.isOutOfStock(itemName);
       final isLow = service.isLowStock(itemName);
 
-      final Color statusColor =
-          isOut ? _colOut : isLow ? _colLow : isTracked ? _colOk : _textSec;
+      final Color statusColor = isOut
+          ? _colOut
+          : isLow
+              ? _colLow
+              : isTracked
+                  ? _colOk
+                  : _textSec;
 
       final String statusText = isOut
           ? 'Stok tükendi'
@@ -277,8 +283,12 @@ class _InventoryItemCard extends StatelessWidget {
           decoration: const BoxDecoration(
             color: _card,
             borderRadius: BorderRadius.all(Radius.circular(12)),
+            border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
             boxShadow: [
-              BoxShadow(color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 2)),
+              BoxShadow(
+                  color: Color(0x08000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 2)),
             ],
           ),
           child: Row(
@@ -308,7 +318,7 @@ class _InventoryItemCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              const Icon(Icons.edit_outlined, size: 16, color: _textSec),
+              const Icon(CupertinoIcons.pencil, size: 16, color: _textSec),
             ],
           ),
         ),

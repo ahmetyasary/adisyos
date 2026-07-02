@@ -1,20 +1,22 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:orderix/services/day_service.dart';
 import 'package:orderix/services/sales_history_service.dart';
 import 'package:orderix/services/settings_service.dart';
+import 'package:orderix/widgets/shell_leading.dart';
 
 // ── Design tokens ─────────────────────────────────────────────
-const _bg          = Color(0xFFF2F2F7);
-const _card        = Colors.white;
-const _orange      = Color(0xFFFF9500);
-const _green       = Color(0xFF34C759);
-const _red         = Color(0xFFFF3B30);
-const _blue        = Color(0xFF007AFF);
+const _bg = Colors.white;
+const _card = Colors.white;
+const _orange = Color(0xFFFF9500);
+const _green = Color(0xFF34C759);
+const _red = Color(0xFFFF3B30);
+const _blue = Color(0xFF007AFF);
 const _textPrimary = Color(0xFF1C1C1E);
-const _textSec     = Color(0xFF8E8E93);
-const _border      = Color(0xFFE5E5EA);
+const _textSec = Color(0xFF8E8E93);
+const _border = Color(0xFFE5E5EA);
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -34,7 +36,9 @@ String _formatDuration(DateTime start, DateTime? end) {
 // ── View ──────────────────────────────────────────────────────
 
 class DayManagementView extends StatelessWidget {
-  const DayManagementView({super.key});
+  const DayManagementView({super.key, this.embedded = false});
+
+  final bool embedded;
 
   /// Compute per-identifier sales totals from SalesHistoryService.
   /// Returns Map<displayName, {total, count}>.
@@ -44,8 +48,8 @@ class DayManagementView extends StatelessWidget {
       final raw = sale['staffEmail'] as String? ?? '';
       final name = _displayName(raw.isEmpty ? null : raw);
       result.putIfAbsent(name, () => {'total': 0.0, 'count': 0});
-      result[name]!['total'] =
-          (result[name]!['total'] as double) + ((sale['total'] as num).toDouble());
+      result[name]!['total'] = (result[name]!['total'] as double) +
+          ((sale['total'] as num).toDouble());
       result[name]!['count'] = (result[name]!['count'] as int) + 1;
     }
     return result;
@@ -64,22 +68,13 @@ class DayManagementView extends StatelessWidget {
               padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
               decoration: const BoxDecoration(
                 color: _card,
-                boxShadow: [
-                  BoxShadow(
-                      color: Color(0x0C000000),
-                      blurRadius: 16,
-                      offset: Offset(0, 2)),
-                ],
+                border: Border(bottom: BorderSide(color: _border, width: 1)),
               ),
               child: SizedBox(
                 height: 52,
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                          size: 18, color: _textPrimary),
-                      onPressed: Get.back,
-                    ),
+                    ShellLeading(embedded: embedded, color: _textPrimary),
                     const Text(
                       'Gün Yönetimi',
                       style: TextStyle(
@@ -116,7 +111,7 @@ class DayManagementView extends StatelessWidget {
                             color: _orange.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(24),
                           ),
-                          child: const Icon(Icons.wb_sunny_rounded,
+                          child: const Icon(CupertinoIcons.sun_max_fill,
                               size: 40, color: _orange),
                         ),
                         const SizedBox(height: 16),
@@ -140,7 +135,8 @@ class DayManagementView extends StatelessWidget {
                 // Group by date
                 final grouped = <String, List<Map<String, dynamic>>>{};
                 for (final d in days) {
-                  final date = (d['day_date'] as String? ?? '').substring(0, 10);
+                  final date =
+                      (d['day_date'] as String? ?? '').substring(0, 10);
                   grouped.putIfAbsent(date, () => []).add(d);
                 }
                 final sortedDates = grouped.keys.toList()
@@ -271,11 +267,15 @@ class _SessionCard extends StatelessWidget {
 
     // Avatar color from name hash
     final colors = [
-      _orange, _blue, _green,
-      const Color(0xFFAF52DE), const Color(0xFF30B0C7), const Color(0xFF5856D6),
+      _orange,
+      _blue,
+      _green,
+      const Color(0xFFAF52DE),
+      const Color(0xFF30B0C7),
+      const Color(0xFF5856D6),
     ];
-    final avatarColor = colors[
-        displayName.codeUnits.fold(0, (a, b) => a + b) % colors.length];
+    final avatarColor =
+        colors[displayName.codeUnits.fold(0, (a, b) => a + b) % colors.length];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -284,16 +284,12 @@ class _SessionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         border: isActive
             ? Border.all(color: _green.withValues(alpha: 0.3), width: 1)
-            : null,
+            : Border.fromBorderSide(BorderSide(color: _border, width: 1)),
         boxShadow: const [
           BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 20,
-              offset: Offset(0, 4)),
+              color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
           BoxShadow(
-              color: Color(0x05000000),
-              blurRadius: 5,
-              offset: Offset(0, 1)),
+              color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 1)),
         ],
       ),
       child: Column(
@@ -308,14 +304,7 @@ class _SessionCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color.lerp(avatarColor, Colors.white, 0.28)!,
-                        avatarColor,
-                      ],
-                    ),
+                    color: avatarColor,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -410,12 +399,10 @@ class _SessionCard extends StatelessWidget {
 
                 // Duration pill
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isActive
-                        ? _green.withValues(alpha: 0.1)
-                        : _bg,
+                    color: isActive ? _green.withValues(alpha: 0.1) : _bg,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -441,7 +428,7 @@ class _SessionCard extends StatelessWidget {
               children: [
                 // Start time
                 _InfoChip(
-                  icon: Icons.login_rounded,
+                  icon: CupertinoIcons.sunrise_fill,
                   color: _green,
                   label: 'Başladı',
                   value: startedAt != null
@@ -452,7 +439,7 @@ class _SessionCard extends StatelessWidget {
 
                 // End time
                 _InfoChip(
-                  icon: Icons.logout_rounded,
+                  icon: CupertinoIcons.sunset_fill,
                   color: isActive ? _textSec : _red,
                   label: 'Bitti',
                   value: endedAt != null
@@ -468,13 +455,13 @@ class _SessionCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Obx(() => Text(
-                        '${SettingsService.cs}${salesTotal.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: _orange,
-                        ),
-                      )),
+                            '${SettingsService.cs}${salesTotal.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: _orange,
+                            ),
+                          )),
                       Text(
                         '$salesCount işlem',
                         style: const TextStyle(
@@ -532,8 +519,7 @@ class _InfoChip extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label,
-                style: const TextStyle(fontSize: 10, color: _textSec)),
+            Text(label, style: const TextStyle(fontSize: 10, color: _textSec)),
             Text(
               value,
               style: const TextStyle(

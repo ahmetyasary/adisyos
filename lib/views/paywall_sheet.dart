@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -10,15 +11,15 @@ import 'package:orderix/views/auth_screen.dart';
 import 'package:orderix/widgets/app_toast.dart';
 
 // ── Design tokens ──────────────────────────────────────────────
-const _orange      = Color(0xFFFF9500);
+const _orange = Color(0xFFFF9500);
 const _textPrimary = Color(0xFF1C1C1E);
-const _textSec     = Color(0xFF8E8E93);
-const _surface     = Color(0xFFF2F2F7);
-const _border      = Color(0xFFE5E5EA);
+const _textSec = Color(0xFF8E8E93);
+const _surface = Color(0xFFF2F2F7);
+const _border = Color(0xFFE5E5EA);
 
 // Legal links (App Store Guideline 3.1.2 — must be functional on the paywall).
 const _privacyUrl = 'https://orderix.tr/privacy';
-const _termsUrl   = 'https://orderix.tr/terms';
+const _termsUrl = 'https://orderix.tr/terms';
 
 // ──────────────────────────────────────────────────────────────
 // Public entry point
@@ -62,8 +63,8 @@ class _PaywallSheet extends StatefulWidget {
 
 class _PaywallSheetState extends State<_PaywallSheet> {
   Offerings? _offerings;
-  bool _loading      = true;
-  int  _selectedIdx  = 1; // 0 = monthly, 1 = yearly (pre-selected)
+  bool _loading = true;
+  int _selectedIdx = 1; // 0 = monthly, 1 = yearly (pre-selected)
 
   @override
   void initState() {
@@ -76,18 +77,18 @@ class _PaywallSheetState extends State<_PaywallSheet> {
     if (mounted) {
       setState(() {
         _offerings = offerings;
-        _loading   = false;
+        _loading = false;
       });
     }
   }
 
-  Package? get _monthly  => _offerings?.current?.monthly;
-  Package? get _yearly   => _offerings?.current?.annual;
+  Package? get _monthly => _offerings?.current?.monthly;
+  Package? get _yearly => _offerings?.current?.annual;
   Package? get _selected => _selectedIdx == 0 ? _monthly : _yearly;
 
   String? get _savingsBadge {
     if (_monthly == null || _yearly == null) return null;
-    final annualCost  = _monthly!.storeProduct.price * 12;
+    final annualCost = _monthly!.storeProduct.price * 12;
     final yearlyPrice = _yearly!.storeProduct.price;
     if (annualCost <= 0) return null;
     final pct = ((annualCost - yearlyPrice) / annualCost * 100).round();
@@ -148,11 +149,16 @@ class _PaywallSheetState extends State<_PaywallSheet> {
 
   String _unitLabel(PeriodUnit unit) {
     switch (unit) {
-      case PeriodUnit.day:   return 'gün';
-      case PeriodUnit.week:  return 'hafta';
-      case PeriodUnit.month: return 'ay';
-      case PeriodUnit.year:  return 'yıl';
-      case PeriodUnit.unknown: return 'gün';
+      case PeriodUnit.day:
+        return 'gün';
+      case PeriodUnit.week:
+        return 'hafta';
+      case PeriodUnit.month:
+        return 'ay';
+      case PeriodUnit.year:
+        return 'yıl';
+      case PeriodUnit.unknown:
+        return 'gün';
     }
   }
 
@@ -231,24 +237,24 @@ class _PaywallSheetState extends State<_PaywallSheet> {
                   const _PlanLoading()
                 else
                   _PlanRow(
-                    monthly:        _monthly,
-                    yearly:         _yearly,
-                    savingsBadge:   _savingsBadge,
+                    monthly: _monthly,
+                    yearly: _yearly,
+                    savingsBadge: _savingsBadge,
                     yearlyPerMonth: _yearlyPerMonth,
-                    selectedIndex:  _selectedIdx,
-                    onSelect:       (i) => setState(() => _selectedIdx = i),
+                    selectedIndex: _selectedIdx,
+                    onSelect: (i) => setState(() => _selectedIdx = i),
                   ),
                 const SizedBox(height: 14),
 
                 // CTA — the free-trial offer is surfaced directly on the button
                 // (headline + what it renews to), StoreKit-driven.
                 _CtaButton(
-                  package:    _selected,
+                  package: _selected,
                   onPurchase: _onPurchase,
-                  title:      _hasFreeTrial
+                  title: _hasFreeTrial
                       ? (_trialHeadline ?? 'Ücretsiz Denemeyi Başlat')
                       : 'Aboneliği Başlat',
-                  subtitle:   _hasFreeTrial ? _renewLine : null,
+                  subtitle: _hasFreeTrial ? _renewLine : null,
                 ),
                 const SizedBox(height: 12),
 
@@ -263,8 +269,8 @@ class _PaywallSheetState extends State<_PaywallSheet> {
                     style: TextButton.styleFrom(foregroundColor: _textSec),
                     child: const Text(
                       'Çıkış Yap',
-                      style: TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w500),
+                      style:
+                          TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],
@@ -287,10 +293,10 @@ class _Handle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width:  36,
+      width: 36,
       height: 5,
       decoration: BoxDecoration(
-        color:        const Color(0xFFD1D1D6),
+        color: const Color(0xFFD1D1D6),
         borderRadius: BorderRadius.circular(3),
       ),
     );
@@ -309,7 +315,7 @@ class _BrandHero extends StatelessWidget {
     return Column(
       children: [
         SizedBox(
-          width:  56,
+          width: 56,
           height: 56,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
@@ -323,11 +329,11 @@ class _BrandHero extends StatelessWidget {
         RichText(
           text: const TextSpan(
             style: TextStyle(
-              fontSize:      25,
-              fontWeight:    FontWeight.w800,
-              color:         _textPrimary,
+              fontSize: 25,
+              fontWeight: FontWeight.w800,
+              color: _textPrimary,
               letterSpacing: -0.6,
-              height:        1.1,
+              height: 1.1,
             ),
             children: [
               TextSpan(text: 'Orderix '),
@@ -343,8 +349,8 @@ class _BrandHero extends StatelessWidget {
           'Restoranınızı tek bir yerden yönetin',
           style: TextStyle(
             fontSize: 14,
-            color:    _textSec,
-            height:   1.4,
+            color: _textSec,
+            height: 1.4,
           ),
           textAlign: TextAlign.center,
         ),
@@ -366,21 +372,21 @@ class _TrialExpiredBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
-        color:        _surface,
+        color: _surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: const Row(
         children: [
-          Icon(Icons.lock_outline_rounded, size: 16, color: _orange),
+          Icon(CupertinoIcons.lock, size: 16, color: _orange),
           SizedBox(width: 10),
           Expanded(
             child: Text(
               'Orderix\'i kullanmaya devam etmek için aboneliğinizi başlatın.',
               style: TextStyle(
-                fontSize:   13,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color:      _textPrimary,
-                height:     1.3,
+                color: _textPrimary,
+                height: 1.3,
               ),
             ),
           ),
@@ -415,13 +421,13 @@ class _FeatureList extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width:  22,
+                    width: 22,
                     height: 22,
                     decoration: BoxDecoration(
                       color: _orange.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.check_rounded,
+                    child: const Icon(CupertinoIcons.checkmark_alt,
                         size: 14, color: _orange),
                   ),
                   const SizedBox(width: 12),
@@ -429,10 +435,10 @@ class _FeatureList extends StatelessWidget {
                     child: Text(
                       f,
                       style: const TextStyle(
-                        fontSize:   14,
+                        fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color:      _textPrimary,
-                        height:     1.35,
+                        color: _textPrimary,
+                        height: 1.35,
                       ),
                     ),
                   ),
@@ -479,19 +485,19 @@ class _PlanRow extends StatelessWidget {
 
   final Package? monthly;
   final Package? yearly;
-  final String?  savingsBadge;
-  final String?  yearlyPerMonth;
-  final int      selectedIndex;
+  final String? savingsBadge;
+  final String? yearlyPerMonth;
+  final int selectedIndex;
   final void Function(int) onSelect;
 
   @override
   Widget build(BuildContext context) {
     if (monthly == null && yearly == null) {
       return Container(
-        width:  double.infinity,
+        width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color:        _surface,
+          color: _surface,
           borderRadius: BorderRadius.circular(14),
         ),
         child: const Text(
@@ -513,25 +519,24 @@ class _PlanRow extends StatelessWidget {
             if (monthly != null)
               Expanded(
                 child: _PlanCard(
-                  label:    'Aylık',
-                  price:    monthly!.storeProduct.priceString,
-                  period:   'her ay',
+                  label: 'Aylık',
+                  price: monthly!.storeProduct.priceString,
+                  period: 'her ay',
                   selected: selectedIndex == 0,
-                  onTap:    () => onSelect(0),
+                  onTap: () => onSelect(0),
                 ),
               ),
-            if (monthly != null && yearly != null)
-              const SizedBox(width: 12),
+            if (monthly != null && yearly != null) const SizedBox(width: 12),
             if (yearly != null)
               Expanded(
                 child: _PlanCard(
-                  label:    'Yıllık',
-                  price:    yearly!.storeProduct.priceString,
-                  period:   'her yıl',
+                  label: 'Yıllık',
+                  price: yearly!.storeProduct.priceString,
+                  period: 'her yıl',
                   selected: selectedIndex == 1,
-                  ribbon:   savingsBadge,
+                  ribbon: savingsBadge,
                   subPrice: yearlyPerMonth,
-                  onTap:    () => onSelect(1),
+                  onTap: () => onSelect(1),
                 ),
               ),
           ],
@@ -556,10 +561,10 @@ class _PlanCard extends StatelessWidget {
     this.subPrice,
   });
 
-  final String  label;
-  final String  price;
-  final String  period;
-  final bool    selected;
+  final String label;
+  final String price;
+  final String period;
+  final bool selected;
   final VoidCallback onTap;
 
   /// "Best value" pill that overhangs the top edge (e.g. "%17 İNDİRİM").
@@ -579,10 +584,10 @@ class _PlanCard extends StatelessWidget {
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            curve:    Curves.easeOut,
-            padding:  const EdgeInsets.fromLTRB(14, 16, 14, 16),
+            curve: Curves.easeOut,
+            padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
             decoration: BoxDecoration(
-              color:        Colors.white,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: selected ? _orange : _border,
@@ -591,16 +596,16 @@ class _PlanCard extends StatelessWidget {
               boxShadow: selected
                   ? [
                       BoxShadow(
-                        color:      _orange.withValues(alpha: 0.16),
+                        color: _orange.withValues(alpha: 0.16),
                         blurRadius: 18,
-                        offset:     const Offset(0, 8),
+                        offset: const Offset(0, 8),
                       ),
                     ]
                   : [
                       BoxShadow(
-                        color:      const Color(0x08000000),
+                        color: const Color(0x08000000),
                         blurRadius: 10,
-                        offset:     const Offset(0, 3),
+                        offset: const Offset(0, 3),
                       ),
                     ],
             ),
@@ -615,14 +620,14 @@ class _PlanCard extends StatelessWidget {
                     Text(
                       label,
                       style: TextStyle(
-                        fontSize:   13,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color:      selected ? _orange : _textSec,
+                        color: selected ? _orange : _textSec,
                       ),
                     ),
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
-                      width:  18,
+                      width: 18,
                       height: 18,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
@@ -633,7 +638,7 @@ class _PlanCard extends StatelessWidget {
                         ),
                       ),
                       child: selected
-                          ? const Icon(Icons.check_rounded,
+                          ? const Icon(CupertinoIcons.checkmark_alt,
                               size: 12, color: Colors.white)
                           : null,
                     ),
@@ -645,9 +650,9 @@ class _PlanCard extends StatelessWidget {
                 Text(
                   price,
                   style: const TextStyle(
-                    fontSize:      21,
-                    fontWeight:    FontWeight.w800,
-                    color:         _textPrimary,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w800,
+                    color: _textPrimary,
                     letterSpacing: -0.5,
                   ),
                 ),
@@ -657,9 +662,9 @@ class _PlanCard extends StatelessWidget {
                 Text(
                   period,
                   style: const TextStyle(
-                    fontSize:   12,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color:      _textSec,
+                    color: _textSec,
                   ),
                 ),
 
@@ -669,9 +674,9 @@ class _PlanCard extends StatelessWidget {
                   Text(
                     subPrice!,
                     style: TextStyle(
-                      fontSize:   11.5,
+                      fontSize: 11.5,
                       fontWeight: FontWeight.w700,
-                      color:      selected ? _orange : _textSec,
+                      color: selected ? _orange : _textSec,
                     ),
                   ),
                 ],
@@ -682,30 +687,30 @@ class _PlanCard extends StatelessWidget {
           // "Best value" ribbon, overhanging the top edge.
           if (ribbon != null)
             Positioned(
-              top:   -11,
-              left:  0,
+              top: -11,
+              left: 0,
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color:        _orange,
+                    color: _orange,
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color:      _orange.withValues(alpha: 0.35),
+                        color: _orange.withValues(alpha: 0.35),
                         blurRadius: 8,
-                        offset:     const Offset(0, 3),
+                        offset: const Offset(0, 3),
                       ),
                     ],
                   ),
                   child: Text(
                     ribbon!.toUpperCase(),
                     style: const TextStyle(
-                      fontSize:      10,
-                      fontWeight:    FontWeight.w800,
-                      color:         Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
                       letterSpacing: 0.4,
                     ),
                   ),
@@ -730,10 +735,10 @@ class _CtaButton extends StatelessWidget {
     this.subtitle,
   });
 
-  final Package?     package;
+  final Package? package;
   final VoidCallback onPurchase;
-  final String       title;
-  final String?      subtitle;
+  final String title;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -746,16 +751,16 @@ class _CtaButton extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           height: subtitle != null ? 62 : 54,
-          width:  double.infinity,
+          width: double.infinity,
           decoration: BoxDecoration(
-            color:        enabled ? _orange : const Color(0xFFD1D1D6),
+            color: enabled ? _orange : const Color(0xFFD1D1D6),
             borderRadius: BorderRadius.circular(16),
             boxShadow: enabled
                 ? [
                     BoxShadow(
-                      color:      _orange.withValues(alpha: 0.30),
+                      color: _orange.withValues(alpha: 0.30),
                       blurRadius: 18,
-                      offset:     const Offset(0, 8),
+                      offset: const Offset(0, 8),
                     ),
                   ]
                 : [],
@@ -763,10 +768,10 @@ class _CtaButton extends StatelessWidget {
           child: Center(
             child: loading
                 ? const SizedBox(
-                    width:  22,
+                    width: 22,
                     height: 22,
-                    child:  CircularProgressIndicator(
-                      color:       Colors.white,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
                       strokeWidth: 2.5,
                     ),
                   )
@@ -776,9 +781,9 @@ class _CtaButton extends StatelessWidget {
                       Text(
                         title,
                         style: const TextStyle(
-                          fontSize:      16,
-                          fontWeight:    FontWeight.w700,
-                          color:         Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
                           letterSpacing: 0.2,
                         ),
                       ),
@@ -787,9 +792,9 @@ class _CtaButton extends StatelessWidget {
                         Text(
                           subtitle!,
                           style: TextStyle(
-                            fontSize:   11.5,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w500,
-                            color:      Colors.white.withValues(alpha: 0.85),
+                            color: Colors.white.withValues(alpha: 0.85),
                           ),
                         ),
                       ],
@@ -809,7 +814,7 @@ class _CtaButton extends StatelessWidget {
 class _Footer extends StatelessWidget {
   const _Footer({required this.onRestore, this.showTrialTerms = false});
   final VoidCallback onRestore;
-  final bool         showTrialTerms;
+  final bool showTrialTerms;
 
   @override
   Widget build(BuildContext context) {
@@ -827,10 +832,10 @@ class _Footer extends StatelessWidget {
                 : 'Abonelik otomatik yenilenir. İstediğin zaman App Store\'dan '
                     'iptal edebilirsin.',
             textAlign: TextAlign.center,
-            style:     const TextStyle(
+            style: const TextStyle(
               fontSize: 11,
-              color:    _textSec,
-              height:   1.4,
+              color: _textSec,
+              height: 1.4,
             ),
           ),
           const SizedBox(height: 10),
@@ -845,9 +850,9 @@ class _Footer extends StatelessWidget {
               'Satın Alımları Geri Yükle',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize:   13,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color:      loading ? _textSec : _orange,
+                color: loading ? _textSec : _orange,
               ),
             ),
           ),
@@ -875,22 +880,22 @@ class _PaywallLegal extends StatelessWidget {
   Widget build(BuildContext context) {
     const textStyle = TextStyle(
       fontSize: 11,
-      color:    _textSec,
-      height:   1.5,
+      color: _textSec,
+      height: 1.5,
     );
     const linkStyle = TextStyle(
-      fontSize:        11,
-      fontWeight:      FontWeight.w600,
-      color:           _orange,
-      decoration:      TextDecoration.underline,
+      fontSize: 11,
+      fontWeight: FontWeight.w600,
+      color: _orange,
+      decoration: TextDecoration.underline,
       decorationColor: _orange,
-      height:          1.5,
+      height: 1.5,
     );
 
     // Single wrapped line keeps the required EULA + Privacy links functional
     // (Guideline 3.1.2) without spending two extra rows of vertical space.
     return Wrap(
-      alignment:          WrapAlignment.center,
+      alignment: WrapAlignment.center,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         const Text('Devam ederek ', style: textStyle),

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -11,8 +12,8 @@ import 'package:orderix/services/settings_service.dart';
 /// Returns "Section · tableName" when a live table with that name has a section.
 String _resolveTableLabel(String rawName) {
   final tables = TableService.to.tables;
-  final match = tables.firstWhereOrNull(
-      (t) => (t['name'] as String) == rawName);
+  final match =
+      tables.firstWhereOrNull((t) => (t['name'] as String) == rawName);
   if (match == null) return rawName;
   final sectionId = match['sectionId'] as String?;
   final sectionName = SectionService.to.nameById(sectionId);
@@ -23,18 +24,127 @@ String _resolveTableLabel(String rawName) {
 }
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _bg          = Color(0xFFF2F2F7);
-const _card        = Colors.white;
+const _bg = Colors.white;
+const _chip = Color(0xFFF2F2F7);
+const _card = Colors.white;
 const _textPrimary = Color(0xFF1C1C1E);
-const _textSec     = Color(0xFF8E8E93);
-const _border      = Color(0xFFE5E5EA);
+const _textSec = Color(0xFF8E8E93);
+const _border = Color(0xFFE5E5EA);
 
 class DailyReportView extends StatelessWidget {
-  const DailyReportView({super.key});
+  /// [inline] renders the report body only (no own Scaffold/header), for
+  /// embedding as the detail pane of a tablet master-detail split view.
+  const DailyReportView({super.key, this.inline = false});
+
+  final bool inline;
 
   @override
   Widget build(BuildContext context) {
     final today = DateTime.now();
+
+    final body = Obx(() {
+      final cs = SettingsService.cs;
+      final sales = SalesHistoryService.to.getSalesForDate(today);
+      final total = SalesHistoryService.to.getTotalForSales(sales);
+      final hourlyTotals = SalesHistoryService.to.getHourlyTotals(today);
+      final topItems = SalesHistoryService.to.getTopItems(sales, top: 5);
+
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Date label
+            Text(
+              DateFormat('dd MMMM yyyy, EEEE', Get.locale?.languageCode ?? 'tr')
+                  .format(today),
+              style: const TextStyle(
+                color: _textSec,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Summary cards
+            Row(
+              children: [
+                Expanded(
+                  child: _StatCard(
+                    icon: CupertinoIcons.money_dollar_circle_fill,
+                    label: 'total_sales'.tr,
+                    value: '$cs${total.toStringAsFixed(2)}',
+                    accent: AppTheme.successColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _StatCard(
+                    icon: CupertinoIcons.doc_text_fill,
+                    label: 'sale_count'.tr,
+                    value: '${sales.length}',
+                    accent: AppTheme.accentColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _StatCard(
+                    icon: CupertinoIcons.arrow_up_right_circle_fill,
+                    label: 'Ort. Sipariş',
+                    value: sales.isEmpty
+                        ? '${cs}0.00'
+                        : '$cs${(total / sales.length).toStringAsFixed(2)}',
+                    accent: AppTheme.warningColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            if (sales.isEmpty)
+              _buildEmptyState()
+            else ...[
+              // Hourly line chart
+              _SectionTitle(
+                  title: 'hourly_sales'.tr, icon: CupertinoIcons.clock_fill),
+              const SizedBox(height: 12),
+              _ChartCard(child: _buildHourlyLineChart(hourlyTotals, cs)),
+              const SizedBox(height: 24),
+
+              // Payment method breakdown
+              _SectionTitle(
+                  title: 'pay_breakdown'.tr,
+                  icon: CupertinoIcons.chart_pie_fill),
+              const SizedBox(height: 12),
+              _ContentCard(
+                  child: _buildPaymentBreakdown(
+                      SalesHistoryService.to.getPaymentMethodTotals(sales),
+                      total,
+                      cs)),
+              const SizedBox(height: 24),
+
+              // Top items
+              if (topItems.isNotEmpty) ...[
+                _SectionTitle(
+                    title: 'top_items'.tr, icon: CupertinoIcons.star_fill),
+                const SizedBox(height: 12),
+                _ContentCard(child: _buildTopItemsList(topItems)),
+                const SizedBox(height: 24),
+              ],
+
+              // Son Aktivite — table-grouped
+              _SectionTitle(
+                  title: 'recent_activity'.tr,
+                  icon: CupertinoIcons.list_bullet),
+              const SizedBox(height: 12),
+              _buildTableGroupedActivity(sales, cs),
+            ],
+          ],
+        ),
+      );
+    });
+
+    if (inline) return body;
 
     return Scaffold(
       backgroundColor: _bg,
@@ -43,116 +153,7 @@ class DailyReportView extends StatelessWidget {
         child: Column(
           children: [
             _Header(title: 'daily_report'.tr),
-            Expanded(
-              child: Obx(() {
-                final cs = SettingsService.cs;
-                final sales = SalesHistoryService.to.getSalesForDate(today);
-                final total = SalesHistoryService.to.getTotalForSales(sales);
-                final hourlyTotals =
-                    SalesHistoryService.to.getHourlyTotals(today);
-                final topItems =
-                    SalesHistoryService.to.getTopItems(sales, top: 5);
-
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Date label
-                      Text(
-                        DateFormat('dd MMMM yyyy, EEEE',
-                                Get.locale?.languageCode ?? 'tr')
-                            .format(today),
-                        style: const TextStyle(
-                          color: _textSec,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Summary cards
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _StatCard(
-                              icon: Icons.attach_money_rounded,
-                              label: 'total_sales'.tr,
-                              value: '$cs${total.toStringAsFixed(2)}',
-                              accent: AppTheme.successColor,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _StatCard(
-                              icon: Icons.receipt_long_rounded,
-                              label: 'sale_count'.tr,
-                              value: '${sales.length}',
-                              accent: AppTheme.accentColor,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _StatCard(
-                              icon: Icons.trending_up_rounded,
-                              label: 'Ort. Sipariş',
-                              value: sales.isEmpty
-                                  ? '${cs}0.00'
-                                  : '$cs${(total / sales.length).toStringAsFixed(2)}',
-                              accent: AppTheme.warningColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-
-                      if (sales.isEmpty)
-                        _buildEmptyState()
-                      else ...[
-                        // Hourly line chart
-                        _SectionTitle(
-                            title: 'hourly_sales'.tr,
-                            icon: Icons.access_time_rounded),
-                        const SizedBox(height: 12),
-                        _ChartCard(
-                            child: _buildHourlyLineChart(hourlyTotals, cs)),
-                        const SizedBox(height: 24),
-
-                        // Payment method breakdown
-                        _SectionTitle(
-                            title: 'pay_breakdown'.tr,
-                            icon: Icons.pie_chart_rounded),
-                        const SizedBox(height: 12),
-                        _ContentCard(
-                            child: _buildPaymentBreakdown(
-                                SalesHistoryService.to
-                                    .getPaymentMethodTotals(sales),
-                                total, cs)),
-                        const SizedBox(height: 24),
-
-                        // Top items
-                        if (topItems.isNotEmpty) ...[
-                          _SectionTitle(
-                              title: 'top_items'.tr,
-                              icon: Icons.star_rounded),
-                          const SizedBox(height: 12),
-                          _ContentCard(
-                              child: _buildTopItemsList(topItems)),
-                          const SizedBox(height: 24),
-                        ],
-
-                        // Son Aktivite — table-grouped
-                        _SectionTitle(
-                            title: 'recent_activity'.tr,
-                            icon: Icons.list_alt_rounded),
-                        const SizedBox(height: 12),
-                        _buildTableGroupedActivity(sales, cs),
-                      ],
-                    ],
-                  ),
-                );
-              }),
-            ),
+            Expanded(child: body),
           ],
         ),
       ),
@@ -162,8 +163,7 @@ class DailyReportView extends StatelessWidget {
   // ── Hourly line chart (upgraded from bar chart) ───────────────
   Widget _buildHourlyLineChart(Map<int, double> hourlyTotals, String cs) {
     if (hourlyTotals.isEmpty) {
-      return const SizedBox(
-          height: 200, child: Center(child: Text('-')));
+      return const SizedBox(height: 200, child: Center(child: Text('-')));
     }
 
     // Build a full 0-23 hour axis with 0 for empty hours
@@ -246,10 +246,8 @@ class DailyReportView extends StatelessWidget {
                 },
               ),
             ),
-            rightTitles:
-                AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles:
-                AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
           ),
           borderData: FlBorderData(show: false),
           gridData: FlGridData(
@@ -267,15 +265,30 @@ class DailyReportView extends StatelessWidget {
   Widget _buildPaymentBreakdown(
       Map<String, double> totals, double grandTotal, String cs) {
     final methods = [
-      {'key': 'cash',     'label': 'pay_cash',     'icon': Icons.payments_rounded,        'color': const Color(0xFF52C97F)},
-      {'key': 'card',     'label': 'pay_card',     'icon': Icons.credit_card_rounded,     'color': const Color(0xFF5DADE2)},
-      {'key': 'transfer', 'label': 'pay_transfer', 'icon': Icons.account_balance_rounded, 'color': const Color(0xFFAB84F5)},
+      {
+        'key': 'cash',
+        'label': 'pay_cash',
+        'icon': CupertinoIcons.money_dollar,
+        'color': const Color(0xFF52C97F)
+      },
+      {
+        'key': 'card',
+        'label': 'pay_card',
+        'icon': CupertinoIcons.creditcard_fill,
+        'color': const Color(0xFF5DADE2)
+      },
+      {
+        'key': 'transfer',
+        'label': 'pay_transfer',
+        'icon': CupertinoIcons.building_2_fill,
+        'color': const Color(0xFFAB84F5)
+      },
     ];
     return Column(
       children: methods.map((m) {
-        final amount   = totals[m['key'] as String] ?? 0.0;
+        final amount = totals[m['key'] as String] ?? 0.0;
         final fraction = grandTotal > 0 ? amount / grandTotal : 0.0;
-        final color    = m['color'] as Color;
+        final color = m['color'] as Color;
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Row(
@@ -330,15 +343,16 @@ class DailyReportView extends StatelessWidget {
     final maxQty = topItems.first.value;
     return Column(
       children: topItems.asMap().entries.map((entry) {
-        final rank     = entry.key + 1;
-        final item     = entry.value;
+        final rank = entry.key + 1;
+        final item = entry.value;
         final fraction = maxQty > 0 ? item.value / maxQty : 0.0;
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Row(
             children: [
               Container(
-                width: 28, height: 28,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
                   color: AppTheme.accentColor
                       .withValues(alpha: rank == 1 ? 0.15 : 0.08),
@@ -368,8 +382,8 @@ class DailyReportView extends StatelessWidget {
                                 fontSize: 13,
                                 color: _textPrimary)),
                         Text('${item.value.toInt()} adet',
-                            style: const TextStyle(
-                                color: _textSec, fontSize: 12)),
+                            style:
+                                const TextStyle(color: _textSec, fontSize: 12)),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -391,7 +405,8 @@ class DailyReportView extends StatelessWidget {
   }
 
   // ── Son Aktivite: table-grouped ───────────────────────────────
-  Widget _buildTableGroupedActivity(List<Map<String, dynamic>> sales, String cs) {
+  Widget _buildTableGroupedActivity(
+      List<Map<String, dynamic>> sales, String cs) {
     // Group by tableName, preserve order (newest first already)
     final grouped = <String, List<Map<String, dynamic>>>{};
     for (final sale in sales) {
@@ -410,14 +425,15 @@ class DailyReportView extends StatelessWidget {
     return Column(
       children: tableNames.map((tableName) {
         final tableSales = grouped[tableName]!;
-        final tableTotal = tableSales.fold(
-            0.0, (sum, s) => sum + (s['total'] as double));
+        final tableTotal =
+            tableSales.fold(0.0, (sum, s) => sum + (s['total'] as double));
 
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
             color: _card,
             borderRadius: BorderRadius.circular(18),
+            border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
             boxShadow: const [
               BoxShadow(
                   color: Color(0x0A000000),
@@ -434,8 +450,8 @@ class DailyReportView extends StatelessWidget {
             children: [
               // Table header
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -445,16 +461,15 @@ class DailyReportView extends StatelessWidget {
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                   ),
-                  borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(18)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(18)),
                 ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: AppTheme.accentColor
-                            .withValues(alpha: 0.15),
+                        color: AppTheme.accentColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.table_restaurant_rounded,
@@ -474,8 +489,7 @@ class DailyReportView extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppTheme.successColor
-                            .withValues(alpha: 0.12),
+                        color: AppTheme.successColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -493,30 +507,25 @@ class DailyReportView extends StatelessWidget {
 
               // Individual sales for this table
               ...tableSales.asMap().entries.map((entry) {
-                final idx  = entry.key;
+                final idx = entry.key;
                 final sale = entry.value;
-                final date =
-                    DateTime.parse(sale['date'] as String);
-                final items = (sale['items'] as List)
-                    .cast<Map<String, dynamic>>();
-                final method =
-                    (sale['paymentMethod'] as String?) ?? 'cash';
-                final isLast =
-                    idx == tableSales.length - 1;
+                final date = DateTime.parse(sale['date'] as String);
+                final items =
+                    (sale['items'] as List).cast<Map<String, dynamic>>();
+                final method = (sale['paymentMethod'] as String?) ?? 'cash';
+                final isLast = idx == tableSales.length - 1;
 
                 return Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                          16, 12, 16, 12),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Time + payment method row
                           Row(
                             children: [
-                              Icon(Icons.access_time_rounded,
+                              Icon(CupertinoIcons.clock_fill,
                                   size: 13, color: _textSec),
                               const SizedBox(width: 4),
                               Text(
@@ -534,21 +543,18 @@ class DailyReportView extends StatelessWidget {
 
                           // Item list
                           ...items.map((item) {
-                            final qty =
-                                (item['quantity'] as num).toInt();
-                            final price =
-                                (item['price'] as num).toDouble();
+                            final qty = (item['quantity'] as num).toInt();
+                            final price = (item['price'] as num).toDouble();
                             return Padding(
-                              padding:
-                                  const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.only(bottom: 6),
                               child: Row(
                                 children: [
                                   Container(
-                                    width: 22, height: 22,
+                                    width: 22,
+                                    height: 22,
                                     decoration: BoxDecoration(
-                                      color: _bg,
-                                      borderRadius:
-                                          BorderRadius.circular(6),
+                                      color: _chip,
+                                      borderRadius: BorderRadius.circular(6),
                                     ),
                                     alignment: Alignment.center,
                                     child: Text(
@@ -565,8 +571,7 @@ class DailyReportView extends StatelessWidget {
                                     child: Text(
                                       item['name'] as String,
                                       style: const TextStyle(
-                                          fontSize: 13,
-                                          color: _textPrimary),
+                                          fontSize: 13, color: _textPrimary),
                                     ),
                                   ),
                                   Text(
@@ -585,8 +590,7 @@ class DailyReportView extends StatelessWidget {
                           // Sale total row
                           const SizedBox(height: 4),
                           Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.end,
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               Text(
                                 '${items.length} ürün · ',
@@ -608,8 +612,7 @@ class DailyReportView extends StatelessWidget {
                     ),
                     if (!isLast)
                       const Divider(
-                          height: 1, indent: 16, endIndent: 16,
-                          color: _border),
+                          height: 1, indent: 16, endIndent: 16, color: _border),
                   ],
                 );
               }),
@@ -633,7 +636,7 @@ class DailyReportView extends StatelessWidget {
                 color: _border,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.bar_chart_rounded,
+              child: const Icon(CupertinoIcons.chart_bar_alt_fill,
                   size: 48, color: _textSec),
             ),
             const SizedBox(height: 16),
@@ -656,9 +659,17 @@ class _PayMethodBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, icon, color) = switch (method) {
-      'card'     => ('Kart',   Icons.credit_card_rounded,     const Color(0xFF5DADE2)),
-      'transfer' => ('Havale', Icons.account_balance_rounded, const Color(0xFFAB84F5)),
-      _          => ('Nakit',  Icons.payments_rounded,        const Color(0xFF52C97F)),
+      'card' => (
+          'Kart',
+          CupertinoIcons.creditcard_fill,
+          const Color(0xFF5DADE2)
+        ),
+      'transfer' => (
+          'Havale',
+          CupertinoIcons.building_2_fill,
+          const Color(0xFFAB84F5)
+        ),
+      _ => ('Nakit', CupertinoIcons.money_dollar, const Color(0xFF52C97F)),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -695,17 +706,14 @@ class _Header extends StatelessWidget {
       padding: EdgeInsets.only(top: topPad),
       decoration: const BoxDecoration(
         color: _card,
-        boxShadow: [
-          BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
-          BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
-        ],
+        border: Border(bottom: BorderSide(color: _border, width: 1)),
       ),
       child: SizedBox(
         height: 52,
         child: Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+              icon: const Icon(CupertinoIcons.chevron_back,
                   size: 18, color: _textPrimary),
               onPressed: () => Get.back(),
             ),
@@ -744,32 +752,18 @@ class _StatCard extends StatelessWidget {
       decoration: const BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.all(Radius.circular(16)),
+        border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
         boxShadow: [
-          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
-          BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
+          BoxShadow(
+              color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(
+              color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 1)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 34, height: 34,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color.lerp(accent, Colors.white, 0.28)!, accent],
-              ),
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                    color: accent.withValues(alpha: 0.28),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2)),
-              ],
-            ),
-            child: Icon(icon, color: Colors.white, size: 16),
-          ),
+          Icon(icon, color: accent, size: 22),
           const SizedBox(height: 10),
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -837,9 +831,12 @@ class _ChartCard extends StatelessWidget {
       decoration: const BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.all(Radius.circular(16)),
+        border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
         boxShadow: [
-          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
-          BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
+          BoxShadow(
+              color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(
+              color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 1)),
         ],
       ),
       child: child,
@@ -858,9 +855,12 @@ class _ContentCard extends StatelessWidget {
       decoration: const BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.all(Radius.circular(16)),
+        border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
         boxShadow: [
-          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
-          BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
+          BoxShadow(
+              color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(
+              color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 1)),
         ],
       ),
       child: child,

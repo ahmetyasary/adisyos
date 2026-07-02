@@ -1,18 +1,23 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:orderix/services/sales_history_service.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/themes/app_theme.dart';
+import 'package:orderix/widgets/shell_leading.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _bg          = Color(0xFFF2F2F7);
-const _card        = Colors.white;
+const _bg = Colors.white;
+const _card = Colors.white;
 const _textPrimary = Color(0xFF1C1C1E);
-const _textSec     = Color(0xFF8E8E93);
+const _textSec = Color(0xFF8E8E93);
+const _border = Color(0xFFECECEF);
 
 class NotificationsView extends StatelessWidget {
-  const NotificationsView({super.key});
+  const NotificationsView({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +27,7 @@ class NotificationsView extends StatelessWidget {
         top: false,
         child: Column(
           children: [
-            _PageHeader(title: 'notifications'.tr),
+            _PageHeader(title: 'notifications'.tr, embedded: embedded),
             Expanded(
               child: Obx(() {
                 final recentSales =
@@ -40,7 +45,7 @@ class NotificationsView extends StatelessWidget {
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
-                            Icons.notifications_none_rounded,
+                            CupertinoIcons.bell,
                             size: 48,
                             color: _textSec,
                           ),
@@ -79,8 +84,9 @@ class NotificationsView extends StatelessWidget {
 // ── _PageHeader ────────────────────────────────────────────
 
 class _PageHeader extends StatelessWidget {
-  const _PageHeader({required this.title});
+  const _PageHeader({required this.title, this.embedded = false});
   final String title;
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
@@ -89,20 +95,13 @@ class _PageHeader extends StatelessWidget {
       padding: EdgeInsets.only(top: topPad),
       decoration: const BoxDecoration(
         color: _card,
-        boxShadow: [
-          BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
-          BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
-        ],
+        border: Border(bottom: BorderSide(color: _border, width: 1)),
       ),
       child: SizedBox(
         height: 52,
         child: Row(
           children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                  size: 18, color: _textPrimary),
-              onPressed: () => Get.back(),
-            ),
+            ShellLeading(embedded: embedded, color: _textPrimary),
             Text(
               title,
               style: const TextStyle(
@@ -152,49 +151,29 @@ class _NotificationCard extends StatelessWidget {
     final itemCount = (sale['items'] as List).length;
     final discount = (sale['discount'] ?? 0.0) as double;
 
-    final isToday = date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day;
+    final isToday =
+        date.year == now.year && date.month == now.month && date.day == now.day;
 
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
-        borderRadius: BorderRadius.all(Radius.circular(14)),
-        boxShadow: [
-          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
-          BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
+        borderRadius: const BorderRadius.all(Radius.circular(14)),
+        border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(
+              color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 1)),
         ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color.lerp(AppTheme.successColor, Colors.white, 0.28)!,
-                  AppTheme.successColor,
-                ],
-              ),
-              borderRadius: BorderRadius.circular(13),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.successColor.withOpacity(0.28),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.payment_rounded,
-              color: Colors.white,
-              size: 22,
-            ),
+          const Icon(
+            CupertinoIcons.money_dollar_circle_fill,
+            color: AppTheme.successColor,
+            size: 30,
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -241,13 +220,13 @@ class _NotificationCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Obx(() => Text(
-                      '${SettingsService.cs}${total.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        color: AppTheme.successColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    )),
+                          '${SettingsService.cs}${total.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            color: AppTheme.successColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        )),
                     Text(
                       timeLabel,
                       style: const TextStyle(color: _textSec, fontSize: 11),

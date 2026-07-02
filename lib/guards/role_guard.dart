@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
@@ -32,7 +33,8 @@ class RoleGuard extends StatelessWidget {
   /// Shown when access is denied. Defaults to [SizedBox.shrink].
   final Widget? fallback;
 
-  factory RoleGuard.admin({Key? key, required Widget child, Widget? fallback}) =>
+  factory RoleGuard.admin(
+          {Key? key, required Widget child, Widget? fallback}) =>
       RoleGuard(
         key: key,
         allowedRoles: const [AppRole.admin],
@@ -40,7 +42,8 @@ class RoleGuard extends StatelessWidget {
         fallback: fallback,
       );
 
-  factory RoleGuard.staff({Key? key, required Widget child, Widget? fallback}) =>
+  factory RoleGuard.staff(
+          {Key? key, required Widget child, Widget? fallback}) =>
       RoleGuard(
         key: key,
         allowedRoles: const [AppRole.staff],
@@ -114,7 +117,7 @@ class _AccessDeniedScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.lock_outline_rounded,
+            Icon(CupertinoIcons.lock,
                 size: 64, color: Theme.of(context).colorScheme.error),
             const SizedBox(height: 16),
             Text('Erişim Yetkiniz Yok',
@@ -124,7 +127,7 @@ class _AccessDeniedScreen extends StatelessWidget {
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: Get.back,
-              icon: const Icon(Icons.arrow_back),
+              icon: const Icon(CupertinoIcons.chevron_back),
               label: const Text('Geri Dön'),
             ),
           ],

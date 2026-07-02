@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,45 +9,55 @@ import 'package:orderix/themes/app_theme.dart';
 import 'package:orderix/widgets/app_toast.dart';
 import 'package:orderix/widgets/app_dialog.dart';
 import 'package:orderix/widgets/responsive_content.dart';
+import 'package:orderix/widgets/shell_leading.dart';
 
 // ── Design tokens ──────────────────────────────────────────────
-const _bg          = Color(0xFFF2F2F7);
-const _card        = Colors.white;
-const _orange      = Color(0xFFFF9500);
+const _bg = Colors.white;
+const _chip = Color(0xFFF2F2F7);
+const _card = Colors.white;
+const _orange = Color(0xFFFF9500);
 const _orangeLight = Color(0xFFFFF4E0);
 const _textPrimary = Color(0xFF1C1C1E);
-const _textSec     = Color(0xFF8E8E93);
-const _border      = Color(0xFFE5E5EA);
+const _textSec = Color(0xFF8E8E93);
+const _border = Color(0xFFE5E5EA);
 
 // ── Icon catalogue ─────────────────────────────────────────────
 
 typedef _IconOpt = ({String key, IconData icon, String label});
 
 const List<_IconOpt> _kMenuIcons = [
-  (key: 'restaurant_menu', icon: Icons.restaurant_menu_rounded,    label: 'Menü'),
-  (key: 'local_cafe',      icon: Icons.local_cafe_rounded,         label: 'Kafe'),
-  (key: 'coffee',          icon: Icons.coffee_rounded,             label: 'Kahve'),
-  (key: 'free_breakfast',  icon: Icons.free_breakfast_rounded,     label: 'Çay'),
-  (key: 'food_beverage',   icon: Icons.emoji_food_beverage_rounded, label: 'İçecek'),
-  (key: 'water_drop',      icon: Icons.water_drop_rounded,         label: 'Su'),
-  (key: 'local_bar',       icon: Icons.local_bar_rounded,          label: 'Bar'),
-  (key: 'wine_bar',        icon: Icons.wine_bar_rounded,           label: 'Şarap'),
-  (key: 'sports_bar',      icon: Icons.sports_bar_rounded,         label: 'Bira'),
-  (key: 'liquor',          icon: Icons.liquor_rounded,             label: 'Alkol'),
-  (key: 'local_pizza',     icon: Icons.local_pizza_rounded,        label: 'Pizza'),
-  (key: 'fastfood',        icon: Icons.fastfood_rounded,           label: 'Burger'),
-  (key: 'lunch_dining',    icon: Icons.lunch_dining_rounded,       label: 'Öğle'),
-  (key: 'dinner_dining',   icon: Icons.dinner_dining_rounded,      label: 'Akşam'),
-  (key: 'breakfast_dining',icon: Icons.breakfast_dining_rounded,   label: 'Kahvaltı'),
-  (key: 'ramen_dining',    icon: Icons.ramen_dining_rounded,       label: 'Noodle'),
-  (key: 'kebab_dining',    icon: Icons.kebab_dining_rounded,       label: 'Kebap'),
-  (key: 'rice_bowl',       icon: Icons.rice_bowl_rounded,          label: 'Pilav'),
-  (key: 'set_meal',        icon: Icons.set_meal_rounded,           label: 'Set Menü'),
-  (key: 'bakery_dining',   icon: Icons.bakery_dining_rounded,      label: 'Fırın'),
-  (key: 'cake',            icon: Icons.cake_rounded,               label: 'Pasta'),
-  (key: 'icecream',        icon: Icons.icecream_rounded,           label: 'Dondurma'),
-  (key: 'egg',             icon: Icons.egg_rounded,                label: 'Yumurta'),
-  (key: 'eco',             icon: Icons.eco_rounded,                label: 'Vegan'),
+  (key: 'restaurant_menu', icon: Icons.restaurant_menu_rounded, label: 'Menü'),
+  (key: 'local_cafe', icon: Icons.local_cafe_rounded, label: 'Kafe'),
+  (key: 'coffee', icon: Icons.coffee_rounded, label: 'Kahve'),
+  (key: 'free_breakfast', icon: Icons.free_breakfast_rounded, label: 'Çay'),
+  (
+    key: 'food_beverage',
+    icon: Icons.emoji_food_beverage_rounded,
+    label: 'İçecek'
+  ),
+  (key: 'water_drop', icon: Icons.water_drop_rounded, label: 'Su'),
+  (key: 'local_bar', icon: Icons.local_bar_rounded, label: 'Bar'),
+  (key: 'wine_bar', icon: Icons.wine_bar_rounded, label: 'Şarap'),
+  (key: 'sports_bar', icon: Icons.sports_bar_rounded, label: 'Bira'),
+  (key: 'liquor', icon: Icons.liquor_rounded, label: 'Alkol'),
+  (key: 'local_pizza', icon: Icons.local_pizza_rounded, label: 'Pizza'),
+  (key: 'fastfood', icon: Icons.fastfood_rounded, label: 'Burger'),
+  (key: 'lunch_dining', icon: Icons.lunch_dining_rounded, label: 'Öğle'),
+  (key: 'dinner_dining', icon: Icons.dinner_dining_rounded, label: 'Akşam'),
+  (
+    key: 'breakfast_dining',
+    icon: Icons.breakfast_dining_rounded,
+    label: 'Kahvaltı'
+  ),
+  (key: 'ramen_dining', icon: Icons.ramen_dining_rounded, label: 'Noodle'),
+  (key: 'kebab_dining', icon: Icons.kebab_dining_rounded, label: 'Kebap'),
+  (key: 'rice_bowl', icon: Icons.rice_bowl_rounded, label: 'Pilav'),
+  (key: 'set_meal', icon: Icons.set_meal_rounded, label: 'Set Menü'),
+  (key: 'bakery_dining', icon: Icons.bakery_dining_rounded, label: 'Fırın'),
+  (key: 'cake', icon: Icons.cake_rounded, label: 'Pasta'),
+  (key: 'icecream', icon: Icons.icecream_rounded, label: 'Dondurma'),
+  (key: 'egg', icon: Icons.egg_rounded, label: 'Yumurta'),
+  (key: 'eco', icon: Icons.eco_rounded, label: 'Vegan'),
 ];
 
 IconData _iconData(String key) => _kMenuIcons
@@ -62,7 +73,9 @@ String _iconLabel(String key) => _kMenuIcons
 // ──────────────────────────────────────────────────────────────
 
 class MenuManagementView extends StatefulWidget {
-  const MenuManagementView({super.key});
+  const MenuManagementView({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   State<MenuManagementView> createState() => _MenuManagementViewState();
@@ -91,8 +104,8 @@ class _MenuManagementViewState extends State<MenuManagementView> {
     showDialog(
       context: context,
       builder: (_) => _MenuFormDialog(
-        menuIndex:      menuIndex,
-        initialName:    currentName,
+        menuIndex: menuIndex,
+        initialName: currentName,
         initialIconKey: iconKey,
       ),
     );
@@ -100,7 +113,7 @@ class _MenuManagementViewState extends State<MenuManagementView> {
 
   void _showDeleteMenuConfirmation(int menuIndex, String menuName) async {
     final ok = await AppDialog.confirm(
-      icon: Icons.delete_outline_rounded,
+      icon: CupertinoIcons.trash,
       iconColor: const Color(0xFFFF3B30),
       title: 'delete_menu'.tr,
       message: '"$menuName" ${'delete_menu_confirm'.tr}',
@@ -128,11 +141,11 @@ class _MenuManagementViewState extends State<MenuManagementView> {
     showDialog(
       context: context,
       builder: (_) => _ItemFormDialog(
-        menuIndex:        menuIndex,
-        itemIndex:        itemIndex,
-        initialName:      name,
-        initialPrice:     price,
-        initialImageUrl:  imageUrl,
+        menuIndex: menuIndex,
+        itemIndex: itemIndex,
+        initialName: name,
+        initialPrice: price,
+        initialImageUrl: imageUrl,
       ),
     );
   }
@@ -152,20 +165,14 @@ class _MenuManagementViewState extends State<MenuManagementView> {
               padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
               decoration: const BoxDecoration(
                 color: _card,
-                boxShadow: [
-                  BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
-                  BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
-                ],
+                border: Border(bottom: BorderSide(color: _border, width: 1)),
               ),
               child: SizedBox(
                 height: 52,
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                          size: 18, color: _textPrimary),
-                      onPressed: Get.back,
-                    ),
+                    ShellLeading(
+                        embedded: widget.embedded, color: _textPrimary),
                     Text(
                       'menu_management'.tr,
                       style: const TextStyle(
@@ -197,7 +204,7 @@ class _MenuManagementViewState extends State<MenuManagementView> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.add_rounded,
+                              const Icon(CupertinoIcons.add,
                                   size: 16, color: Colors.white),
                               const SizedBox(width: 4),
                               Text(
@@ -223,77 +230,76 @@ class _MenuManagementViewState extends State<MenuManagementView> {
               child: ResponsiveContent(
                 width: ContentWidth.list,
                 child: Obx(
-                () => MenuService.to.menus.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: _textSec.withValues(alpha: 0.08),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.restaurant_menu_rounded,
-                                size: 48,
-                                color: _textSec,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'no_menus'.tr,
-                              style: const TextStyle(
-                                color: _textSec,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            GestureDetector(
-                              onTap: _showAddMenuDialog,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 20, vertical: 10),
+                  () => MenuService.to.menus.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(20),
                                 decoration: BoxDecoration(
-                                  color: _orange,
-                                  borderRadius: BorderRadius.circular(20),
+                                  color: _textSec.withValues(alpha: 0.08),
+                                  shape: BoxShape.circle,
                                 ),
-                                child: Text(
-                                  'add_menu'.tr,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
+                                child: const Icon(
+                                  CupertinoIcons.square_list_fill,
+                                  size: 48,
+                                  color: _textSec,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'no_menus'.tr,
+                                style: const TextStyle(
+                                  color: _textSec,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              GestureDetector(
+                                onTap: _showAddMenuDialog,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: _orange,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    'add_menu'.tr,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: MenuService.to.menus.length,
+                          itemBuilder: (_, menuIndex) {
+                            final menu = MenuService.to.menus[menuIndex];
+                            return _MenuCard(
+                              menu: menu,
+                              menuIndex: menuIndex,
+                              onAddItem: () => _showAddItemDialog(menuIndex),
+                              onEditMenu: () => _showEditMenuDialog(
+                                  menuIndex, menu['name'] as String),
+                              onDeleteMenu: () => _showDeleteMenuConfirmation(
+                                  menuIndex, menu['name'] as String),
+                              onEditItem: (itemIndex, name, price, imageUrl) =>
+                                  _showEditItemDialog(menuIndex, itemIndex,
+                                      name, price, imageUrl),
+                              onDeleteItem: (itemIndex) => MenuService.to
+                                  .removeMenuItem(menuIndex, itemIndex),
+                            );
+                          },
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: MenuService.to.menus.length,
-                        itemBuilder: (_, menuIndex) {
-                          final menu = MenuService.to.menus[menuIndex];
-                          return _MenuCard(
-                            menu: menu,
-                            menuIndex: menuIndex,
-                            onAddItem: () => _showAddItemDialog(menuIndex),
-                            onEditMenu: () => _showEditMenuDialog(
-                                menuIndex, menu['name'] as String),
-                            onDeleteMenu: () => _showDeleteMenuConfirmation(
-                                menuIndex, menu['name'] as String),
-                            onEditItem: (itemIndex, name, price, imageUrl) =>
-                                _showEditItemDialog(
-                                    menuIndex, itemIndex, name, price, imageUrl),
-                            onDeleteItem: (itemIndex) =>
-                                MenuService.to.removeMenuItem(
-                                    menuIndex, itemIndex),
-                          );
-                        },
-                      ),
                 ),
               ),
             ),
@@ -315,7 +321,7 @@ class _MenuFormDialog extends StatefulWidget {
     this.initialIconKey,
   });
 
-  final int?    menuIndex;      // null → add mode
+  final int? menuIndex; // null → add mode
   final String? initialName;
   final String? initialIconKey;
 
@@ -331,7 +337,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.initialName ?? '');
-    _iconKey  = widget.initialIconKey ?? 'restaurant_menu';
+    _iconKey = widget.initialIconKey ?? 'restaurant_menu';
   }
 
   @override
@@ -394,8 +400,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
                       borderRadius: BorderRadius.circular(12)),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: _orange, width: 1.5),
+                    borderSide: const BorderSide(color: _orange, width: 1.5),
                   ),
                 ),
                 onSubmitted: (_) => _save(),
@@ -423,8 +428,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
                       color: _orange.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(_iconData(_iconKey),
-                        size: 16, color: _orange),
+                    child: Icon(_iconData(_iconKey), size: 16, color: _orange),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -489,8 +493,8 @@ class _ItemFormDialog extends StatefulWidget {
     this.initialImageUrl,
   });
 
-  final int     menuIndex;
-  final int?    itemIndex;      // null → add mode
+  final int menuIndex;
+  final int? itemIndex; // null → add mode
   final String? initialName;
   final double? initialPrice;
   final String? initialImageUrl;
@@ -508,7 +512,7 @@ class _ItemFormDialogState extends State<_ItemFormDialog> {
   @override
   void initState() {
     super.initState();
-    _nameCtrl  = TextEditingController(text: widget.initialName ?? '');
+    _nameCtrl = TextEditingController(text: widget.initialName ?? '');
     _priceCtrl = TextEditingController(
       text: widget.initialPrice != null
           ? widget.initialPrice!.toStringAsFixed(2)
@@ -526,9 +530,9 @@ class _ItemFormDialogState extends State<_ItemFormDialog> {
   Future<void> _pickImage() async {
     try {
       final file = await ImagePicker().pickImage(
-        source:       ImageSource.gallery,
-        maxWidth:     900,
-        maxHeight:    900,
+        source: ImageSource.gallery,
+        maxWidth: 900,
+        maxHeight: 900,
         imageQuality: 82,
       );
       if (file == null || !mounted) return;
@@ -542,7 +546,7 @@ class _ItemFormDialogState extends State<_ItemFormDialog> {
   }
 
   Future<void> _save() async {
-    final name      = _nameCtrl.text.trim();
+    final name = _nameCtrl.text.trim();
     final priceText = _priceCtrl.text.trim().replaceAll(',', '.');
     if (name.isEmpty || priceText.isEmpty) return;
 
@@ -577,7 +581,8 @@ class _ItemFormDialogState extends State<_ItemFormDialog> {
         final msg = e.toString().contains('storage')
             ? 'Fotoğraf yüklenemedi. Supabase Storage politikasını kontrol edin.\n\n$e'
             : 'Kaydedilemedi: $e';
-        AppToast.error(msg, title: 'Hata', duration: const Duration(seconds: 6));
+        AppToast.error(msg,
+            title: 'Hata', duration: const Duration(seconds: 6));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -611,9 +616,9 @@ class _ItemFormDialogState extends State<_ItemFormDialog> {
 
               // Image picker area
               _ImagePickerArea(
-                bytes:       _pickedBytes,
+                bytes: _pickedBytes,
                 existingUrl: widget.initialImageUrl,
-                onTap:       _pickImage,
+                onTap: _pickImage,
               ),
               const SizedBox(height: 16),
 
@@ -628,8 +633,7 @@ class _ItemFormDialogState extends State<_ItemFormDialog> {
                       borderRadius: BorderRadius.circular(12)),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: _orange, width: 1.5),
+                    borderSide: const BorderSide(color: _orange, width: 1.5),
                   ),
                 ),
               ),
@@ -637,22 +641,22 @@ class _ItemFormDialogState extends State<_ItemFormDialog> {
 
               // Price field
               Obx(() => TextField(
-                controller: _priceCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText: 'price'.tr,
-                  prefixText: SettingsService.cs,
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: _orange, width: 1.5),
-                  ),
-                ),
-                onSubmitted: (_) => _save(),
-              )),
+                    controller: _priceCtrl,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'price'.tr,
+                      prefixText: SettingsService.cs,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            const BorderSide(color: _orange, width: 1.5),
+                      ),
+                    ),
+                    onSubmitted: (_) => _save(),
+                  )),
               const SizedBox(height: 24),
 
               // Actions
@@ -720,7 +724,7 @@ class _IconPickerGrid extends StatelessWidget {
         ),
         itemCount: _kMenuIcons.length,
         itemBuilder: (_, i) {
-          final opt      = _kMenuIcons[i];
+          final opt = _kMenuIcons[i];
           final selected = opt.key == selectedKey;
 
           return Tooltip(
@@ -734,7 +738,8 @@ class _IconPickerGrid extends StatelessWidget {
                   borderRadius: BorderRadius.circular(11),
                   border: selected
                       ? null
-                      : Border.all(color: _border, width: 1),
+                      : Border.fromBorderSide(
+                          BorderSide(color: _border, width: 1)),
                   boxShadow: selected
                       ? const [
                           BoxShadow(
@@ -771,7 +776,7 @@ class _ImagePickerArea extends StatelessWidget {
   });
 
   final Uint8List? bytes;
-  final String?   existingUrl;
+  final String? existingUrl;
   final VoidCallback onTap;
 
   @override
@@ -781,8 +786,8 @@ class _ImagePickerArea extends StatelessWidget {
     if (bytes != null) {
       inner = ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: Image.memory(bytes!, fit: BoxFit.cover,
-            width: double.infinity, height: double.infinity),
+        child: Image.memory(bytes!,
+            fit: BoxFit.cover, width: double.infinity, height: double.infinity),
       );
     } else if (existingUrl != null && existingUrl!.isNotEmpty) {
       inner = ClipRRect(
@@ -805,7 +810,7 @@ class _ImagePickerArea extends StatelessWidget {
         height: 155,
         width: double.infinity,
         decoration: BoxDecoration(
-          color: _bg,
+          color: _chip,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: (bytes != null || (existingUrl?.isNotEmpty ?? false))
@@ -830,7 +835,7 @@ class _ImagePickerArea extends StatelessWidget {
             shape: BoxShape.circle,
           ),
           child: const Icon(
-            Icons.add_photo_alternate_rounded,
+            CupertinoIcons.photo,
             size: 30,
             color: _orange,
           ),
@@ -879,18 +884,21 @@ class _MenuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items    = menu['items'] as List;
+    final items = menu['items'] as List;
     final menuName = menu['name'] as String;
-    final menuId   = menu['id'] as int;
+    final menuId = menu['id'] as int;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: const BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.all(Radius.circular(16)),
+        border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
         boxShadow: [
-          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
-          BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
+          BoxShadow(
+              color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(
+              color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 1)),
         ],
       ),
       child: Column(
@@ -903,31 +911,9 @@ class _MenuCard extends StatelessWidget {
               children: [
                 // Reactive icon — updates when user changes it
                 Obx(() {
-                  final key      = MenuService.to.getMenuIcon(menuId);
+                  final key = MenuService.to.getMenuIcon(menuId);
                   final iconData = _iconData(key);
-                  return Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color.lerp(_orange, Colors.white, 0.28)!,
-                          _orange,
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _orange.withValues(alpha: 0.28),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Icon(iconData, size: 18, color: Colors.white),
-                  );
+                  return Icon(iconData, size: 26, color: _orange);
                 }),
                 const SizedBox(width: 12),
                 Expanded(
@@ -953,19 +939,19 @@ class _MenuCard extends StatelessWidget {
                   ),
                 ),
                 _IconBtn(
-                  icon: Icons.add_circle_outline_rounded,
+                  icon: CupertinoIcons.plus_circle,
                   color: AppTheme.successColor,
                   tooltip: 'add_item'.tr,
                   onTap: onAddItem,
                 ),
                 _IconBtn(
-                  icon: Icons.edit_outlined,
+                  icon: CupertinoIcons.pencil,
                   color: _orange,
                   tooltip: 'edit_menu'.tr,
                   onTap: onEditMenu,
                 ),
                 _IconBtn(
-                  icon: Icons.delete_outline_rounded,
+                  icon: CupertinoIcons.trash,
                   color: AppTheme.errorColor,
                   tooltip: 'delete_menu'.tr,
                   onTap: onDeleteMenu,
@@ -985,14 +971,14 @@ class _MenuCard extends StatelessWidget {
               separatorBuilder: (_, __) =>
                   const Divider(height: 1, color: _border),
               itemBuilder: (_, itemIndex) {
-                final item      = items[itemIndex] as Map<String, dynamic>;
-                final itemName  = item['name']  as String;
+                final item = items[itemIndex] as Map<String, dynamic>;
+                final itemName = item['name'] as String;
                 final itemPrice = item['price'] as double;
-                final imageUrl  = item['imageUrl'] as String?;
+                final imageUrl = item['imageUrl'] as String?;
 
                 return Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   child: Row(
                     children: [
                       // Thumbnail or default icon
@@ -1019,26 +1005,26 @@ class _MenuCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Obx(() => Text(
-                          '${SettingsService.cs}${itemPrice.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: _orange,
-                          ),
-                        )),
+                              '${SettingsService.cs}${itemPrice.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: _orange,
+                              ),
+                            )),
                       ),
                       const SizedBox(width: 4),
 
                       _IconBtn(
-                        icon: Icons.edit_outlined,
+                        icon: CupertinoIcons.pencil,
                         color: _orange,
                         tooltip: 'edit_item'.tr,
-                        onTap: () =>
-                            onEditItem(itemIndex, itemName, itemPrice, imageUrl),
+                        onTap: () => onEditItem(
+                            itemIndex, itemName, itemPrice, imageUrl),
                         size: 18,
                       ),
                       _IconBtn(
-                        icon: Icons.delete_outline_rounded,
+                        icon: CupertinoIcons.trash,
                         color: AppTheme.errorColor,
                         tooltip: 'delete'.tr,
                         onTap: () => onDeleteItem(itemIndex),
@@ -1086,10 +1072,10 @@ class _ItemThumbnail extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: _bg,
+        color: _chip,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Icon(Icons.fastfood_rounded, size: 18, color: _textSec),
+      child: const Icon(CupertinoIcons.photo, size: 18, color: _textSec),
     );
   }
 }

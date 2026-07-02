@@ -7,7 +7,7 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 // Set these via --dart-define at build/run time:
 //   --dart-define=REVENUECAT_APPLE_KEY=appl_xxxx
 //   --dart-define=REVENUECAT_GOOGLE_KEY=goog_xxxx
-const String _kAppleKey  = String.fromEnvironment('REVENUECAT_APPLE_KEY');
+const String _kAppleKey = String.fromEnvironment('REVENUECAT_APPLE_KEY');
 const String _kGoogleKey = String.fromEnvironment('REVENUECAT_GOOGLE_KEY');
 
 // Must match the entitlement identifier in your RevenueCat dashboard.
@@ -71,7 +71,12 @@ class SubscriptionService extends GetxService {
   ///
   /// We never fall back to allowing access just because RC hasn't synced yet —
   /// no entitlement means no access.
-  bool get hasAccess => isSubscribed;
+  ///
+  /// In debug builds we always grant access so the paywall never appears
+  /// during local development. `kDebugMode` is a compile-time constant that is
+  /// `false` in profile/release builds, so the production App Store build is
+  /// completely unaffected.
+  bool get hasAccess => kDebugMode || isSubscribed;
 
   bool get isSubscribed => _entitlement != null;
 

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -14,40 +15,41 @@ import 'package:orderix/widgets/app_toast.dart';
 import 'package:orderix/widgets/app_dialog.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _bg            = Color(0xFFF2F2F7);
-const _card          = Colors.white;
-const _orange        = Color(0xFFFF9500);
-const _textPrimary   = Color(0xFF1C1C1E);
+const _bg = Colors.white;
+const _chip = Color(0xFFF2F2F7);
+const _card = Colors.white;
+const _orange = Color(0xFFFF9500);
+const _textPrimary = Color(0xFF1C1C1E);
 const _textSecondary = Color(0xFF8E8E93);
-const _border        = Color(0xFFE5E5EA);
+const _border = Color(0xFFE5E5EA);
 
 // ── Menu icon key → IconData ──────────────────────────────────
 IconData _menuIconData(String key) {
   const map = <String, IconData>{
     'restaurant_menu': Icons.restaurant_menu_rounded,
-    'local_cafe':      Icons.local_cafe_rounded,
-    'coffee':          Icons.coffee_rounded,
-    'free_breakfast':  Icons.free_breakfast_rounded,
-    'food_beverage':   Icons.emoji_food_beverage_rounded,
-    'water_drop':      Icons.water_drop_rounded,
-    'local_bar':       Icons.local_bar_rounded,
-    'wine_bar':        Icons.wine_bar_rounded,
-    'sports_bar':      Icons.sports_bar_rounded,
-    'liquor':          Icons.liquor_rounded,
-    'local_pizza':     Icons.local_pizza_rounded,
-    'fastfood':        Icons.fastfood_rounded,
-    'lunch_dining':    Icons.lunch_dining_rounded,
-    'dinner_dining':   Icons.dinner_dining_rounded,
-    'breakfast_dining':Icons.breakfast_dining_rounded,
-    'ramen_dining':    Icons.ramen_dining_rounded,
-    'kebab_dining':    Icons.kebab_dining_rounded,
-    'rice_bowl':       Icons.rice_bowl_rounded,
-    'set_meal':        Icons.set_meal_rounded,
-    'bakery_dining':   Icons.bakery_dining_rounded,
-    'cake':            Icons.cake_rounded,
-    'icecream':        Icons.icecream_rounded,
-    'egg':             Icons.egg_rounded,
-    'eco':             Icons.eco_rounded,
+    'local_cafe': Icons.local_cafe_rounded,
+    'coffee': Icons.coffee_rounded,
+    'free_breakfast': Icons.free_breakfast_rounded,
+    'food_beverage': Icons.emoji_food_beverage_rounded,
+    'water_drop': Icons.water_drop_rounded,
+    'local_bar': Icons.local_bar_rounded,
+    'wine_bar': Icons.wine_bar_rounded,
+    'sports_bar': Icons.sports_bar_rounded,
+    'liquor': Icons.liquor_rounded,
+    'local_pizza': Icons.local_pizza_rounded,
+    'fastfood': Icons.fastfood_rounded,
+    'lunch_dining': Icons.lunch_dining_rounded,
+    'dinner_dining': Icons.dinner_dining_rounded,
+    'breakfast_dining': Icons.breakfast_dining_rounded,
+    'ramen_dining': Icons.ramen_dining_rounded,
+    'kebab_dining': Icons.kebab_dining_rounded,
+    'rice_bowl': Icons.rice_bowl_rounded,
+    'set_meal': Icons.set_meal_rounded,
+    'bakery_dining': Icons.bakery_dining_rounded,
+    'cake': Icons.cake_rounded,
+    'icecream': Icons.icecream_rounded,
+    'egg': Icons.egg_rounded,
+    'eco': Icons.eco_rounded,
   };
   return map[key] ?? Icons.restaurant_menu_rounded;
 }
@@ -118,29 +120,29 @@ class _TableDetailViewState extends State<TableDetailView> {
     return Scaffold(
       backgroundColor: _bg,
       body: LayoutBuilder(
-          builder: (context, constraints) {
-            final isMobile = constraints.maxWidth < 650;
-            return Column(
-              children: [
-                // Top bar
-                _buildTopBar(context),
-                // Main content
-                Expanded(
-                  child: isMobile
-                      ? _buildMobileLayout(context)
-                      : Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildCategorySidebar(),
-                            Expanded(flex: 3, child: _buildMenuSection()),
-                            _buildOrderPanel(context, width: 440),
-                          ],
-                        ),
-                ),
-              ],
-            );
-          },
-        ),
+        builder: (context, constraints) {
+          final isMobile = constraints.maxWidth < 650;
+          return Column(
+            children: [
+              // Top bar
+              _buildTopBar(context),
+              // Main content
+              Expanded(
+                child: isMobile
+                    ? _buildMobileLayout(context)
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildCategorySidebar(),
+                          Expanded(flex: 3, child: _buildMenuSection()),
+                          _buildOrderPanel(context, width: 440),
+                        ],
+                      ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -185,7 +187,12 @@ class _TableDetailViewState extends State<TableDetailView> {
                   color: isActive ? _orange : _bg,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: isActive
-                      ? [BoxShadow(color: _orange.withOpacity(0.30), blurRadius: 8, offset: const Offset(0, 2))]
+                      ? [
+                          BoxShadow(
+                              color: _orange.withOpacity(0.30),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2))
+                        ]
                       : null,
                 ),
                 alignment: Alignment.center,
@@ -202,7 +209,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                       menu['name'] as String,
                       style: TextStyle(
                         fontSize: 13,
-                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                        fontWeight:
+                            isActive ? FontWeight.w600 : FontWeight.w400,
                         color: isActive ? Colors.white : _textSecondary,
                       ),
                     ),
@@ -224,93 +232,93 @@ class _TableDetailViewState extends State<TableDetailView> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 360),
           child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFF3B30).withOpacity(0.1),
-                  shape: BoxShape.circle,
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF3B30).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(CupertinoIcons.trash,
+                      size: 26, color: Color(0xFFFF3B30)),
                 ),
-                child: const Icon(Icons.delete_outline_rounded,
-                    size: 26, color: Color(0xFFFF3B30)),
-              ),
-              const SizedBox(height: 14),
-              const Text(
-                'Siparişi Kaldır',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1C1C1E),
+                const SizedBox(height: 14),
+                const Text(
+                  'Siparişi Kaldır',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1C1C1E),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '"$itemName" siparişten kaldırılsın mı?',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF8E8E93),
-                  height: 1.4,
+                const SizedBox(height: 8),
+                Text(
+                  '"$itemName" siparişten kaldırılsın mı?',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF8E8E93),
+                    height: 1.4,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Get.back(),
-                      child: Container(
-                        height: 46,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF2F2F7),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Text(
-                          'İptal',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1C1C1E),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Get.back(),
+                        child: Container(
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF2F2F7),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'İptal',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1C1C1E),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        Get.back();
-                        TableService.to.removeOrder(widget.tableIndex, index);
-                      },
-                      child: Container(
-                        height: 46,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF3B30),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Text(
-                          'Kaldır',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          Get.back();
+                          TableService.to.removeOrder(widget.tableIndex, index);
+                        },
+                        child: Container(
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF3B30),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'Kaldır',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
         ),
       ),
     );
@@ -328,8 +336,16 @@ class _TableDetailViewState extends State<TableDetailView> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: _border, width: 1),
               boxShadow: const [
-                BoxShadow(color: Color(0x08000000), blurRadius: 16, offset: Offset(0, 4)),
+                BoxShadow(
+                    color: Color(0x0F000000),
+                    blurRadius: 16,
+                    offset: Offset(0, 6)),
+                BoxShadow(
+                    color: Color(0x0A000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 1)),
               ],
             ),
             child: Row(
@@ -345,7 +361,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
                     color: _orange.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(20),
@@ -371,7 +388,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.shopping_cart_outlined,
+                      const Icon(CupertinoIcons.cart,
                           size: 44, color: _textSecondary),
                       const SizedBox(height: 12),
                       Text('no_orders_yet'.tr,
@@ -387,165 +404,180 @@ class _TableDetailViewState extends State<TableDetailView> {
                 itemCount: orders.length,
                 itemBuilder: (context, index) {
                   final order = orders[index];
-                  final name     = order['name']     as String;
+                  final name = order['name'] as String;
                   final quantity = order['quantity'] as int;
-                  final price    = order['price']    as double;
+                  final price = order['price'] as double;
                   final lineTotal = price * quantity;
                   final isPartial = _isPartialPayMode;
-                  final selCount = isPartial ? (_partialSelected[name] ?? 0) : 0;
+                  final selCount =
+                      isPartial ? (_partialSelected[name] ?? 0) : 0;
                   return GestureDetector(
-                    key: ValueKey(order['id']),
-                    onTap: isPartial
-                        ? () {
-                            setState(() {
-                              final cur = _partialSelected[name] ?? 0;
-                              _partialSelected[name] = (cur + 1) % (quantity + 1);
-                            });
-                          }
-                        : null,
-                    child: Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isPartial && selCount > 0
-                          ? _orange.withOpacity(0.05)
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: isPartial
-                          ? Border.all(
-                              color: selCount > 0
-                                  ? _orange.withOpacity(0.7)
-                                  : _orange.withOpacity(0.2),
-                              width: selCount > 0 ? 2.0 : 1.0)
+                      key: ValueKey(order['id']),
+                      onTap: isPartial
+                          ? () {
+                              setState(() {
+                                final cur = _partialSelected[name] ?? 0;
+                                _partialSelected[name] =
+                                    (cur + 1) % (quantity + 1);
+                              });
+                            }
                           : null,
-                      boxShadow: const [
-                        BoxShadow(color: Color(0x07000000), blurRadius: 12, offset: Offset(0, 3)),
-                      ],
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // ── Qty display ──
-                        isPartial
-                            ? Container(
-                                width: 32,
-                                alignment: Alignment.center,
-                                child: Text(
-                                  '$quantity',
-                                  style: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
-                                    color: _orange,
-                                  ),
-                                ),
-                              )
-                            : Container(
-                                decoration: BoxDecoration(
-                                  color: _bg,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    GestureDetector(
-                                      onTap: () => TableService.to
-                                          .decrementOrder(widget.tableIndex, index),
-                                      child: const SizedBox(
-                                        width: 38,
-                                        height: 42,
-                                        child: Icon(Icons.remove_rounded,
-                                            size: 16, color: _textSecondary),
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isPartial && selCount > 0
+                              ? _orange.withOpacity(0.05)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: isPartial
+                              ? Border.all(
+                                  color: selCount > 0
+                                      ? _orange.withOpacity(0.7)
+                                      : _orange.withOpacity(0.2),
+                                  width: selCount > 0 ? 2.0 : 1.0)
+                              : Border.all(color: _border, width: 1),
+                          boxShadow: const [
+                            BoxShadow(
+                                color: Color(0x0E000000),
+                                blurRadius: 14,
+                                offset: Offset(0, 5)),
+                            BoxShadow(
+                                color: Color(0x0A000000),
+                                blurRadius: 3,
+                                offset: Offset(0, 1)),
+                          ],
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // ── Qty display ──
+                            isPartial
+                                ? Container(
+                                    width: 32,
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      '$quantity',
+                                      style: const TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.bold,
+                                        color: _orange,
                                       ),
                                     ),
-                                    SizedBox(
-                                      width: 28,
+                                  )
+                                : Container(
+                                    decoration: BoxDecoration(
+                                      color: _chip,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () => TableService.to
+                                              .decrementOrder(
+                                                  widget.tableIndex, index),
+                                          child: const SizedBox(
+                                            width: 38,
+                                            height: 42,
+                                            child: Icon(CupertinoIcons.minus,
+                                                size: 16,
+                                                color: _textSecondary),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 28,
+                                          child: Text(
+                                            '$quantity',
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(
+                                              fontSize: 17,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF1C1C1E),
+                                            ),
+                                          ),
+                                        ),
+                                        GestureDetector(
+                                          onTap: () => TableService.to.addOrder(
+                                              widget.tableIndex, name, price),
+                                          child: const SizedBox(
+                                            width: 38,
+                                            height: 42,
+                                            child: Icon(CupertinoIcons.add,
+                                                size: 16,
+                                                color: _textSecondary),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                            const SizedBox(width: 12),
+                            // ── Name ──
+                            Expanded(
+                              child: Text(
+                                name,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: _textPrimary,
+                                  letterSpacing: -0.2,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // ── Price ──
+                            Text(
+                              '${SettingsService.cs}${lineTotal.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: _orange,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // ── Delete / counter badge ──
+                            isPartial
+                                ? Container(
+                                    width: 30,
+                                    height: 30,
+                                    decoration: BoxDecoration(
+                                      color: selCount > 0 ? _orange : _bg,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
                                       child: Text(
-                                        '$quantity',
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF1C1C1E),
+                                        '$selCount',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w800,
+                                          color: selCount > 0
+                                              ? Colors.white
+                                              : _textSecondary,
                                         ),
                                       ),
                                     ),
-                                    GestureDetector(
-                                      onTap: () => TableService.to
-                                          .addOrder(widget.tableIndex, name, price),
-                                      child: const SizedBox(
-                                        width: 38,
-                                        height: 42,
-                                        child: Icon(Icons.add_rounded,
-                                            size: 16, color: _textSecondary),
+                                  )
+                                : GestureDetector(
+                                    onTap: () => _confirmDelete(name, index),
+                                    child: Container(
+                                      width: 34,
+                                      height: 34,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFF3B30)
+                                            .withOpacity(0.08),
+                                        borderRadius: BorderRadius.circular(10),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                        const SizedBox(width: 12),
-                        // ── Name ──
-                        Expanded(
-                          child: Text(
-                            name,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: _textPrimary,
-                              letterSpacing: -0.2,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // ── Price ──
-                        Text(
-                          '${SettingsService.cs}${lineTotal.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: _orange,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // ── Delete / counter badge ──
-                        isPartial
-                            ? Container(
-                                width: 30,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  color: selCount > 0 ? _orange : _bg,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '$selCount',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
-                                      color: selCount > 0 ? Colors.white : _textSecondary,
+                                      child: const Icon(CupertinoIcons.trash,
+                                          size: 18, color: Color(0xFFFF3B30)),
                                     ),
                                   ),
-                                ),
-                              )
-                            : GestureDetector(
-                                onTap: () => _confirmDelete(name, index),
-                                child: Container(
-                                  width: 34,
-                                  height: 34,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFF3B30).withOpacity(0.08),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(Icons.delete_outline_rounded,
-                                      size: 18, color: Color(0xFFFF3B30)),
-                                ),
-                              ),
-                      ],
-                    ),
-                  ));
+                          ],
+                        ),
+                      ));
                 },
               );
             }),
@@ -561,7 +593,8 @@ class _TableDetailViewState extends State<TableDetailView> {
       decoration: const BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Color(0x0E000000), blurRadius: 20, offset: Offset(0, -4)),
+          BoxShadow(
+              color: Color(0x0E000000), blurRadius: 20, offset: Offset(0, -4)),
         ],
       ),
       child: Column(
@@ -569,21 +602,24 @@ class _TableDetailViewState extends State<TableDetailView> {
         children: [
           // ── Totals ──
           Obx(() {
-            final subtotal   = TableService.to.getTotal(widget.tableIndex);
-            final discount   = TableService.to.getDiscount(widget.tableIndex);
-            final finalTotal = TableService.to.getTotalWithDiscount(widget.tableIndex);
+            final subtotal = TableService.to.getTotal(widget.tableIndex);
+            final discount = TableService.to.getDiscount(widget.tableIndex);
+            final finalTotal =
+                TableService.to.getTotalWithDiscount(widget.tableIndex);
             return Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
               child: Column(
                 children: [
                   _SummaryRow(
                     label: 'Ara Toplam',
-                    value: '${SettingsService.cs}${subtotal.toStringAsFixed(2)}',
+                    value:
+                        '${SettingsService.cs}${subtotal.toStringAsFixed(2)}',
                   ),
                   if (discount > 0)
                     _SummaryRow(
                       label: 'İndirim',
-                      value: '-${SettingsService.cs}${discount.toStringAsFixed(2)}',
+                      value:
+                          '-${SettingsService.cs}${discount.toStringAsFixed(2)}',
                       valueColor: _orange,
                     ),
                   const SizedBox(height: 8),
@@ -619,10 +655,26 @@ class _TableDetailViewState extends State<TableDetailView> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _ActionBtn(icon: Icons.add_circle_outline, label: 'new'.tr,      color: AppTheme.accentColor,    onTap: _handleNewOrder),
-                _ActionBtn(icon: Icons.discount,           label: 'discount'.tr, color: AppTheme.warningColor,   onTap: _handleDiscount),
-                _ActionBtn(icon: Icons.print,              label: 'print'.tr,    color: const Color(0xFF616161), onTap: _handlePrint),
-                _ActionBtn(icon: Icons.compare_arrows,     label: 'move'.tr,     color: AppTheme.accentColor,    onTap: _handleMove),
+                _ActionBtn(
+                    icon: CupertinoIcons.plus_circle,
+                    label: 'new'.tr,
+                    color: AppTheme.accentColor,
+                    onTap: _handleNewOrder),
+                _ActionBtn(
+                    icon: CupertinoIcons.tag_fill,
+                    label: 'discount'.tr,
+                    color: AppTheme.warningColor,
+                    onTap: _handleDiscount),
+                _ActionBtn(
+                    icon: CupertinoIcons.printer,
+                    label: 'print'.tr,
+                    color: const Color(0xFF616161),
+                    onTap: _handlePrint),
+                _ActionBtn(
+                    icon: CupertinoIcons.arrow_swap,
+                    label: 'move'.tr,
+                    color: AppTheme.accentColor,
+                    onTap: _handleMove),
               ],
             ),
           ),
@@ -635,7 +687,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                     children: [
                       // Mode banner
                       Builder(builder: (_) {
-                        final hasSelected = _partialSelected.values.any((v) => v > 0);
+                        final hasSelected =
+                            _partialSelected.values.any((v) => v > 0);
                         final selTotal = _selectedTotal;
                         return Container(
                           width: double.infinity,
@@ -644,14 +697,17 @@ class _TableDetailViewState extends State<TableDetailView> {
                           decoration: BoxDecoration(
                             color: _orange.withOpacity(0.07),
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                                color: _orange.withOpacity(0.18)),
+                            border:
+                                Border.all(color: _orange.withOpacity(0.18)),
                           ),
                           child: Row(
                             children: [
                               Icon(
-                                hasSelected ? Icons.check_circle_outline_rounded : Icons.touch_app_rounded,
-                                size: 16, color: _orange,
+                                hasSelected
+                                    ? CupertinoIcons.checkmark_circle
+                                    : CupertinoIcons.hand_point_left_fill,
+                                size: 16,
+                                color: _orange,
                               ),
                               const SizedBox(width: 8),
                               Text(
@@ -706,7 +762,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                                         foregroundColor: Colors.white,
                                         elevation: 0,
                                         shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(16)),
+                                            borderRadius:
+                                                BorderRadius.circular(16)),
                                       ),
                                       onPressed: _confirmPartialPayments,
                                       child: Text(
@@ -718,17 +775,22 @@ class _TableDetailViewState extends State<TableDetailView> {
                                     )
                                   : ElevatedButton(
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF3A3A3C),
+                                        backgroundColor:
+                                            const Color(0xFF3A3A3C),
                                         foregroundColor: Colors.white,
                                         elevation: 0,
                                         shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(16)),
+                                            borderRadius:
+                                                BorderRadius.circular(16)),
                                       ),
                                       onPressed: _showPartialPaymentsPanel,
                                       child: Obx(() {
-                                        final payments = TableService.to.getPartialPayments(widget.tableIndex);
+                                        final payments = TableService.to
+                                            .getPartialPayments(
+                                                widget.tableIndex);
                                         return Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
                                             const Text(
                                               'Ödemeler',
@@ -739,17 +801,22 @@ class _TableDetailViewState extends State<TableDetailView> {
                                             if (payments.isNotEmpty) ...[
                                               const SizedBox(width: 6),
                                               Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                    horizontal: 6, vertical: 2),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 2),
                                                 decoration: BoxDecoration(
-                                                  color: Colors.white.withOpacity(0.3),
-                                                  borderRadius: BorderRadius.circular(10),
+                                                  color: Colors.white
+                                                      .withOpacity(0.3),
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
                                                 ),
                                                 child: Text(
                                                   '${payments.length}',
                                                   style: const TextStyle(
                                                       fontSize: 11,
-                                                      fontWeight: FontWeight.w700),
+                                                      fontWeight:
+                                                          FontWeight.w700),
                                                 ),
                                               ),
                                             ],
@@ -778,10 +845,11 @@ class _TableDetailViewState extends State<TableDetailView> {
                                   borderRadius: BorderRadius.circular(18)),
                             ),
                             onPressed: () {
-                              final orders = TableService.to
-                                  .getOrders(widget.tableIndex);
+                              final orders =
+                                  TableService.to.getOrders(widget.tableIndex);
                               if (orders.isEmpty) {
-                                AppToast.warning('empty_no_pay'.tr, title: 'warning'.tr);
+                                AppToast.warning('empty_no_pay'.tr,
+                                    title: 'warning'.tr);
                                 return;
                               }
                               setState(() => _isPartialPayMode = true);
@@ -834,7 +902,8 @@ class _TableDetailViewState extends State<TableDetailView> {
       decoration: const BoxDecoration(
         color: _card,
         boxShadow: [
-          BoxShadow(color: Color(0x0A000000), blurRadius: 12, offset: Offset(2, 0)),
+          BoxShadow(
+              color: Color(0x0A000000), blurRadius: 12, offset: Offset(2, 0)),
         ],
       ),
       child: Obx(
@@ -842,68 +911,80 @@ class _TableDetailViewState extends State<TableDetailView> {
           // Touch menuIcons so this Obx rebuilds when icons change.
           final _ = MenuService.to.menuIcons.length;
           return ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: MenuService.to.menus.length,
-          itemBuilder: (context, index) {
-            final menu = MenuService.to.menus[index];
-            final iconKey = MenuService.to.getMenuIcon(menu['id'] as int);
-            return GestureDetector(
-              onTap: () {
-                setState(() => _selectedMenuIndex = index);
-                _showMenuBottomSheet(context, index);
-              },
-              child: Container(
-                margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: index == _safeMenuIndex
-                      ? _orange.withOpacity(0.1)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: MenuService.to.menus.length,
+            itemBuilder: (context, index) {
+              final menu = MenuService.to.menus[index];
+              final iconKey = MenuService.to.getMenuIcon(menu['id'] as int);
+              return GestureDetector(
+                onTap: () {
+                  setState(() => _selectedMenuIndex = index);
+                  _showMenuBottomSheet(context, index);
+                },
+                child: Container(
+                  margin:
+                      const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: index == _safeMenuIndex
+                        ? _orange.withOpacity(0.1)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          gradient: index == _safeMenuIndex
+                              ? const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [Color(0xFFFFBF4D), _orange],
+                                )
+                              : null,
+                          color: index == _safeMenuIndex ? null : _bg,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: index == _safeMenuIndex
+                              ? [
+                                  BoxShadow(
+                                      color: _orange.withOpacity(0.28),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3))
+                                ]
+                              : null,
+                        ),
+                        child: Icon(
+                          _menuIconData(iconKey),
+                          size: 20,
+                          color: index == _safeMenuIndex
+                              ? Colors.white
+                              : _textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        menu['name'] as String,
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: index == _safeMenuIndex
+                              ? _orange
+                              : _textSecondary,
+                          fontWeight: index == _safeMenuIndex
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        gradient: index == _safeMenuIndex
-                            ? const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [Color(0xFFFFBF4D), _orange],
-                              )
-                            : null,
-                        color: index == _safeMenuIndex ? null : _bg,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: index == _safeMenuIndex
-                            ? [BoxShadow(color: _orange.withOpacity(0.28), blurRadius: 8, offset: const Offset(0, 3))]
-                            : null,
-                      ),
-                      child: Icon(
-                        _menuIconData(iconKey),
-                        size: 20,
-                        color: index == _safeMenuIndex ? Colors.white : _textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      menu['name'] as String,
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: index == _safeMenuIndex ? _orange : _textSecondary,
-                        fontWeight: index == _safeMenuIndex ? FontWeight.w600 : FontWeight.normal,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
+              );
+            },
+          );
         },
       ),
     );
@@ -933,7 +1014,9 @@ class _TableDetailViewState extends State<TableDetailView> {
                     for (final menu in menus) {
                       for (final item in (menu['items'] as List)) {
                         final m = item as Map<String, dynamic>;
-                        if ((m['name'] as String).toLowerCase().contains(localSearch)) {
+                        if ((m['name'] as String)
+                            .toLowerCase()
+                            .contains(localSearch)) {
                           results.add(m);
                         }
                       }
@@ -947,7 +1030,7 @@ class _TableDetailViewState extends State<TableDetailView> {
               maxChildSize: 0.97,
               builder: (ctx, scrollController) => Container(
                 decoration: const BoxDecoration(
-                  color: _bg,
+                  color: _chip,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 child: Column(
@@ -993,7 +1076,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                                 color: _textSecondary.withOpacity(0.1),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.close, size: 18, color: _textSecondary),
+                              child: const Icon(CupertinoIcons.xmark,
+                                  size: 18, color: _textSecondary),
                             ),
                           ),
                         ],
@@ -1019,22 +1103,37 @@ class _TableDetailViewState extends State<TableDetailView> {
                             },
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
-                              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 4),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 14),
                               decoration: BoxDecoration(
                                 color: isActive ? _orange : Colors.white,
                                 borderRadius: BorderRadius.circular(20),
                                 boxShadow: isActive
-                                    ? [BoxShadow(color: _orange.withOpacity(0.30), blurRadius: 8, offset: const Offset(0, 2))]
-                                    : [const BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 1))],
+                                    ? [
+                                        BoxShadow(
+                                            color: _orange.withOpacity(0.30),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2))
+                                      ]
+                                    : [
+                                        const BoxShadow(
+                                            color: Color(0x0A000000),
+                                            blurRadius: 4,
+                                            offset: Offset(0, 1))
+                                      ],
                               ),
                               alignment: Alignment.center,
                               child: Text(
                                 menus[i]['name'] as String,
                                 style: TextStyle(
                                   fontSize: 13,
-                                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                                  color: isActive ? Colors.white : _textSecondary,
+                                  fontWeight: isActive
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                  color:
+                                      isActive ? Colors.white : _textSecondary,
                                 ),
                               ),
                             ),
@@ -1045,16 +1144,20 @@ class _TableDetailViewState extends State<TableDetailView> {
                     const SizedBox(height: 6),
                     // Search bar
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
                       child: TextField(
                         controller: searchCtrl,
                         decoration: InputDecoration(
                           hintText: 'search_menu'.tr,
-                          hintStyle: const TextStyle(color: _textSecondary, fontSize: 14),
-                          prefixIcon: const Icon(Icons.search, color: _textSecondary, size: 20),
+                          hintStyle: const TextStyle(
+                              color: _textSecondary, fontSize: 14),
+                          prefixIcon: const Icon(CupertinoIcons.search,
+                              color: _textSecondary, size: 20),
                           filled: true,
                           fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 0),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(24),
                             borderSide: BorderSide.none,
@@ -1065,10 +1168,12 @@ class _TableDetailViewState extends State<TableDetailView> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(24),
-                            borderSide: const BorderSide(color: _orange, width: 1.5),
+                            borderSide:
+                                const BorderSide(color: _orange, width: 1.5),
                           ),
                         ),
-                        onChanged: (v) => setSheetState(() => localSearch = v.toLowerCase()),
+                        onChanged: (v) =>
+                            setSheetState(() => localSearch = v.toLowerCase()),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -1077,14 +1182,18 @@ class _TableDetailViewState extends State<TableDetailView> {
                       child: items.isEmpty
                           ? Center(
                               child: Text(
-                                localSearch.isNotEmpty ? 'Sonuç bulunamadı' : 'no_menu_defined'.tr,
-                                style: const TextStyle(color: _textSecondary, fontSize: 15),
+                                localSearch.isNotEmpty
+                                    ? 'Sonuç bulunamadı'
+                                    : 'no_menu_defined'.tr,
+                                style: const TextStyle(
+                                    color: _textSecondary, fontSize: 15),
                               ),
                             )
                           : GridView.builder(
                               controller: scrollController,
                               padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 3,
                                 childAspectRatio: 0.65,
                                 crossAxisSpacing: 10,
@@ -1097,14 +1206,19 @@ class _TableDetailViewState extends State<TableDetailView> {
                                 final price = item['price'] as double;
                                 final imageUrl = item['imageUrl'] as String?;
                                 return Obx(() {
-                                  final isOut = InventoryService.to.isOutOfStock(name);
-                                  final isLow = InventoryService.to.isLowStock(name);
-                                  final isTracked = InventoryService.to.isTracked(name);
-                                  final stockVal = InventoryService.to.getStock(name);
+                                  final isOut =
+                                      InventoryService.to.isOutOfStock(name);
+                                  final isLow =
+                                      InventoryService.to.isLowStock(name);
+                                  final isTracked =
+                                      InventoryService.to.isTracked(name);
+                                  final stockVal =
+                                      InventoryService.to.getStock(name);
                                   return InkWell(
                                     onTap: () {
                                       if (isOut) {
-                                        AppToast.warning('$name stokta yok!', title: 'warning'.tr);
+                                        AppToast.warning('$name stokta yok!',
+                                            title: 'warning'.tr);
                                         return;
                                       }
                                       TableService.to.addOrder(
@@ -1112,7 +1226,9 @@ class _TableDetailViewState extends State<TableDetailView> {
                                         name,
                                         price,
                                       );
-                                      AppToast.success('$name eklendi', duration: const Duration(milliseconds: 800));
+                                      AppToast.success('$name eklendi',
+                                          duration: const Duration(
+                                              milliseconds: 800));
                                     },
                                     borderRadius: BorderRadius.circular(16),
                                     child: Stack(
@@ -1128,14 +1244,19 @@ class _TableDetailViewState extends State<TableDetailView> {
                                             top: 6,
                                             right: 6,
                                             child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2),
                                               decoration: BoxDecoration(
                                                 color: isOut
                                                     ? const Color(0xFFFF3B30)
                                                     : isLow
                                                         ? _orange
-                                                        : const Color(0xFF34C759),
-                                                borderRadius: BorderRadius.circular(8),
+                                                        : const Color(
+                                                            0xFF34C759),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
                                               ),
                                               child: Text(
                                                 isOut ? 'Bitti' : '$stockVal',
@@ -1169,10 +1290,7 @@ class _TableDetailViewState extends State<TableDetailView> {
     return Container(
       decoration: const BoxDecoration(
         color: _card,
-        boxShadow: [
-          BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
-          BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
-        ],
+        border: Border(bottom: BorderSide(color: _border, width: 1)),
       ),
       // Absorb status bar so white extends seamlessly behind system UI
       padding: EdgeInsets.only(top: topPad),
@@ -1182,7 +1300,7 @@ class _TableDetailViewState extends State<TableDetailView> {
           children: [
             // Back button
             IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+              icon: const Icon(CupertinoIcons.chevron_back,
                   size: 18, color: _textPrimary),
               onPressed: () => Get.back(),
             ),
@@ -1203,14 +1321,14 @@ class _TableDetailViewState extends State<TableDetailView> {
             // Order count badge
             Obx(() {
               final orders = TableService.to.getOrders(widget.tableIndex);
-              final count = orders.fold<int>(
-                  0, (sum, o) => sum + (o['quantity'] as int));
+              final count =
+                  orders.fold<int>(0, (sum, o) => sum + (o['quantity'] as int));
               return Padding(
                 padding: const EdgeInsets.only(right: 16),
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    const Icon(Icons.receipt_long_rounded,
+                    const Icon(CupertinoIcons.doc_text_fill,
                         color: _textSecondary, size: 22),
                     if (count > 0)
                       Positioned(
@@ -1251,7 +1369,8 @@ class _TableDetailViewState extends State<TableDetailView> {
       decoration: const BoxDecoration(
         color: _card,
         boxShadow: [
-          BoxShadow(color: Color(0x0A000000), blurRadius: 12, offset: Offset(2, 0)),
+          BoxShadow(
+              color: Color(0x0A000000), blurRadius: 12, offset: Offset(2, 0)),
         ],
       ),
       child: Column(
@@ -1262,73 +1381,80 @@ class _TableDetailViewState extends State<TableDetailView> {
                 // Touch menuIcons so this Obx rebuilds when icons change.
                 final _ = MenuService.to.menuIcons.length;
                 return ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: MenuService.to.menus.length,
-                itemBuilder: (context, index) {
-                  final menu = MenuService.to.menus[index];
-                  final isSelected = index == _safeMenuIndex;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedMenuIndex = index),
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(
-                          vertical: 4, horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? _orange.withOpacity(0.1)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(12),
-                        border: isSelected
-                            ? const Border(
-                                left: BorderSide(color: _orange, width: 3),
-                              )
-                            : null,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: MenuService.to.menus.length,
+                  itemBuilder: (context, index) {
+                    final menu = MenuService.to.menus[index];
+                    final isSelected = index == _safeMenuIndex;
+                    return GestureDetector(
+                      onTap: () => setState(() => _selectedMenuIndex = index),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(
+                            vertical: 4, horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? _orange.withOpacity(0.1)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: isSelected
+                              ? const Border(
+                                  left: BorderSide(color: _orange, width: 3),
+                                )
+                              : null,
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                gradient: isSelected
+                                    ? const LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [Color(0xFFFFBF4D), _orange],
+                                      )
+                                    : null,
+                                color: isSelected ? null : _bg,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                            color: _orange.withOpacity(0.28),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 3))
+                                      ]
+                                    : null,
+                              ),
+                              child: Icon(
+                                _menuIconData(MenuService.to
+                                    .getMenuIcon(menu['id'] as int)),
+                                size: 20,
+                                color:
+                                    isSelected ? Colors.white : _textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              menu['name'] as String,
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: isSelected ? _orange : _textSecondary,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              gradient: isSelected
-                                  ? const LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [Color(0xFFFFBF4D), _orange],
-                                    )
-                                  : null,
-                              color: isSelected ? null : _bg,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: isSelected
-                                  ? [BoxShadow(color: _orange.withOpacity(0.28), blurRadius: 8, offset: const Offset(0, 3))]
-                                  : null,
-                            ),
-                            child: Icon(
-                              _menuIconData(MenuService.to.getMenuIcon(menu['id'] as int)),
-                              size: 20,
-                              color: isSelected ? Colors.white : _textSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            menu['name'] as String,
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: isSelected ? _orange : _textSecondary,
-                              fontWeight: isSelected
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
+                    );
+                  },
+                );
               },
             ),
           ),
@@ -1344,17 +1470,15 @@ class _TableDetailViewState extends State<TableDetailView> {
         children: [
           // Search bar
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'search_menu'.tr,
-                hintStyle: const TextStyle(
-                    color: _textSecondary, fontSize: 14),
-                prefixIcon:
-                    const Icon(Icons.search, color: _textSecondary, size: 20),
-                suffixIcon: const Icon(Icons.tune,
+                hintStyle: const TextStyle(color: _textSecondary, fontSize: 14),
+                prefixIcon: const Icon(CupertinoIcons.search,
+                    color: _textSecondary, size: 20),
+                suffixIcon: const Icon(CupertinoIcons.slider_horizontal_3,
                     color: _textSecondary, size: 20),
                 filled: true,
                 fillColor: Colors.white,
@@ -1370,8 +1494,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
-                  borderSide:
-                      const BorderSide(color: _orange, width: 1.5),
+                  borderSide: const BorderSide(color: _orange, width: 1.5),
                 ),
               ),
               onChanged: (value) {
@@ -1400,7 +1523,7 @@ class _TableDetailViewState extends State<TableDetailView> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.restaurant_menu,
+              const Icon(CupertinoIcons.square_list_fill,
                   size: 48, color: _textSecondary),
               const SizedBox(height: 12),
               Text(
@@ -1526,7 +1649,8 @@ class _TableDetailViewState extends State<TableDetailView> {
     });
   }
 
-  Widget _buildMenuCard(String name, String price, {String? imageUrl, bool dimmed = false}) {
+  Widget _buildMenuCard(String name, String price,
+      {String? imageUrl, bool dimmed = false}) {
     final hasImage = imageUrl != null && imageUrl.isNotEmpty;
     return Opacity(
       opacity: dimmed ? 0.45 : 1.0,
@@ -1537,8 +1661,16 @@ class _TableDetailViewState extends State<TableDetailView> {
           boxShadow: dimmed
               ? []
               : [
-                  BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 24, spreadRadius: 0, offset: const Offset(0, 6)),
-                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, spreadRadius: 0, offset: const Offset(0, 2)),
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.07),
+                      blurRadius: 24,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 6)),
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 6,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 2)),
                 ],
         ),
         child: Column(
@@ -1548,7 +1680,8 @@ class _TableDetailViewState extends State<TableDetailView> {
             Expanded(
               flex: 10,
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
                 child: hasImage
                     ? Image.network(
                         imageUrl,
@@ -1568,67 +1701,72 @@ class _TableDetailViewState extends State<TableDetailView> {
                 builder: (context, constraints) {
                   // Compact layout for narrow cards (phone 3-col ~111px wide)
                   final isCompact = constraints.maxWidth < 140;
-                  final btnSize  = isCompact ? 24.0 : 30.0;
-                  final btnRadius = isCompact ? 8.0  : 10.0;
-                  final iconSize = isCompact ? 14.0  : 18.0;
+                  final btnSize = isCompact ? 24.0 : 30.0;
+                  final btnRadius = isCompact ? 8.0 : 10.0;
+                  final iconSize = isCompact ? 14.0 : 18.0;
                   final priceSize = isCompact ? 13.0 : 15.0;
-                  final hPad    = isCompact ? 8.0   : 12.0;
+                  final hPad = isCompact ? 8.0 : 12.0;
                   return Padding(
-                padding: EdgeInsets.fromLTRB(hPad, isCompact ? 6 : 8, isCompact ? 7 : 10, isCompact ? 8 : 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      name,
-                      style: TextStyle(
-                        fontSize: isCompact ? 12.0 : 13.0,
-                        color: const Color(0xFF1C1C1E),
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -0.2,
-                        height: 1.25,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Row(
+                    padding: EdgeInsets.fromLTRB(hPad, isCompact ? 6 : 8,
+                        isCompact ? 7 : 10, isCompact ? 8 : 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Flexible(
-                          child: Text(
-                          price,
+                        Text(
+                          name,
                           style: TextStyle(
-                            fontSize: priceSize,
-                            color: _orange,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: -0.3,
+                            fontSize: isCompact ? 12.0 : 13.0,
+                            color: const Color(0xFF1C1C1E),
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.2,
+                            height: 1.25,
                           ),
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        ),
-                        const SizedBox(width: 4),
-                        Container(
-                          width: btnSize,
-                          height: btnSize,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Color(0xFFFFBF4D), _orange],
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                price,
+                                style: TextStyle(
+                                  fontSize: priceSize,
+                                  color: _orange,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: -0.3,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            borderRadius: BorderRadius.circular(btnRadius),
-                            boxShadow: [
-                              BoxShadow(color: _orange.withOpacity(0.40), blurRadius: 8, offset: const Offset(0, 3)),
-                            ],
-                          ),
-                          child: Icon(Icons.add_rounded, color: Colors.white, size: iconSize),
+                            const SizedBox(width: 4),
+                            Container(
+                              width: btnSize,
+                              height: btnSize,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [Color(0xFFFFBF4D), _orange],
+                                ),
+                                borderRadius: BorderRadius.circular(btnRadius),
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: _orange.withOpacity(0.40),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3)),
+                                ],
+                              ),
+                              child: Icon(CupertinoIcons.add,
+                                  color: Colors.white, size: iconSize),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              );
+                  );
                 },
               ),
             ),
@@ -1649,7 +1787,8 @@ class _TableDetailViewState extends State<TableDetailView> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Center(
-        child: Icon(Icons.fastfood_rounded, size: 32, color: Colors.white.withOpacity(0.9)),
+        child: Icon(CupertinoIcons.photo_fill,
+            size: 32, color: Colors.white.withOpacity(0.9)),
       ),
     );
   }
@@ -1660,7 +1799,8 @@ class _TableDetailViewState extends State<TableDetailView> {
       decoration: const BoxDecoration(
         color: _card,
         boxShadow: [
-          BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(-2, 0)),
+          BoxShadow(
+              color: Color(0x0C000000), blurRadius: 16, offset: Offset(-2, 0)),
         ],
       ),
       child: Column(
@@ -1680,8 +1820,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                       ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: _orange.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -1708,7 +1848,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.shopping_cart_outlined,
+                      const Icon(CupertinoIcons.cart,
                           size: 48, color: _textSecondary),
                       const SizedBox(height: 12),
                       Text(
@@ -1725,8 +1865,8 @@ class _TableDetailViewState extends State<TableDetailView> {
               }
               return ListView.separated(
                 itemCount: orders.length,
-                separatorBuilder: (_, __) =>
-                    const Divider(color: _border, height: 1, indent: 16, endIndent: 16),
+                separatorBuilder: (_, __) => const Divider(
+                    color: _border, height: 1, indent: 16, endIndent: 16),
                 itemBuilder: (context, index) {
                   final order = orders[index];
                   final name = order['name'] as String;
@@ -1734,14 +1874,16 @@ class _TableDetailViewState extends State<TableDetailView> {
                   final price = order['price'] as double;
                   final lineTotal = price * quantity;
                   final isPartial = _isPartialPayMode;
-                  final selCount = isPartial ? (_partialSelected[name] ?? 0) : 0;
+                  final selCount =
+                      isPartial ? (_partialSelected[name] ?? 0) : 0;
                   return GestureDetector(
                     key: ValueKey(order['id']),
                     onTap: isPartial
                         ? () {
                             setState(() {
                               final cur = _partialSelected[name] ?? 0;
-                              _partialSelected[name] = (cur + 1) % (quantity + 1);
+                              _partialSelected[name] =
+                                  (cur + 1) % (quantity + 1);
                             });
                           }
                         : null,
@@ -1750,134 +1892,137 @@ class _TableDetailViewState extends State<TableDetailView> {
                           ? _orange.withOpacity(0.05)
                           : Colors.transparent,
                       child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Qty display
-                        isPartial
-                            ? Container(
-                                width: 32,
-                                alignment: Alignment.center,
-                                child: Text(
-                                  '$quantity',
-                                  style: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
-                                    color: _orange,
-                                  ),
-                                ),
-                              )
-                            : Container(
-                                decoration: BoxDecoration(
-                                  color: _bg,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    GestureDetector(
-                                      onTap: () => TableService.to
-                                          .decrementOrder(widget.tableIndex, index),
-                                      child: const SizedBox(
-                                        width: 38,
-                                        height: 42,
-                                        child: Icon(Icons.remove_rounded,
-                                            size: 16, color: _textSecondary),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Qty display
+                            isPartial
+                                ? Container(
+                                    width: 32,
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      '$quantity',
+                                      style: const TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.bold,
+                                        color: _orange,
                                       ),
                                     ),
-                                    SizedBox(
-                                      width: 28,
+                                  )
+                                : Container(
+                                    decoration: BoxDecoration(
+                                      color: _chip,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () => TableService.to
+                                              .decrementOrder(
+                                                  widget.tableIndex, index),
+                                          child: const SizedBox(
+                                            width: 38,
+                                            height: 42,
+                                            child: Icon(CupertinoIcons.minus,
+                                                size: 16,
+                                                color: _textSecondary),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 28,
+                                          child: Text(
+                                            '$quantity',
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(
+                                              fontSize: 17,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF1C1C1E),
+                                            ),
+                                          ),
+                                        ),
+                                        GestureDetector(
+                                          onTap: () => TableService.to.addOrder(
+                                              widget.tableIndex, name, price),
+                                          child: const SizedBox(
+                                            width: 38,
+                                            height: 42,
+                                            child: Icon(CupertinoIcons.add,
+                                                size: 16,
+                                                color: _textSecondary),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                            const SizedBox(width: 10),
+                            // Item name
+                            Expanded(
+                              child: Text(
+                                name,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                  color: _textPrimary,
+                                  letterSpacing: -0.2,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 2,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Price
+                            Text(
+                              '${SettingsService.cs}${lineTotal.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                color: _orange,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Delete / counter badge
+                            isPartial
+                                ? Container(
+                                    width: 30,
+                                    height: 30,
+                                    decoration: BoxDecoration(
+                                      color: selCount > 0 ? _orange : _bg,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
                                       child: Text(
-                                        '$quantity',
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF1C1C1E),
+                                        '$selCount',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w800,
+                                          color: selCount > 0
+                                              ? Colors.white
+                                              : _textSecondary,
                                         ),
                                       ),
                                     ),
-                                    GestureDetector(
-                                      onTap: () => TableService.to
-                                          .addOrder(widget.tableIndex, name, price),
-                                      child: const SizedBox(
-                                        width: 38,
-                                        height: 42,
-                                        child: Icon(Icons.add_rounded,
-                                            size: 16, color: _textSecondary),
+                                  )
+                                : GestureDetector(
+                                    onTap: () => _confirmDelete(name, index),
+                                    child: Container(
+                                      width: 38,
+                                      height: 38,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFF3B30)
+                                            .withOpacity(0.08),
+                                        borderRadius: BorderRadius.circular(11),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                        const SizedBox(width: 10),
-                        // Item name
-                        Expanded(
-                          child: Text(
-                            name,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: _textPrimary,
-                              letterSpacing: -0.2,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 2,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Price
-                        Text(
-                          '${SettingsService.cs}${lineTotal.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: _orange,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Delete / counter badge
-                        isPartial
-                            ? Container(
-                                width: 30,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  color: selCount > 0 ? _orange : _bg,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '$selCount',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
-                                      color: selCount > 0 ? Colors.white : _textSecondary,
+                                      child: const Icon(CupertinoIcons.trash,
+                                          size: 20, color: Color(0xFFFF3B30)),
                                     ),
                                   ),
-                                ),
-                              )
-                            : GestureDetector(
-                                onTap: () => _confirmDelete(name, index),
-                                child: Container(
-                                  width: 38,
-                                  height: 38,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFF3B30)
-                                        .withOpacity(0.08),
-                                    borderRadius: BorderRadius.circular(11),
-                                  ),
-                                  child: const Icon(
-                                      Icons.delete_outline_rounded,
-                                      size: 20,
-                                      color: Color(0xFFFF3B30)),
-                                ),
-                              ),
-                      ],
-                    ),
-                  ),
+                          ],
+                        ),
+                      ),
                     ),
                   );
                 },
@@ -1897,12 +2042,14 @@ class _TableDetailViewState extends State<TableDetailView> {
                 children: [
                   _SummaryRow(
                     label: 'Ara Toplam',
-                    value: '${SettingsService.cs}${subtotal.toStringAsFixed(2)}',
+                    value:
+                        '${SettingsService.cs}${subtotal.toStringAsFixed(2)}',
                   ),
                   if (discount > 0)
                     _SummaryRow(
                       label: 'İndirim',
-                      value: '-${SettingsService.cs}${discount.toStringAsFixed(2)}',
+                      value:
+                          '-${SettingsService.cs}${discount.toStringAsFixed(2)}',
                       valueColor: _orange,
                     ),
                   const SizedBox(height: 8),
@@ -1911,14 +2058,12 @@ class _TableDetailViewState extends State<TableDetailView> {
                     children: [
                       Text(
                         'Toplam',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: _textPrimary,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: _textPrimary,
+                                ),
                       ),
                       Text(
                         '${SettingsService.cs}${finalTotal.toStringAsFixed(2)}',
@@ -1936,32 +2081,31 @@ class _TableDetailViewState extends State<TableDetailView> {
           }),
           // Action buttons row
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
                   _ActionBtn(
-                    icon: Icons.add_circle_outline,
+                    icon: CupertinoIcons.plus_circle,
                     label: 'new'.tr,
                     color: AppTheme.accentColor,
                     onTap: _handleNewOrder,
                   ),
                   _ActionBtn(
-                    icon: Icons.discount,
+                    icon: CupertinoIcons.tag_fill,
                     label: 'discount'.tr,
                     color: AppTheme.warningColor,
                     onTap: _handleDiscount,
                   ),
                   _ActionBtn(
-                    icon: Icons.print,
+                    icon: CupertinoIcons.printer,
                     label: 'print'.tr,
                     color: const Color(0xFF616161),
                     onTap: _handlePrint,
                   ),
                   _ActionBtn(
-                    icon: Icons.compare_arrows,
+                    icon: CupertinoIcons.arrow_swap,
                     label: 'move'.tr,
                     color: AppTheme.accentColor,
                     onTap: _handleMove,
@@ -1978,7 +2122,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Builder(builder: (_) {
-                        final hasSelected = _partialSelected.values.any((v) => v > 0);
+                        final hasSelected =
+                            _partialSelected.values.any((v) => v > 0);
                         final selTotal = _selectedTotal;
                         return Container(
                           width: double.infinity,
@@ -1987,13 +2132,17 @@ class _TableDetailViewState extends State<TableDetailView> {
                           decoration: BoxDecoration(
                             color: _orange.withOpacity(0.07),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _orange.withOpacity(0.18)),
+                            border:
+                                Border.all(color: _orange.withOpacity(0.18)),
                           ),
                           child: Row(
                             children: [
                               Icon(
-                                hasSelected ? Icons.check_circle_outline_rounded : Icons.touch_app_rounded,
-                                size: 15, color: _orange,
+                                hasSelected
+                                    ? CupertinoIcons.checkmark_circle
+                                    : CupertinoIcons.hand_point_left_fill,
+                                size: 15,
+                                color: _orange,
                               ),
                               const SizedBox(width: 8),
                               Text(
@@ -2020,11 +2169,9 @@ class _TableDetailViewState extends State<TableDetailView> {
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: _textSecondary,
                                   side: const BorderSide(
-                                      color: Color(0xFFE5E5EA),
-                                      width: 1.5),
+                                      color: Color(0xFFE5E5EA), width: 1.5),
                                   shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(14)),
+                                      borderRadius: BorderRadius.circular(14)),
                                 ),
                                 onPressed: () => setState(() {
                                   _isPartialPayMode = false;
@@ -2050,7 +2197,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                                         foregroundColor: Colors.white,
                                         elevation: 0,
                                         shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(14)),
+                                            borderRadius:
+                                                BorderRadius.circular(14)),
                                       ),
                                       onPressed: _confirmPartialPayments,
                                       child: Text(
@@ -2062,17 +2210,22 @@ class _TableDetailViewState extends State<TableDetailView> {
                                     )
                                   : ElevatedButton(
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF3A3A3C),
+                                        backgroundColor:
+                                            const Color(0xFF3A3A3C),
                                         foregroundColor: Colors.white,
                                         elevation: 0,
                                         shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(14)),
+                                            borderRadius:
+                                                BorderRadius.circular(14)),
                                       ),
                                       onPressed: _showPartialPaymentsPanel,
                                       child: Obx(() {
-                                        final payments = TableService.to.getPartialPayments(widget.tableIndex);
+                                        final payments = TableService.to
+                                            .getPartialPayments(
+                                                widget.tableIndex);
                                         return Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
                                             const Text(
                                               'Ödemeler',
@@ -2083,17 +2236,22 @@ class _TableDetailViewState extends State<TableDetailView> {
                                             if (payments.isNotEmpty) ...[
                                               const SizedBox(width: 6),
                                               Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                    horizontal: 6, vertical: 2),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 2),
                                                 decoration: BoxDecoration(
-                                                  color: Colors.white.withOpacity(0.3),
-                                                  borderRadius: BorderRadius.circular(10),
+                                                  color: Colors.white
+                                                      .withOpacity(0.3),
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
                                                 ),
                                                 child: Text(
                                                   '${payments.length}',
                                                   style: const TextStyle(
                                                       fontSize: 11,
-                                                      fontWeight: FontWeight.w700),
+                                                      fontWeight:
+                                                          FontWeight.w700),
                                                 ),
                                               ),
                                             ],
@@ -2114,23 +2272,21 @@ class _TableDetailViewState extends State<TableDetailView> {
                           height: 52,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  const Color(0xFF3A3A3C),
+                              backgroundColor: const Color(0xFF3A3A3C),
                               foregroundColor: Colors.white,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(16)),
+                                  borderRadius: BorderRadius.circular(16)),
                             ),
                             onPressed: () {
-                              final orders = TableService.to
-                                  .getOrders(widget.tableIndex);
+                              final orders =
+                                  TableService.to.getOrders(widget.tableIndex);
                               if (orders.isEmpty) {
-                                AppToast.warning('empty_no_pay'.tr, title: 'warning'.tr);
+                                AppToast.warning('empty_no_pay'.tr,
+                                    title: 'warning'.tr);
                                 return;
                               }
-                              setState(
-                                  () => _isPartialPayMode = true);
+                              setState(() => _isPartialPayMode = true);
                             },
                             child: const Text(
                               'Parçalı Ödeme Al',
@@ -2152,8 +2308,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                               foregroundColor: Colors.white,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(16),
                               ),
                             ),
                             onPressed: _handlePayment,
@@ -2184,7 +2339,7 @@ class _TableDetailViewState extends State<TableDetailView> {
     }
 
     AppDialog.confirm(
-      icon: Icons.delete_sweep_rounded,
+      icon: CupertinoIcons.trash_fill,
       iconColor: AppTheme.errorColor,
       title: 'clear_table'.tr,
       message: 'clear_table_confirm'.tr,
@@ -2276,8 +2431,7 @@ class _TableDetailViewState extends State<TableDetailView> {
 
     final subtotal = TableService.to.getTotal(widget.tableIndex);
     final discount = TableService.to.getDiscount(widget.tableIndex);
-    final finalTotal =
-        TableService.to.getTotalWithDiscount(widget.tableIndex);
+    final finalTotal = TableService.to.getTotalWithDiscount(widget.tableIndex);
 
     try {
       final companyName = SettingsService.to.companyName.value.isNotEmpty
@@ -2319,21 +2473,17 @@ class _TableDetailViewState extends State<TableDetailView> {
                 pw.SizedBox(height: 4),
                 ...orders.map(
                   (order) => pw.Padding(
-                    padding:
-                        const pw.EdgeInsets.symmetric(vertical: 2),
+                    padding: const pw.EdgeInsets.symmetric(vertical: 2),
                     child: pw.Row(
-                      mainAxisAlignment:
-                          pw.MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
                         pw.Text(
                           '${order['quantity']}x  ${order['name']}',
-                          style: pw.TextStyle(
-                              font: regularFont, fontSize: 12),
+                          style: pw.TextStyle(font: regularFont, fontSize: 12),
                         ),
                         pw.Text(
                           'TL ${((order['price'] as double) * (order['quantity'] as int)).toStringAsFixed(2)}',
-                          style: pw.TextStyle(
-                              font: regularFont, fontSize: 12),
+                          style: pw.TextStyle(font: regularFont, fontSize: 12),
                         ),
                       ],
                     ),
@@ -2347,22 +2497,18 @@ class _TableDetailViewState extends State<TableDetailView> {
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
                       pw.Text('Ara Toplam',
-                          style: pw.TextStyle(
-                              font: regularFont, fontSize: 11)),
+                          style: pw.TextStyle(font: regularFont, fontSize: 11)),
                       pw.Text('TL ${subtotal.toStringAsFixed(2)}',
-                          style: pw.TextStyle(
-                              font: regularFont, fontSize: 11)),
+                          style: pw.TextStyle(font: regularFont, fontSize: 11)),
                     ],
                   ),
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
                       pw.Text('Indirim',
-                          style: pw.TextStyle(
-                              font: regularFont, fontSize: 11)),
+                          style: pw.TextStyle(font: regularFont, fontSize: 11)),
                       pw.Text('-TL ${discount.toStringAsFixed(2)}',
-                          style: pw.TextStyle(
-                              font: regularFont, fontSize: 11)),
+                          style: pw.TextStyle(font: regularFont, fontSize: 11)),
                     ],
                   ),
                 ],
@@ -2370,20 +2516,16 @@ class _TableDetailViewState extends State<TableDetailView> {
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Text('TOPLAM',
-                        style: pw.TextStyle(
-                            font: boldFont, fontSize: 14)),
-                    pw.Text(
-                        'TL ${finalTotal.toStringAsFixed(2)}',
-                        style: pw.TextStyle(
-                            font: boldFont, fontSize: 14)),
+                        style: pw.TextStyle(font: boldFont, fontSize: 14)),
+                    pw.Text('TL ${finalTotal.toStringAsFixed(2)}',
+                        style: pw.TextStyle(font: boldFont, fontSize: 14)),
                   ],
                 ),
                 pw.SizedBox(height: 16),
                 pw.Center(
                   child: pw.Text(
                     'Tesekkur ederiz!',
-                    style:
-                        pw.TextStyle(font: regularFont, fontSize: 11),
+                    style: pw.TextStyle(font: regularFont, fontSize: 11),
                   ),
                 ),
               ],
@@ -2392,8 +2534,7 @@ class _TableDetailViewState extends State<TableDetailView> {
         ),
       );
 
-      await Printing.layoutPdf(
-          onLayout: (format) async => doc.save());
+      await Printing.layoutPdf(onLayout: (format) async => doc.save());
     } catch (e) {
       AppToast.error('PDF olusturulurken hata: $e', title: 'error'.tr);
     }
@@ -2413,12 +2554,15 @@ class _TableDetailViewState extends State<TableDetailView> {
       builder: (ctx) {
         return Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 44),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 44),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 420),
             decoration: BoxDecoration(
               color: _card,
               borderRadius: BorderRadius.circular(24),
+              border:
+                  Border.fromBorderSide(BorderSide(color: _border, width: 1)),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x1F000000),
@@ -2456,7 +2600,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                           borderRadius: BorderRadius.circular(13),
                         ),
                         child: const Icon(
-                          Icons.swap_horiz_rounded,
+                          CupertinoIcons.arrow_swap,
                           size: 22,
                           color: _orange,
                         ),
@@ -2497,11 +2641,11 @@ class _TableDetailViewState extends State<TableDetailView> {
                               width: 32,
                               height: 32,
                               decoration: BoxDecoration(
-                                color: _bg,
+                                color: _chip,
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: const Icon(
-                                Icons.close_rounded,
+                                CupertinoIcons.xmark,
                                 size: 16,
                                 color: _textSecondary,
                               ),
@@ -2537,7 +2681,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                               width: 56,
                               height: 56,
                               decoration: BoxDecoration(
-                                color: _bg,
+                                color: _chip,
                                 borderRadius: BorderRadius.circular(18),
                               ),
                               child: const Icon(
@@ -2569,7 +2713,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                     }
 
                     // Group by section — tables without a section go under null key
-                    final Map<String?, List<MapEntry<int, Map<String, dynamic>>>> grouped = {};
+                    final Map<String?,
+                        List<MapEntry<int, Map<String, dynamic>>>> grouped = {};
                     for (final entry in emptyTables) {
                       final sectionId = entry.value['sectionId'] as String?;
                       final sectionName = SectionService.to.nameById(sectionId);
@@ -2601,8 +2746,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                               if (sectionName != null) ...[
                                 if (sectionIdx > 0) const SizedBox(height: 16),
                                 Padding(
-                                  padding: const EdgeInsets.only(
-                                      left: 4, bottom: 8),
+                                  padding:
+                                      const EdgeInsets.only(left: 4, bottom: 8),
                                   child: Text(
                                     sectionName.toUpperCase(),
                                     style: const TextStyle(
@@ -2685,7 +2830,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                             ),
                                             const SizedBox(width: 4),
                                             const Icon(
-                                              Icons.chevron_right_rounded,
+                                              CupertinoIcons.chevron_forward,
                                               size: 18,
                                               color: _textSecondary,
                                             ),
@@ -2768,7 +2913,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(ctx),
-                      icon: const Icon(Icons.close_rounded,
+                      icon: const Icon(CupertinoIcons.xmark,
                           size: 20, color: Color(0xFF8E8E93)),
                     ),
                   ],
@@ -2777,7 +2922,8 @@ class _TableDetailViewState extends State<TableDetailView> {
               const Divider(height: 1, color: Color(0xFFE5E5EA)),
               // List — Obx so other-device payments appear in real-time
               Obx(() {
-                final payments = TableService.to.getPartialPayments(widget.tableIndex);
+                final payments =
+                    TableService.to.getPartialPayments(widget.tableIndex);
                 if (payments.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 32),
@@ -2798,14 +2944,17 @@ class _TableDetailViewState extends State<TableDetailView> {
                     shrinkWrap: true,
                     itemCount: payments.length,
                     separatorBuilder: (_, __) => const Divider(
-                        height: 1, color: Color(0xFFE5E5EA), indent: 16, endIndent: 16),
+                        height: 1,
+                        color: Color(0xFFE5E5EA),
+                        indent: 16,
+                        endIndent: 16),
                     itemBuilder: (ctx, i) {
                       final p = payments[i];
                       final methodIcon = p['method'] == 'cash'
-                          ? Icons.payments_rounded
+                          ? CupertinoIcons.money_dollar
                           : p['method'] == 'card'
-                              ? Icons.credit_card_rounded
-                              : Icons.account_balance_rounded;
+                              ? CupertinoIcons.creditcard_fill
+                              : CupertinoIcons.building_2_fill;
                       final methodLabel = p['method'] == 'cash'
                           ? 'Nakit'
                           : p['method'] == 'card'
@@ -2817,7 +2966,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                         child: Row(
                           children: [
                             Container(
-                              width: 32, height: 32,
+                              width: 32,
+                              height: 32,
                               decoration: BoxDecoration(
                                 color: _orange.withOpacity(0.08),
                                 borderRadius: BorderRadius.circular(8),
@@ -2864,7 +3014,8 @@ class _TableDetailViewState extends State<TableDetailView> {
               }),
               // Footer total (also reactive)
               Obx(() {
-                final payments = TableService.to.getPartialPayments(widget.tableIndex);
+                final payments =
+                    TableService.to.getPartialPayments(widget.tableIndex);
                 if (payments.isEmpty) return const SizedBox.shrink();
                 return Column(
                   mainAxisSize: MainAxisSize.min,
@@ -2934,7 +3085,8 @@ class _TableDetailViewState extends State<TableDetailView> {
         final price = order['price'] as double;
         final lineTotal = price * entry.value;
         totalAmount += lineTotal;
-        lineItems.add({'name': entry.key, 'qty': entry.value, 'total': lineTotal});
+        lineItems
+            .add({'name': entry.key, 'qty': entry.value, 'total': lineTotal});
       } catch (_) {}
     }
     if (lineItems.isEmpty) return;
@@ -2960,7 +3112,8 @@ class _TableDetailViewState extends State<TableDetailView> {
               // Handle bar
               Center(
                 child: Container(
-                  width: 40, height: 4,
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
                     color: const Color(0xFFE5E5EA),
                     borderRadius: BorderRadius.circular(2),
@@ -2979,47 +3132,49 @@ class _TableDetailViewState extends State<TableDetailView> {
               const SizedBox(height: 12),
               // Selected items list
               ...lineItems.map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 28, height: 28,
-                      decoration: const BoxDecoration(
-                        color: _orange, shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${item['qty']}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: const BoxDecoration(
+                            color: _orange,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${item['qty']}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        item['name'] as String,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: _textPrimary,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            item['name'] as String,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: _textPrimary,
+                            ),
+                          ),
                         ),
-                      ),
+                        Text(
+                          '${SettingsService.cs}${(item['total'] as double).toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: _textPrimary,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      '${SettingsService.cs}${(item['total'] as double).toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: _textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              )),
+                  )),
               const Divider(height: 20, color: _border),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -3055,7 +3210,7 @@ class _TableDetailViewState extends State<TableDetailView> {
               Row(
                 children: [
                   _PartialPayMethodBtn(
-                    icon: Icons.payments_rounded,
+                    icon: CupertinoIcons.money_dollar,
                     label: 'pay_cash'.tr,
                     value: 'cash',
                     selected: selectedMethod == 'cash',
@@ -3063,7 +3218,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                   ),
                   const SizedBox(width: 10),
                   _PartialPayMethodBtn(
-                    icon: Icons.credit_card_rounded,
+                    icon: CupertinoIcons.creditcard_fill,
                     label: 'pay_card'.tr,
                     value: 'card',
                     selected: selectedMethod == 'card',
@@ -3071,7 +3226,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                   ),
                   const SizedBox(width: 10),
                   _PartialPayMethodBtn(
-                    icon: Icons.account_balance_rounded,
+                    icon: CupertinoIcons.building_2_fill,
                     label: 'pay_transfer'.tr,
                     value: 'transfer',
                     selected: selectedMethod == 'transfer',
@@ -3093,23 +3248,26 @@ class _TableDetailViewState extends State<TableDetailView> {
                   ),
                   onPressed: () {
                     final method = selectedMethod;
-                    final toProcess = List<Map<String, dynamic>>.from(lineItems);
+                    final toProcess =
+                        List<Map<String, dynamic>>.from(lineItems);
                     Navigator.pop(ctx);
 
                     // All in-memory updates are synchronous inside
                     // recordPartialPaymentUnits — fire all in parallel.
                     for (final item in toProcess) {
-                      final itemName  = item['name']  as String;
-                      final units     = item['qty']   as int;
+                      final itemName = item['name'] as String;
+                      final units = item['qty'] as int;
                       final lineTotal = item['total'] as double;
 
                       // Instant in-memory update; DB writes fire in background.
-                      TableService.to.recordPartialPaymentUnits(
-                        widget.tableIndex,
-                        itemName,
-                        units,
-                        paymentMethod: method,
-                      ).ignore();
+                      TableService.to
+                          .recordPartialPaymentUnits(
+                            widget.tableIndex,
+                            itemName,
+                            units,
+                            paymentMethod: method,
+                          )
+                          .ignore();
 
                       final record = {
                         'name': itemName,
@@ -3118,8 +3276,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                         'method': method,
                       };
                       // addPartialPaymentRecord persists to DB + reactive map.
-                      TableService.to.addPartialPaymentRecord(
-                          widget.tableIndex, record);
+                      TableService.to
+                          .addPartialPaymentRecord(widget.tableIndex, record);
                     }
 
                     setState(() {
@@ -3158,7 +3316,7 @@ class _TableDetailViewState extends State<TableDetailView> {
       return;
     }
 
-    final total    = TableService.to.getTotal(widget.tableIndex);
+    final total = TableService.to.getTotal(widget.tableIndex);
     final discount = TableService.to.getDiscount(widget.tableIndex);
     final finalTotal = TableService.to.getTotalWithDiscount(widget.tableIndex);
     String selectedMethod = 'cash';
@@ -3173,7 +3331,9 @@ class _TableDetailViewState extends State<TableDetailView> {
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           padding: EdgeInsets.fromLTRB(
-            24, 0, 24,
+            24,
+            0,
+            24,
             MediaQuery.of(context).viewInsets.bottom + 24,
           ),
           child: SingleChildScrollView(
@@ -3185,7 +3345,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                 Center(
                   child: Container(
                     margin: const EdgeInsets.symmetric(vertical: 12),
-                    width: 36, height: 4,
+                    width: 36,
+                    height: 4,
                     decoration: BoxDecoration(
                       color: Colors.grey.shade300,
                       borderRadius: BorderRadius.circular(2),
@@ -3202,7 +3363,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                         color: AppTheme.successColor.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.receipt_long_rounded,
+                      child: const Icon(CupertinoIcons.doc_text_fill,
                           color: AppTheme.successColor, size: 20),
                     ),
                     const SizedBox(width: 12),
@@ -3212,14 +3373,16 @@ class _TableDetailViewState extends State<TableDetailView> {
                         Text(
                           'pay_title'.tr,
                           style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
                             color: _textPrimary,
                           ),
                         ),
                         Text(
                           _fullTableLabel,
                           style: const TextStyle(
-                            fontSize: 13, color: _textSecondary,
+                            fontSize: 13,
+                            color: _textSecondary,
                           ),
                         ),
                       ],
@@ -3230,10 +3393,10 @@ class _TableDetailViewState extends State<TableDetailView> {
 
                 // ── total summary card ───────────────────────────
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    color: _bg,
+                    color: _chip,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
@@ -3245,7 +3408,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                             Text('subtotal'.tr,
                                 style: const TextStyle(
                                     color: _textSecondary, fontSize: 13)),
-                            Text('${SettingsService.cs}${total.toStringAsFixed(2)}',
+                            Text(
+                                '${SettingsService.cs}${total.toStringAsFixed(2)}',
                                 style: const TextStyle(
                                     color: _textSecondary, fontSize: 13)),
                           ],
@@ -3258,7 +3422,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                                 style: const TextStyle(
                                     color: AppTheme.warningColor,
                                     fontSize: 13)),
-                            Text('-${SettingsService.cs}${discount.toStringAsFixed(2)}',
+                            Text(
+                                '-${SettingsService.cs}${discount.toStringAsFixed(2)}',
                                 style: const TextStyle(
                                     color: AppTheme.warningColor,
                                     fontSize: 13)),
@@ -3266,8 +3431,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                         ),
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 10),
-                          child: Divider(height: 1,
-                              color: Colors.grey.shade300),
+                          child:
+                              Divider(height: 1, color: Colors.grey.shade300),
                         ),
                       ],
                       Row(
@@ -3298,8 +3463,7 @@ class _TableDetailViewState extends State<TableDetailView> {
 
                 // ── Böl toggle row ───────────────────────────────
                 GestureDetector(
-                  onTap: () =>
-                      setState(() => splitEnabled = !splitEnabled),
+                  onTap: () => setState(() => splitEnabled = !splitEnabled),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 220),
                     padding: const EdgeInsets.symmetric(
@@ -3319,7 +3483,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                     child: Row(
                       children: [
                         Icon(
-                          Icons.call_split_rounded,
+                          CupertinoIcons.square_split_2x2_fill,
                           color: splitEnabled
                               ? AppTheme.infoColor
                               : _textSecondary,
@@ -3340,13 +3504,11 @@ class _TableDetailViewState extends State<TableDetailView> {
                         AnimatedSwitcher(
                           duration: const Duration(milliseconds: 200),
                           child: splitEnabled
-                              ? const Icon(Icons.keyboard_arrow_up_rounded,
+                              ? const Icon(CupertinoIcons.chevron_up,
                                   color: AppTheme.infoColor,
                                   key: ValueKey('up'))
-                              : const Icon(
-                                  Icons.keyboard_arrow_down_rounded,
-                                  color: _textSecondary,
-                                  key: ValueKey('down')),
+                              : const Icon(CupertinoIcons.chevron_down,
+                                  color: _textSecondary, key: ValueKey('down')),
                         ),
                       ],
                     ),
@@ -3364,14 +3526,12 @@ class _TableDetailViewState extends State<TableDetailView> {
                             children: [
                               // stepper
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.center,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   _StepperBtn(
-                                    icon: Icons.remove_rounded,
+                                    icon: CupertinoIcons.minus,
                                     onTap: splitCount > 2
-                                        ? () => setState(
-                                            () => splitCount--)
+                                        ? () => setState(() => splitCount--)
                                         : null,
                                   ),
                                   Padding(
@@ -3398,9 +3558,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                                     ),
                                   ),
                                   _StepperBtn(
-                                    icon: Icons.add_rounded,
-                                    onTap: () =>
-                                        setState(() => splitCount++),
+                                    icon: CupertinoIcons.add,
+                                    onTap: () => setState(() => splitCount++),
                                   ),
                                 ],
                               ),
@@ -3408,8 +3567,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                               // per-person result
                               Container(
                                 width: double.infinity,
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 16),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
                                     colors: [
@@ -3421,8 +3580,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
-                                  borderRadius:
-                                      BorderRadius.circular(14),
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: Column(
                                   children: [
@@ -3468,26 +3626,23 @@ class _TableDetailViewState extends State<TableDetailView> {
                   children: [
                     _PayCard(
                       label: 'pay_cash'.tr,
-                      icon: Icons.payments_rounded,
+                      icon: CupertinoIcons.money_dollar,
                       selected: selectedMethod == 'cash',
-                      onTap: () =>
-                          setState(() => selectedMethod = 'cash'),
+                      onTap: () => setState(() => selectedMethod = 'cash'),
                     ),
                     const SizedBox(width: 8),
                     _PayCard(
                       label: 'pay_card'.tr,
-                      icon: Icons.credit_card_rounded,
+                      icon: CupertinoIcons.creditcard_fill,
                       selected: selectedMethod == 'card',
-                      onTap: () =>
-                          setState(() => selectedMethod = 'card'),
+                      onTap: () => setState(() => selectedMethod = 'card'),
                     ),
                     const SizedBox(width: 8),
                     _PayCard(
                       label: 'pay_transfer'.tr,
-                      icon: Icons.account_balance_rounded,
+                      icon: CupertinoIcons.building_2_fill,
                       selected: selectedMethod == 'transfer',
-                      onTap: () =>
-                          setState(() => selectedMethod = 'transfer'),
+                      onTap: () => setState(() => selectedMethod = 'transfer'),
                     ),
                   ],
                 ),
@@ -3499,10 +3654,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                     Expanded(
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 15),
-                          side:
-                              BorderSide(color: Colors.grey.shade300),
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          side: BorderSide(color: Colors.grey.shade300),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
@@ -3524,16 +3677,14 @@ class _TableDetailViewState extends State<TableDetailView> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.successColor,
                           foregroundColor: Colors.white,
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 15),
+                          padding: const EdgeInsets.symmetric(vertical: 15),
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
                         onPressed: () {
-                          TableService.to.recordPayment(
-                              widget.tableIndex,
+                          TableService.to.recordPayment(widget.tableIndex,
                               paymentMethod: selectedMethod);
                           Get.back();
                           Get.back();
@@ -3644,7 +3795,8 @@ class _PartialPayMethodBtn extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 22,
+              Icon(icon,
+                  size: 22,
                   color: selected ? Colors.white : const Color(0xFF8E8E93)),
               const SizedBox(height: 4),
               Text(
@@ -3664,7 +3816,6 @@ class _PartialPayMethodBtn extends StatelessWidget {
   }
 }
 
-
 class _QtyBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -3679,7 +3830,7 @@ class _QtyBtn extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: _bg,
+          color: _chip,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, size: 16, color: _textSecondary),
@@ -3702,7 +3853,8 @@ class _StepperBtn extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        width: 44, height: 44,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
           color: enabled ? _bg : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
@@ -3711,8 +3863,7 @@ class _StepperBtn extends StatelessWidget {
           ),
         ),
         child: Icon(icon,
-            size: 20,
-            color: enabled ? _textPrimary : _textSecondary),
+            size: 20, color: enabled ? _textPrimary : _textSecondary),
       ),
     );
   }
@@ -3756,8 +3907,7 @@ class _PayCard extends StatelessWidget {
           child: Column(
             children: [
               Icon(icon,
-                  size: 22,
-                  color: selected ? Colors.white : _textSecondary),
+                  size: 22, color: selected ? Colors.white : _textSecondary),
               const SizedBox(height: 5),
               Text(
                 label,

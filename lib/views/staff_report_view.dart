@@ -1,22 +1,29 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/services/sales_history_service.dart';
 import 'package:orderix/services/shift_service.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/settings_service.dart';
+import 'package:orderix/widgets/app_dialog.dart';
+import 'package:orderix/widgets/shell_leading.dart';
 
 // ── Design tokens ─────────────────────────────────────────────
-const _bg          = Color(0xFFF2F2F7);
-const _card        = Colors.white;
-const _orange      = Color(0xFFFF9500);
+const _bg = Colors.white;
+const _card = Colors.white;
+const _border = Color(0xFFECECEF);
+const _orange = Color(0xFFFF9500);
 const _textPrimary = Color(0xFF1C1C1E);
-const _textSec     = Color(0xFF8E8E93);
-const _green       = Color(0xFF34C759);
-const _blue        = Color(0xFF007AFF);
+const _textSec = Color(0xFF8E8E93);
+const _green = Color(0xFF34C759);
+const _blue = Color(0xFF007AFF);
 
 class StaffReportView extends StatelessWidget {
-  const StaffReportView({super.key});
+  const StaffReportView({super.key, this.embedded = false});
+
+  final bool embedded;
 
   // Normalise a staffEmail raw value to a display key.
   // Admin logins (email addresses) and empty/unknown values all map to
@@ -32,17 +39,18 @@ class StaffReportView extends StatelessWidget {
   // Build combined stats: sales + hours for each staff member.
   List<Map<String, dynamic>> _buildStats() {
     final profiles = StaffService.to.staffList;
-    final sales    = SalesHistoryService.to.sales;
-    final shifts   = ShiftService.to.shifts;
-    final today    = DateTime.now();
+    final sales = SalesHistoryService.to.sales;
+    final shifts = ShiftService.to.shifts;
+    final today = DateTime.now();
 
     // Aggregate sales — all admin/email/unknown entries merge into _adminKey
     final Map<String, Map<String, dynamic>> salesMap = {};
     for (final sale in sales) {
       final id = _toKey(sale['staffEmail'] as String?);
-      salesMap.putIfAbsent(id, () => {'total': 0.0, 'count': 0, 'lastSale': null});
-      salesMap[id]!['total'] =
-          (salesMap[id]!['total'] as double) + ((sale['total'] as num).toDouble());
+      salesMap.putIfAbsent(
+          id, () => {'total': 0.0, 'count': 0, 'lastSale': null});
+      salesMap[id]!['total'] = (salesMap[id]!['total'] as double) +
+          ((sale['total'] as num).toDouble());
       salesMap[id]!['count'] = (salesMap[id]!['count'] as int) + 1;
       final saleDate = DateTime.tryParse(sale['date'] as String? ?? '');
       if (saleDate != null) {
@@ -63,7 +71,8 @@ class StaffReportView extends StatelessWidget {
       if (shiftDate.year != today.year ||
           shiftDate.month != today.month ||
           shiftDate.day != today.day) continue;
-      hoursMap[id] = (hoursMap[id] ?? 0) + ShiftService.to.getWorkMinutes(shift);
+      hoursMap[id] =
+          (hoursMap[id] ?? 0) + ShiftService.to.getWorkMinutes(shift);
     }
 
     // Build result list — known staff profiles first
@@ -97,8 +106,8 @@ class StaffReportView extends StatelessWidget {
       });
     }
 
-    result.sort(
-        (a, b) => (b['total'] as double).compareTo(a['total'] as double));
+    result
+        .sort((a, b) => (b['total'] as double).compareTo(a['total'] as double));
     return result;
   }
 
@@ -106,6 +115,15 @@ class StaffReportView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg,
+      floatingActionButton: AuthController.to.isAdmin
+          ? FloatingActionButton(
+              onPressed: () => _showAddStaffDialog(context),
+              backgroundColor: _orange,
+              foregroundColor: Colors.white,
+              elevation: 4,
+              child: const Icon(CupertinoIcons.person_add_solid),
+            )
+          : null,
       body: SafeArea(
         top: false,
         child: Column(
@@ -115,22 +133,13 @@ class StaffReportView extends StatelessWidget {
               padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
               decoration: const BoxDecoration(
                 color: _card,
-                boxShadow: [
-                  BoxShadow(
-                      color: Color(0x0C000000),
-                      blurRadius: 16,
-                      offset: Offset(0, 2)),
-                ],
+                border: Border(bottom: BorderSide(color: _border, width: 1)),
               ),
               child: SizedBox(
                 height: 52,
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                          size: 18, color: _textPrimary),
-                      onPressed: () => Get.back(),
-                    ),
+                    ShellLeading(embedded: embedded, color: _textPrimary),
                     const Text(
                       'Personel Raporu',
                       style: TextStyle(
@@ -162,7 +171,8 @@ class StaffReportView extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.people_outline, size: 48, color: _textSec),
+                        Icon(CupertinoIcons.person_2,
+                            size: 48, color: _textSec),
                         SizedBox(height: 12),
                         Text('Henüz personel eklenmedi',
                             style: TextStyle(color: _textSec, fontSize: 16)),
@@ -174,8 +184,18 @@ class StaffReportView extends StatelessWidget {
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: stats.length,
-                  itemBuilder: (_, i) =>
-                      _StaffCard(stats: stats[i], rank: i + 1),
+                  itemBuilder: (_, i) {
+                    final st = stats[i];
+                    final card = _StaffCard(stats: st, rank: i + 1);
+                    final isSentinel = st['isAdmin'] as bool? ?? false;
+                    // Admins can long-press a real staff member to edit / delete.
+                    if (!AuthController.to.isAdmin || isSentinel) return card;
+                    return GestureDetector(
+                      onLongPressStart: (d) => _showStaffContextMenu(
+                          context, st['name'] as String, d.globalPosition),
+                      child: card,
+                    );
+                  },
                 );
               }),
             ),
@@ -183,6 +203,138 @@ class StaffReportView extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // ── Staff management (moved here from Settings) ──────────────
+
+  void _showAddStaffDialog(BuildContext context) {
+    final nameCtrl = TextEditingController();
+    final pinCtrl = TextEditingController();
+    AppDialog.form(
+      title: 'Personel Ekle',
+      confirmText: 'Ekle',
+      onConfirm: () async {
+        final name = nameCtrl.text.trim();
+        final pin = pinCtrl.text.trim();
+        if (name.isEmpty || pin.length != 4) return;
+        await StaffService.to.addStaff(name, pin);
+        Get.back();
+      },
+      body: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppDialogTextField(
+            controller: nameCtrl,
+            label: 'Ad Soyad',
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+          ),
+          const SizedBox(height: 14),
+          AppDialogTextField(
+            controller: pinCtrl,
+            label: '4 Haneli PIN',
+            keyboardType: TextInputType.number,
+            maxLength: 4,
+            obscureText: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showStaffContextMenu(BuildContext context, String name, Offset pos) {
+    Map<String, dynamic>? staff;
+    for (final s in StaffService.to.staffList) {
+      if (s['name'] == name) {
+        staff = s;
+        break;
+      }
+    }
+    if (staff == null) return;
+    final record = staff;
+    showMenu(
+      context: context,
+      position: RelativeRect.fromLTRB(pos.dx, pos.dy, pos.dx + 1, pos.dy + 1),
+      items: [
+        PopupMenuItem(
+          value: 'edit',
+          child: Row(children: [
+            const Icon(CupertinoIcons.pencil, color: Color(0xFF007AFF)),
+            const SizedBox(width: 8),
+            Text('edit'.tr),
+          ]),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: Row(children: [
+            const Icon(CupertinoIcons.trash, color: Color(0xFFFF3B30)),
+            const SizedBox(width: 8),
+            Text('delete'.tr),
+          ]),
+        ),
+      ],
+    ).then((value) {
+      if (value == 'edit') {
+        _showEditStaffDialog(record);
+      } else if (value == 'delete') {
+        _confirmDeleteStaff(record);
+      }
+    });
+  }
+
+  void _showEditStaffDialog(Map<String, dynamic> staff) {
+    final nameCtrl = TextEditingController(text: staff['name'] as String);
+    final pinCtrl = TextEditingController();
+    AppDialog.form(
+      title: 'Personeli Düzenle',
+      confirmText: 'save'.tr,
+      onConfirm: () async {
+        final name = nameCtrl.text.trim();
+        final pin = pinCtrl.text.trim().isEmpty
+            ? staff['pin'] as String
+            : pinCtrl.text.trim();
+        if (name.isEmpty) return;
+        await StaffService.to.updateStaff(
+          staff['id'] as String,
+          name: name,
+          pin: pin,
+        );
+        Get.back();
+      },
+      body: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppDialogTextField(
+            controller: nameCtrl,
+            label: 'Ad Soyad',
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+          ),
+          const SizedBox(height: 14),
+          AppDialogTextField(
+            controller: pinCtrl,
+            label: 'Yeni PIN',
+            hintText: 'Boş bırakın = değişmesin',
+            keyboardType: TextInputType.number,
+            maxLength: 4,
+            obscureText: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteStaff(Map<String, dynamic> staff) async {
+    final ok = await AppDialog.confirm(
+      icon: CupertinoIcons.trash,
+      iconColor: const Color(0xFFFF3B30),
+      title: 'Personeli Sil',
+      message: '${staff['name']} silinsin mi?',
+      confirmText: 'yes'.tr,
+      cancelText: 'no'.tr,
+      destructive: true,
+    );
+    if (ok) await StaffService.to.deleteStaff(staff['id'] as String);
   }
 }
 
@@ -196,22 +348,26 @@ class _StaffCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name         = stats['name'] as String;
-    final total        = stats['total'] as double;
-    final count        = stats['count'] as int;
-    final lastSale     = stats['lastSale'] as DateTime?;
+    final name = stats['name'] as String;
+    final total = stats['total'] as double;
+    final count = stats['count'] as int;
+    final lastSale = stats['lastSale'] as DateTime?;
     final todayMinutes = stats['todayMinutes'] as int;
-    final isAdmin      = stats['isAdmin'] as bool? ?? false;
+    final isAdmin = stats['isAdmin'] as bool? ?? false;
 
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
     // Color based on name hash
     final avatarColors = [
-      _orange, _blue, _green,
-      const Color(0xFFAF52DE), const Color(0xFF30B0C7), const Color(0xFF5856D6),
+      _orange,
+      _blue,
+      _green,
+      const Color(0xFFAF52DE),
+      const Color(0xFF30B0C7),
+      const Color(0xFF5856D6),
     ];
-    final avatarColor =
-        avatarColors[name.codeUnits.fold(0, (a, b) => a + b) % avatarColors.length];
+    final avatarColor = avatarColors[
+        name.codeUnits.fold(0, (a, b) => a + b) % avatarColors.length];
 
     final medalColor = rank == 1
         ? const Color(0xFFFFD700)
@@ -227,6 +383,7 @@ class _StaffCard extends StatelessWidget {
       decoration: const BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.all(Radius.circular(18)),
+        border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
         boxShadow: [
           BoxShadow(
               color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
@@ -241,17 +398,7 @@ class _StaffCard extends StatelessWidget {
             width: 30,
             height: 30,
             decoration: BoxDecoration(
-              gradient: rank <= 3
-                  ? LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color.lerp(medalColor, Colors.white, 0.28)!,
-                        medalColor
-                      ],
-                    )
-                  : null,
-              color: rank > 3 ? medalColor.withOpacity(0.12) : null,
+              color: rank <= 3 ? medalColor : medalColor.withOpacity(0.12),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -272,14 +419,7 @@ class _StaffCard extends StatelessWidget {
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color.lerp(avatarColor, Colors.white, 0.28)!,
-                  avatarColor
-                ],
-              ),
+              color: avatarColor,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
@@ -344,13 +484,11 @@ class _StaffCard extends StatelessWidget {
                       ),
                     if (count > 0 && lastSale != null)
                       const Text(' · ',
-                          style:
-                              TextStyle(fontSize: 12, color: _textSec)),
+                          style: TextStyle(fontSize: 12, color: _textSec)),
                     if (lastSale != null)
                       Text(
                         DateFormat('dd/MM/yyyy').format(lastSale),
-                        style: const TextStyle(
-                            fontSize: 12, color: _textSec),
+                        style: const TextStyle(fontSize: 12, color: _textSec),
                       ),
                   ],
                 ),
@@ -358,7 +496,7 @@ class _StaffCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      const Icon(Icons.schedule_rounded,
+                      const Icon(CupertinoIcons.clock_fill,
                           size: 11, color: _green),
                       const SizedBox(width: 3),
                       Text(
@@ -382,9 +520,7 @@ class _StaffCard extends StatelessWidget {
               Text(
                 '${SettingsService.cs}${total.toStringAsFixed(2)}',
                 style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: _orange),
+                    fontWeight: FontWeight.bold, fontSize: 16, color: _orange),
               ),
               const Text('toplam',
                   style: TextStyle(fontSize: 11, color: _textSec)),

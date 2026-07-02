@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -7,19 +8,112 @@ import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/themes/app_theme.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _bg          = Color(0xFFF2F2F7);
-const _card        = Colors.white;
-const _orange      = Color(0xFFFF9500);
+const _bg = Colors.white;
+const _card = Colors.white;
+const _orange = Color(0xFFFF9500);
 const _textPrimary = Color(0xFF1C1C1E);
-const _textSec     = Color(0xFF8E8E93);
-const _border      = Color(0xFFE5E5EA);
+const _textSec = Color(0xFF8E8E93);
+const _border = Color(0xFFE5E5EA);
 
 class MonthlyReportView extends StatelessWidget {
-  const MonthlyReportView({super.key});
+  /// [inline] renders the report body only (no own Scaffold/header), for
+  /// embedding as the detail pane of a tablet master-detail split view.
+  const MonthlyReportView({super.key, this.inline = false});
+
+  final bool inline;
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
+
+    final body = Obx(() {
+      final cs = SettingsService.cs;
+      final sales =
+          SalesHistoryService.to.getSalesForMonth(now.year, now.month);
+      final total = SalesHistoryService.to.getTotalForSales(sales);
+      final dailyTotals =
+          SalesHistoryService.to.getDailyTotals(now.year, now.month);
+      final topItems = SalesHistoryService.to.getTopItems(sales, top: 5);
+      final monthName =
+          DateFormat('MMMM yyyy', Get.locale?.languageCode ?? 'tr').format(now);
+
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Month label
+            Text(
+              monthName,
+              style: const TextStyle(
+                color: _textSec,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Summary cards
+            Row(
+              children: [
+                Expanded(
+                  child: _StatCard(
+                    icon: CupertinoIcons.money_dollar_circle_fill,
+                    label: 'total_sales'.tr,
+                    value: '$cs${total.toStringAsFixed(2)}',
+                    accent: AppTheme.successColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _StatCard(
+                    icon: CupertinoIcons.doc_text_fill,
+                    label: 'sale_count'.tr,
+                    value: '${sales.length}',
+                    accent: AppTheme.accentColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _StatCard(
+                    icon: CupertinoIcons.calendar_circle_fill,
+                    label: 'Aktif Gün',
+                    value: '${dailyTotals.length}',
+                    accent: _orange,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            if (sales.isEmpty)
+              _buildEmptyState()
+            else ...[
+              // Daily bar chart
+              _SectionTitle(
+                  title: 'monthly_sales_title'.tr,
+                  icon: CupertinoIcons.chart_bar_alt_fill,
+                  accent: _orange),
+              const SizedBox(height: 12),
+              _ChartCard(child: _buildDailyChart(dailyTotals, now, cs)),
+              const SizedBox(height: 24),
+
+              // Top items
+              if (topItems.isNotEmpty) ...[
+                _SectionTitle(
+                    title: 'top_items'.tr,
+                    icon: CupertinoIcons.star_fill,
+                    accent: _orange),
+                const SizedBox(height: 12),
+                _ContentCard(child: _buildTopItemsList(topItems)),
+              ],
+            ],
+          ],
+        ),
+      );
+    });
+
+    if (inline) return body;
 
     return Scaffold(
       backgroundColor: _bg,
@@ -28,106 +122,15 @@ class MonthlyReportView extends StatelessWidget {
         child: Column(
           children: [
             _Header(title: 'monthly_report'.tr),
-            Expanded(
-              child: Obx(() {
-                final cs = SettingsService.cs;
-                final sales = SalesHistoryService.to
-                    .getSalesForMonth(now.year, now.month);
-                final total =
-                    SalesHistoryService.to.getTotalForSales(sales);
-                final dailyTotals = SalesHistoryService.to
-                    .getDailyTotals(now.year, now.month);
-                final topItems =
-                    SalesHistoryService.to.getTopItems(sales, top: 5);
-                final monthName = DateFormat(
-                        'MMMM yyyy', Get.locale?.languageCode ?? 'tr')
-                    .format(now);
-
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Month label
-                      Text(
-                        monthName,
-                        style: const TextStyle(
-                          color: _textSec,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Summary cards
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _StatCard(
-                              icon: Icons.attach_money_rounded,
-                              label: 'total_sales'.tr,
-                              value: '$cs${total.toStringAsFixed(2)}',
-                              accent: AppTheme.successColor,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _StatCard(
-                              icon: Icons.receipt_long_rounded,
-                              label: 'sale_count'.tr,
-                              value: '${sales.length}',
-                              accent: AppTheme.accentColor,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _StatCard(
-                              icon: Icons.calendar_today_rounded,
-                              label: 'Aktif Gün',
-                              value: '${dailyTotals.length}',
-                              accent: _orange,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-
-                      if (sales.isEmpty)
-                        _buildEmptyState()
-                      else ...[
-                        // Daily bar chart
-                        _SectionTitle(
-                            title: 'monthly_sales_title'.tr,
-                            icon: Icons.bar_chart_rounded,
-                            accent: _orange),
-                        const SizedBox(height: 12),
-                        _ChartCard(
-                            child: _buildDailyChart(dailyTotals, now, cs)),
-                        const SizedBox(height: 24),
-
-                        // Top items
-                        if (topItems.isNotEmpty) ...[
-                          _SectionTitle(
-                              title: 'top_items'.tr,
-                              icon: Icons.star_rounded,
-                              accent: _orange),
-                          const SizedBox(height: 12),
-                          _ContentCard(
-                              child: _buildTopItemsList(topItems)),
-                        ],
-                      ],
-                    ],
-                  ),
-                );
-              }),
-            ),
+            Expanded(child: body),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDailyChart(Map<int, double> dailyTotals, DateTime now, String cs) {
+  Widget _buildDailyChart(
+      Map<int, double> dailyTotals, DateTime now, String cs) {
     if (dailyTotals.isEmpty) {
       return const SizedBox(
           height: 220, child: Center(child: Text('Veri yok')));
@@ -157,8 +160,7 @@ class MonthlyReportView extends StatelessWidget {
                 : null,
             color: hasData ? null : _border,
             width: 7,
-            borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(5)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
           ),
         ],
       );
@@ -205,10 +207,8 @@ class MonthlyReportView extends StatelessWidget {
                 ),
               ),
             ),
-            rightTitles:
-                AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles:
-                AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
           ),
           borderData: FlBorderData(show: false),
           gridData: FlGridData(
@@ -239,8 +239,7 @@ class MonthlyReportView extends StatelessWidget {
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: _orange.withValues(
-                      alpha: rank == 1 ? 0.15 : 0.08),
+                  color: _orange.withValues(alpha: rank == 1 ? 0.15 : 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 alignment: Alignment.center,
@@ -267,8 +266,8 @@ class MonthlyReportView extends StatelessWidget {
                                 fontSize: 13,
                                 color: _textPrimary)),
                         Text('${item.value.toInt()} adet',
-                            style: const TextStyle(
-                                color: _textSec, fontSize: 12)),
+                            style:
+                                const TextStyle(color: _textSec, fontSize: 12)),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -302,7 +301,7 @@ class MonthlyReportView extends StatelessWidget {
                 color: _border,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.bar_chart_rounded,
+              child: const Icon(CupertinoIcons.chart_bar_alt_fill,
                   size: 48, color: _textSec),
             ),
             const SizedBox(height: 16),
@@ -330,17 +329,14 @@ class _Header extends StatelessWidget {
       padding: EdgeInsets.only(top: topPad),
       decoration: const BoxDecoration(
         color: _card,
-        boxShadow: [
-          BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
-          BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
-        ],
+        border: Border(bottom: BorderSide(color: _border, width: 1)),
       ),
       child: SizedBox(
         height: 52,
         child: Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+              icon: const Icon(CupertinoIcons.chevron_back,
                   size: 18, color: _textPrimary),
               onPressed: () => Get.back(),
             ),
@@ -379,30 +375,18 @@ class _StatCard extends StatelessWidget {
       decoration: const BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.all(Radius.circular(16)),
+        border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
         boxShadow: [
-          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
-          BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
+          BoxShadow(
+              color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(
+              color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 1)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color.lerp(accent, Colors.white, 0.28)!, accent],
-              ),
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(color: accent.withOpacity(0.28), blurRadius: 6, offset: const Offset(0, 2)),
-              ],
-            ),
-            child: Icon(icon, color: Colors.white, size: 16),
-          ),
+          Icon(icon, color: accent, size: 22),
           const SizedBox(height: 10),
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -472,9 +456,12 @@ class _ChartCard extends StatelessWidget {
       decoration: const BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.all(Radius.circular(16)),
+        border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
         boxShadow: [
-          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
-          BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
+          BoxShadow(
+              color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(
+              color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 1)),
         ],
       ),
       child: child,
@@ -493,9 +480,12 @@ class _ContentCard extends StatelessWidget {
       decoration: const BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.all(Radius.circular(16)),
+        border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
         boxShadow: [
-          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
-          BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
+          BoxShadow(
+              color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(
+              color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 1)),
         ],
       ),
       child: child,

@@ -13,8 +13,7 @@ class TableService extends GetxService {
   final RxList<Map<String, dynamic>> tables = <Map<String, dynamic>>[].obs;
 
   /// Partial payments per table — reactive, DB-backed, realtime across devices.
-  final partialPaymentsByTable =
-      <int, List<Map<String, dynamic>>>{}.obs;
+  final partialPaymentsByTable = <int, List<Map<String, dynamic>>>{}.obs;
 
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
@@ -94,10 +93,7 @@ class TableService extends GetxService {
   Future<void> _load() async {
     final seq = ++_loadSeq;
     try {
-      final rows = await _db
-          .from('tables')
-          .select('*, orders(*)')
-          .order('id');
+      final rows = await _db.from('tables').select('*, orders(*)').order('id');
       if (seq != _loadSeq) return;
       tables.assignAll(rows.map(_rowToTable).toList());
     } catch (e) {
@@ -121,18 +117,16 @@ class TableService extends GetxService {
                   'price': (o['price'] as num).toDouble(),
                 })
             .toList()
-          ..sort((a, b) =>
-              (a['name'] as String).compareTo(b['name'] as String))),
+          ..sort(
+              (a, b) => (a['name'] as String).compareTo(b['name'] as String))),
       };
 
   // ── Partial payments — DB-backed realtime ────────────────────
 
   Future<void> _loadAllPartialPayments() async {
     try {
-      final rows = await _db
-          .from('table_partial_payments')
-          .select()
-          .order('created_at');
+      final rows =
+          await _db.from('table_partial_payments').select().order('created_at');
       final map = <int, List<Map<String, dynamic>>>{};
       for (final row in rows) {
         final tableId = row['table_id'] as int;
@@ -222,7 +216,9 @@ class TableService extends GetxService {
 
   // ── Table CRUD ───────────────────────────────────────────────
 
-  Future<void> addTable(String name, {String? sectionId}) async {
+  /// Adds a table. Returns `null` on success, or a user-facing error message
+  /// (e.g. a duplicate-name conflict within the same section).
+  Future<String?> addTable(String name, {String? sectionId}) async {
     try {
       final row = await _db
           .from('tables')
@@ -247,8 +243,17 @@ class TableService extends GetxService {
         'sectionId': sectionId,
         'orders': <Map<String, dynamic>>[],
       });
+      return null;
+    } on PostgrestException catch (e) {
+      _err('addTable', e);
+      // 23505 = unique_violation → same table name already exists in this scope.
+      if (e.code == '23505') {
+        return 'Bu bölümde "$name" adında bir masa zaten var.';
+      }
+      return 'Masa eklenemedi.';
     } catch (e) {
       _err('addTable', e);
+      return 'Masa eklenemedi.';
     }
   }
 
@@ -256,7 +261,8 @@ class TableService extends GetxService {
     final tableId = _id(index);
     await KitchenService.to.removeTicketsForTable(tableId);
     tables.removeAt(index);
-    _db.from('tables')
+    _db
+        .from('tables')
         .delete()
         .eq('id', tableId)
         .catchError((e) => _err('removeTable', e));
@@ -265,20 +271,23 @@ class TableService extends GetxService {
   void updateTableName(int index, String newName) {
     tables[index]['name'] = newName;
     tables.refresh();
-    _db.from('tables')
+    _db
+        .from('tables')
         .update({'name': newName})
         .eq('id', _id(index))
         .catchError((e) => _err('updateTableName', e));
   }
 
   /// Updates both the name and section of a table in a single DB write.
-  void updateTable(int index, String newName, {String? sectionId, required bool sectionChanged}) {
+  void updateTable(int index, String newName,
+      {String? sectionId, required bool sectionChanged}) {
     tables[index]['name'] = newName;
     if (sectionChanged) tables[index]['sectionId'] = sectionId;
     tables.refresh();
     final data = <String, dynamic>{'name': newName};
     if (sectionChanged) data['section_id'] = sectionId;
-    _db.from('tables')
+    _db
+        .from('tables')
         .update(data)
         .eq('id', _id(index))
         .catchError((e) => _err('updateTable', e));
@@ -287,9 +296,12 @@ class TableService extends GetxService {
   void toggleTableStatus(int index) {
     tables[index]['isOccupied'] = !(tables[index]['isOccupied'] as bool);
     tables.refresh();
-    _db.from('tables').update({
-      'is_occupied': tables[index]['isOccupied'] as bool,
-    }).eq('id', _id(index))
+    _db
+        .from('tables')
+        .update({
+          'is_occupied': tables[index]['isOccupied'] as bool,
+        })
+        .eq('id', _id(index))
         .catchError((e) => _err('toggleTableStatus', e));
   }
 
@@ -322,8 +334,9 @@ class TableService extends GetxService {
         itemName: name,
         quantity: newQty,
       );
-      InventoryService.to
-          .decrementForSale([{'name': name, 'quantity': 1, 'price': price}]);
+      InventoryService.to.decrementForSale([
+        {'name': name, 'quantity': 1, 'price': price}
+      ]);
 
       _enqueue(tableIndex, () async {
         final orderId = order['id'] as int;
@@ -333,8 +346,7 @@ class TableService extends GetxService {
         // Write whatever quantity is current after all optimistic taps.
         await _db
             .from('orders')
-            .update({'quantity': order['quantity'] as int})
-            .eq('id', orderId);
+            .update({'quantity': order['quantity'] as int}).eq('id', orderId);
         await _syncTableHeader(tableIndex);
       });
     } else {
@@ -346,8 +358,8 @@ class TableService extends GetxService {
         'price': price,
       };
       // Insert at the correct alphabetical position so the list never jumps.
-      final insertIdx = orders.indexWhere(
-          (o) => (o['name'] as String).compareTo(name) > 0);
+      final insertIdx =
+          orders.indexWhere((o) => (o['name'] as String).compareTo(name) > 0);
       if (insertIdx == -1) {
         orders.add(newOrder);
       } else {
@@ -362,8 +374,9 @@ class TableService extends GetxService {
         itemName: name,
         quantity: 1,
       );
-      InventoryService.to
-          .decrementForSale([{'name': name, 'quantity': 1, 'price': price}]);
+      InventoryService.to.decrementForSale([
+        {'name': name, 'quantity': 1, 'price': price}
+      ]);
 
       _enqueue(tableIndex, () async {
         // Item was removed before this op ran — skip insert entirely.
@@ -375,19 +388,23 @@ class TableService extends GetxService {
         if ((newOrder['id'] as int) != -1) {
           await _db
               .from('orders')
-              .update({'quantity': newOrder['quantity'] as int})
-              .eq('id', newOrder['id'] as int);
+              .update({'quantity': newOrder['quantity'] as int}).eq(
+                  'id', newOrder['id'] as int);
           await _syncTableHeader(tableIndex);
           return;
         }
         // Insert with the quantity that accumulated from all rapid taps.
-        final row = await _db.from('orders').insert({
-          'table_id': tableId,
-          'name': name,
-          'quantity': newOrder['quantity'] as int,
-          'price': price,
-          'tenant_id': _tenantId,
-        }).select().single();
+        final row = await _db
+            .from('orders')
+            .insert({
+              'table_id': tableId,
+              'name': name,
+              'quantity': newOrder['quantity'] as int,
+              'price': price,
+              'tenant_id': _tenantId,
+            })
+            .select()
+            .single();
         newOrder['id'] = row['id'] as int;
         await _syncTableHeader(tableIndex);
       });
@@ -399,9 +416,7 @@ class TableService extends GetxService {
   void removeOrdersByItemName(String itemName) {
     for (int tableIndex = 0; tableIndex < tables.length; tableIndex++) {
       final orders = tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
-      final matching = orders
-          .where((o) => o['name'] == itemName)
-          .toList();
+      final matching = orders.where((o) => o['name'] == itemName).toList();
       if (matching.isEmpty) continue;
       for (final order in matching) {
         final orderId = order['id'] as int;
@@ -416,12 +431,16 @@ class TableService extends GetxService {
         }
         KitchenService.to
             .removeTicketForItem(tableId: _id(tableIndex), itemName: itemName);
-        _db.from('orders').delete().eq('id', orderId)
+        _db
+            .from('orders')
+            .delete()
+            .eq('id', orderId)
             .catchError((e) => _err('removeOrdersByItemName', e));
       }
       orders.removeWhere((o) => o['name'] == itemName);
       _setOccupied(tableIndex);
-      _syncTableHeader(tableIndex).catchError((e) => _err('removeOrdersByItemName(sync)', e));
+      _syncTableHeader(tableIndex)
+          .catchError((e) => _err('removeOrdersByItemName(sync)', e));
     }
     tables.refresh();
   }
@@ -429,7 +448,8 @@ class TableService extends GetxService {
   void removeOrder(int tableIndex, int orderIndex) {
     final orders = tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
     if (orderIndex >= orders.length) return;
-    final order = orders[orderIndex]; // stable Map reference — survives removeAt
+    final order =
+        orders[orderIndex]; // stable Map reference — survives removeAt
     final price = order['price'] as double;
     final qty = order['quantity'] as int;
     final name = order['name'] as String;
@@ -446,8 +466,9 @@ class TableService extends GetxService {
     _setOccupied(tableIndex);
     KitchenService.to
         .removeTicketForItem(tableId: _id(tableIndex), itemName: name);
-    InventoryService.to.incrementForCancellation(
-        [{'name': name, 'quantity': qty, 'price': price}]);
+    InventoryService.to.incrementForCancellation([
+      {'name': name, 'quantity': qty, 'price': price}
+    ]);
 
     _enqueue(tableIndex, () async {
       final orderId = order['id'] as int;
@@ -480,8 +501,9 @@ class TableService extends GetxService {
         ((tables[tableIndex]['total'] as double) - price)
             .clamp(0.0, double.infinity);
     _setOccupied(tableIndex);
-    InventoryService.to.incrementForCancellation(
-        [{'name': name, 'quantity': 1, 'price': price}]);
+    InventoryService.to.incrementForCancellation([
+      {'name': name, 'quantity': 1, 'price': price}
+    ]);
     KitchenService.to.addOrUpdateTicket(
       tableId: _id(tableIndex),
       tableName: tables[tableIndex]['name'] as String,
@@ -495,8 +517,7 @@ class TableService extends GetxService {
       if (orderId == -1) return;
       await _db
           .from('orders')
-          .update({'quantity': order['quantity'] as int})
-          .eq('id', orderId);
+          .update({'quantity': order['quantity'] as int}).eq('id', orderId);
       await _syncTableHeader(tableIndex);
     });
   }
@@ -536,15 +557,17 @@ class TableService extends GetxService {
     final staffEmail = (table['staffEmail'] as String? ?? '');
     final tableName = table['name'] as String;
     clearTable(tableIndex);
-    SalesHistoryService.to.recordSale(
-      tableName: tableName,
-      items: orders,
-      subtotal: subtotal,
-      discount: discount,
-      total: total,
-      staffEmail: staffEmail,
-      paymentMethod: paymentMethod,
-    ).ignore();
+    SalesHistoryService.to
+        .recordSale(
+          tableName: tableName,
+          items: orders,
+          subtotal: subtotal,
+          discount: discount,
+          total: total,
+          staffEmail: staffEmail,
+          paymentMethod: paymentMethod,
+        )
+        .ignore();
   }
 
   /// Pay [units] units of [itemName] — optimistic in-memory update, DB in background.
@@ -592,15 +615,17 @@ class TableService extends GetxService {
       {'name': itemName, 'quantity': payUnits, 'price': price}
     ];
     final saleTotal = price * payUnits;
-    SalesHistoryService.to.recordSale(
-      tableName: tableName,
-      items: saleItems,
-      subtotal: saleTotal,
-      discount: 0.0,
-      total: saleTotal,
-      staffEmail: staffEmail,
-      paymentMethod: paymentMethod,
-    ).ignore();
+    SalesHistoryService.to
+        .recordSale(
+          tableName: tableName,
+          items: saleItems,
+          subtotal: saleTotal,
+          discount: 0.0,
+          total: saleTotal,
+          staffEmail: staffEmail,
+          paymentMethod: paymentMethod,
+        )
+        .ignore();
     final orderFuture = newQty <= 0
         ? _db.from('orders').delete().eq('id', orderId)
         : _db.from('orders').update({'quantity': newQty}).eq('id', orderId);
@@ -632,7 +657,8 @@ class TableService extends GetxService {
     final tableId = _id(tableIndex);
     partialPaymentsByTable.remove(tableIndex);
     partialPaymentsByTable.refresh();
-    _db.from('table_partial_payments')
+    _db
+        .from('table_partial_payments')
         .delete()
         .eq('table_id', tableId)
         .catchError((e) => _err('clearPartialPayments', e));
@@ -646,9 +672,12 @@ class TableService extends GetxService {
     final discountAmount = currentTotal * (clamped / 100);
     tables[tableIndex]['discount'] = discountAmount;
     tables.refresh();
-    _db.from('tables').update({
-      'discount': discountAmount,
-    }).eq('id', _id(tableIndex))
+    _db
+        .from('tables')
+        .update({
+          'discount': discountAmount,
+        })
+        .eq('id', _id(tableIndex))
         .catchError((e) => _err('applyDiscount', e));
   }
 
@@ -693,14 +722,20 @@ class TableService extends GetxService {
         itemName: name,
         quantity: newQty,
       );
-      _db.from('orders')
+      _db
+          .from('orders')
           .update({'quantity': newQty})
           .eq('id', destOrderId)
           .catchError((e) => _err('moveOrder dest-update', e));
     } else {
-      final movedOrder = <String, dynamic>{'id': -1, 'name': name, 'quantity': qty, 'price': price};
-      final destInsertIdx = destOrders.indexWhere(
-          (o) => (o['name'] as String).compareTo(name) > 0);
+      final movedOrder = <String, dynamic>{
+        'id': -1,
+        'name': name,
+        'quantity': qty,
+        'price': price
+      };
+      final destInsertIdx = destOrders
+          .indexWhere((o) => (o['name'] as String).compareTo(name) > 0);
       if (destInsertIdx == -1) {
         destOrders.add(movedOrder);
       } else {
@@ -712,10 +747,13 @@ class TableService extends GetxService {
         itemName: name,
         quantity: qty,
       );
-      _db.from('orders')
+      _db
+          .from('orders')
           .update({'table_id': destTableId})
           .eq('id', srcOrderId)
-          .then((_) { movedOrder['id'] = srcOrderId; }, onError: (e) => _err('moveOrder reparent', e));
+          .then((_) {
+            movedOrder['id'] = srcOrderId;
+          }, onError: (e) => _err('moveOrder reparent', e));
     }
     tables[toTableIndex]['total'] =
         (tables[toTableIndex]['total'] as double) + price * qty;
@@ -774,8 +812,8 @@ class TableService extends GetxService {
           'quantity': qty,
           'price': price,
         };
-        final destInsertIdx = destOrders.indexWhere(
-            (o) => (o['name'] as String).compareTo(name) > 0);
+        final destInsertIdx = destOrders
+            .indexWhere((o) => (o['name'] as String).compareTo(name) > 0);
         if (destInsertIdx == -1) {
           destOrders.add(movedAllOrder);
         } else {
@@ -787,7 +825,8 @@ class TableService extends GetxService {
           itemName: name,
           quantity: qty,
         );
-        _db.from('orders')
+        _db
+            .from('orders')
             .update({'table_id': destTableId})
             .eq('id', srcOrderId)
             .catchError((e) => _err('moveAll reparent', e));
@@ -814,7 +853,8 @@ class TableService extends GetxService {
       (partialPaymentsByTable[toTableIndex] ??= []).addAll(srcPartials);
       partialPaymentsByTable.remove(fromTableIndex);
       partialPaymentsByTable.refresh();
-      _db.from('table_partial_payments')
+      _db
+          .from('table_partial_payments')
           .update({'table_id': destTableId})
           .eq('table_id', _id(fromTableIndex))
           .then((_) {}, onError: (e) => _err('moveAll partials', e));

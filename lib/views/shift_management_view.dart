@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -6,22 +7,25 @@ import 'package:orderix/services/shift_service.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/models/app_role.dart';
+import 'package:orderix/widgets/shell_leading.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _bg          = Color(0xFFF2F2F7);
-const _card        = Colors.white;
-const _orange      = Color(0xFFFF9500);
+const _bg = Colors.white;
+const _card = Colors.white;
+const _orange = Color(0xFFFF9500);
 const _orangeLight = Color(0xFFFFF4E0);
-const _green       = Color(0xFF34C759);
-const _greenLight  = Color(0xFFE8FAF0);
-const _red         = Color(0xFFFF3B30);
-const _blue        = Color(0xFF007AFF);
+const _green = Color(0xFF34C759);
+const _greenLight = Color(0xFFE8FAF0);
+const _red = Color(0xFFFF3B30);
+const _blue = Color(0xFF007AFF);
 const _textPrimary = Color(0xFF1C1C1E);
-const _textSec     = Color(0xFF8E8E93);
-const _border      = Color(0xFFE5E5EA);
+const _textSec = Color(0xFF8E8E93);
+const _border = Color(0xFFE5E5EA);
 
 class ShiftManagementView extends StatefulWidget {
-  const ShiftManagementView({super.key});
+  const ShiftManagementView({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   State<ShiftManagementView> createState() => _ShiftManagementViewState();
@@ -58,7 +62,7 @@ class _ShiftManagementViewState extends State<ShiftManagementView> {
         top: false,
         child: Column(
           children: [
-            _Header(),
+            _Header(embedded: widget.embedded),
             Expanded(
               child: Obx(() {
                 final isClockedIn = ShiftService.to.isClockedIn(_email);
@@ -93,7 +97,7 @@ class _ShiftManagementViewState extends State<ShiftManagementView> {
                       if (_role == AppRole.admin && todayShifts.isNotEmpty) ...[
                         const SizedBox(height: 28),
                         _SectionLabel(
-                          icon: Icons.today_rounded,
+                          icon: CupertinoIcons.today_fill,
                           title: 'Bugünkü Vardiyalar',
                         ),
                         const SizedBox(height: 12),
@@ -114,6 +118,9 @@ class _ShiftManagementViewState extends State<ShiftManagementView> {
 // ── Header ──────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
+  const _Header({this.embedded = false});
+  final bool embedded;
+
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
@@ -121,20 +128,13 @@ class _Header extends StatelessWidget {
       padding: EdgeInsets.only(top: topPad),
       decoration: const BoxDecoration(
         color: _card,
-        boxShadow: [
-          BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
-          BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
-        ],
+        border: Border(bottom: BorderSide(color: _border, width: 1)),
       ),
       child: SizedBox(
         height: 52,
         child: Row(
           children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                  size: 18, color: _textPrimary),
-              onPressed: () => Get.back(),
-            ),
+            ShellLeading(embedded: embedded, color: _textPrimary),
             const Text(
               'Vardiya Yönetimi',
               style: TextStyle(
@@ -169,15 +169,12 @@ class _MyShiftCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = isClockedIn
-        ? (isOnBreak ? _orange : _green)
-        : _textSec;
+    final statusColor = isClockedIn ? (isOnBreak ? _orange : _green) : _textSec;
     final statusBg = isClockedIn
         ? (isOnBreak ? _orangeLight : _greenLight)
         : const Color(0xFFF5F5F5);
-    final statusLabel = isClockedIn
-        ? (isOnBreak ? 'Molada' : 'Vardiyada')
-        : 'Dışarıda';
+    final statusLabel =
+        isClockedIn ? (isOnBreak ? 'Molada' : 'Vardiyada') : 'Dışarıda';
 
     String workTime = '-';
     String breakTime = '-';
@@ -188,8 +185,8 @@ class _MyShiftCard extends StatelessWidget {
           .formatDuration(ShiftService.to.getWorkMinutes(activeShift!));
       breakTime = ShiftService.to
           .formatDuration(ShiftService.to.getBreakMinutes(activeShift!));
-      startTimeStr = DateFormat('HH:mm').format(
-          DateTime.parse(activeShift!['startTime'] as String));
+      startTimeStr = DateFormat('HH:mm')
+          .format(DateTime.parse(activeShift!['startTime'] as String));
     }
 
     return Container(
@@ -197,15 +194,12 @@ class _MyShiftCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.circular(20),
+        border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
         boxShadow: const [
           BoxShadow(
-              color: Color(0x14000000),
-              blurRadius: 16,
-              offset: Offset(0, 6)),
+              color: Color(0x14000000), blurRadius: 16, offset: Offset(0, 6)),
           BoxShadow(
-              color: Color(0x08000000),
-              blurRadius: 4,
-              offset: Offset(0, 2)),
+              color: Color(0x08000000), blurRadius: 4, offset: Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -217,11 +211,7 @@ class _MyShiftCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFFFFBF4D), _orange],
-                  ),
+                  color: _orange,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
@@ -255,8 +245,7 @@ class _MyShiftCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(email,
-                        style:
-                            const TextStyle(fontSize: 12, color: _textSec)),
+                        style: const TextStyle(fontSize: 12, color: _textSec)),
                   ],
                 ),
               ),
@@ -287,21 +276,21 @@ class _MyShiftCard extends StatelessWidget {
                   child: _ShiftStat(
                       label: 'Başlangıç',
                       value: startTimeStr,
-                      icon: Icons.login_rounded,
+                      icon: CupertinoIcons.arrow_right_to_line,
                       color: _green),
                 ),
                 Expanded(
                   child: _ShiftStat(
                       label: 'Çalışma',
                       value: workTime,
-                      icon: Icons.timer_rounded,
+                      icon: CupertinoIcons.timer,
                       color: _blue),
                 ),
                 Expanded(
                   child: _ShiftStat(
                       label: 'Mola',
                       value: breakTime,
-                      icon: Icons.coffee_rounded,
+                      icon: CupertinoIcons.pause_fill,
                       color: _orange),
                 ),
               ],
@@ -343,8 +332,7 @@ class _ShiftStat extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 fontSize: 14,
                 color: _textPrimary)),
-        Text(label,
-            style: const TextStyle(fontSize: 11, color: _textSec)),
+        Text(label, style: const TextStyle(fontSize: 11, color: _textSec)),
       ],
     );
   }
@@ -370,7 +358,9 @@ class _ActionRow extends StatelessWidget {
         Expanded(
           child: _BigBtn(
             label: isClockedIn ? 'Çıkış Yap' : 'Giriş Yap',
-            icon: isClockedIn ? Icons.logout_rounded : Icons.login_rounded,
+            icon: isClockedIn
+                ? CupertinoIcons.square_arrow_right
+                : CupertinoIcons.arrow_right_to_line,
             color: isClockedIn ? _red : _green,
             onTap: () {
               if (isClockedIn) {
@@ -387,8 +377,8 @@ class _ActionRow extends StatelessWidget {
             child: _BigBtn(
               label: isOnBreak ? 'Molayı Bitir' : 'Mola Başlat',
               icon: isOnBreak
-                  ? Icons.play_arrow_rounded
-                  : Icons.coffee_rounded,
+                  ? CupertinoIcons.play_arrow_solid
+                  : CupertinoIcons.pause_fill,
               color: _orange,
               onTap: () {
                 if (isOnBreak) {
@@ -508,9 +498,12 @@ class _ShiftRow extends StatelessWidget {
       decoration: const BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.all(Radius.circular(14)),
+        border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
         boxShadow: [
-          BoxShadow(color: Color(0x0A000000), blurRadius: 16, offset: Offset(0, 3)),
-          BoxShadow(color: Color(0x05000000), blurRadius: 4,  offset: Offset(0, 1)),
+          BoxShadow(
+              color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(
+              color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 1)),
         ],
       ),
       child: Row(
@@ -519,13 +512,7 @@ class _ShiftRow extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: isActive
-                    ? [Color.lerp(_green, Colors.white, 0.28)!, _green]
-                    : [const Color(0xFFBDBDBD), const Color(0xFF9E9E9E)],
-              ),
+              color: isActive ? _green : const Color(0xFF9E9E9E),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -572,8 +559,7 @@ class _ShiftRow extends StatelessWidget {
               if (breakMins > 0)
                 Text(
                   'Mola: ${ShiftService.to.formatDuration(breakMins)}',
-                  style:
-                      const TextStyle(fontSize: 11, color: _textSec),
+                  style: const TextStyle(fontSize: 11, color: _textSec),
                 ),
             ],
           ),

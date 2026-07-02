@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 // Hide Supabase's AuthUser so our domain entity wins.
-import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser, AuthException;
+import 'package:supabase_flutter/supabase_flutter.dart'
+    hide AuthUser, AuthException;
 import 'package:orderix/core/errors/auth_exception.dart';
 import 'package:orderix/features/auth/domain/entities/auth_user.dart';
 import 'package:orderix/features/auth/domain/usecases/delete_account_usecase.dart';
@@ -10,6 +11,7 @@ import 'package:orderix/features/auth/domain/usecases/get_current_user_usecase.d
 import 'package:orderix/features/auth/domain/usecases/get_user_role_usecase.dart';
 import 'package:orderix/features/auth/domain/usecases/signup_usecase.dart';
 import 'package:orderix/models/app_role.dart';
+import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/subscription_service.dart';
 
 class AuthController extends GetxService {
@@ -47,9 +49,22 @@ class AuthController extends GetxService {
 
   // ── Convenience getters ───────────────────────────────────
   bool get isAuthenticated => user.value != null;
-  bool get isAdmin => user.value?.role.isAdmin ?? false;
-  bool get isStaff => user.value?.role.isStaff ?? false;
-  AppRole? get currentRole => user.value?.role;
+  bool get isAdmin => currentRole?.isAdmin ?? false;
+  bool get isStaff => currentRole?.isStaff ?? false;
+
+  /// The role that governs what the current session may access.
+  ///
+  /// A PIN-based staff session takes precedence over the account's own role:
+  /// even when the signed-in account is an admin, once someone works "as" a
+  /// staff member their access is limited to the staff feature set (tables +
+  /// orders). Reading [StaffService.hasActiveStaff] here also makes any `Obx`
+  /// that watches the role rebuild when a staff session starts or ends.
+  AppRole? get currentRole {
+    if (Get.isRegistered<StaffService>() && StaffService.to.hasActiveStaff) {
+      return AppRole.staff;
+    }
+    return user.value?.role;
+  }
 
   // ── Session restore on app start ──────────────────────────
   @override

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../themes/app_theme.dart';
@@ -148,13 +149,13 @@ class _ToastState extends State<_Toast> with SingleTickerProviderStateMixin {
   IconData get _icon {
     switch (widget.type) {
       case ToastType.success:
-        return Icons.check_circle_rounded;
+        return CupertinoIcons.checkmark_circle_fill;
       case ToastType.warning:
-        return Icons.warning_rounded;
+        return CupertinoIcons.exclamationmark_triangle_fill;
       case ToastType.error:
-        return Icons.error_rounded;
+        return CupertinoIcons.xmark_circle_fill;
       case ToastType.info:
-        return Icons.info_rounded;
+        return CupertinoIcons.info_circle_fill;
     }
   }
 
@@ -172,93 +173,94 @@ class _ToastState extends State<_Toast> with SingleTickerProviderStateMixin {
       child: Material(
         type: MaterialType.transparency,
         child: SlideTransition(
-        position: _slide,
-        child: FadeTransition(
-          opacity: _fade,
-          child: ScaleTransition(
-            scale: _scale,
-            child: Align(
-              heightFactor: 1,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxW),
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: animateOut,
-                  onVerticalDragEnd: (d) {
-                    if ((d.primaryVelocity ?? 0) < -100) animateOut();
-                  },
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0xFF1C1C1E).withOpacity(0.82)
-                              : Colors.white.withOpacity(0.88),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
+          position: _slide,
+          child: FadeTransition(
+            opacity: _fade,
+            child: ScaleTransition(
+              scale: _scale,
+              child: Align(
+                heightFactor: 1,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxW),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: animateOut,
+                    onVerticalDragEnd: (d) {
+                      if ((d.primaryVelocity ?? 0) < -100) animateOut();
+                    },
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
                             color: isDark
-                                ? Colors.white.withOpacity(0.08)
-                                : Colors.black.withOpacity(0.06),
-                            width: 0.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black
-                                  .withOpacity(isDark ? 0.28 : 0.1),
-                              blurRadius: 24,
-                              offset: const Offset(0, 6),
-                              spreadRadius: -4,
+                                ? const Color(0xFF1C1C1E).withOpacity(0.82)
+                                : Colors.white.withOpacity(0.88),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.white.withOpacity(0.08)
+                                  : Colors.black.withOpacity(0.06),
+                              width: 0.5,
                             ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(_icon, color: _color, size: 24),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (hasTitle)
-                                    Padding(
-                                      padding:
-                                          const EdgeInsets.only(bottom: 2),
-                                      child: Text(
-                                        widget.title!,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
-                                          color: isDark
-                                              ? Colors.white
-                                              : const Color(0xFF1C1C1E),
-                                          letterSpacing: -0.3,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black
+                                    .withOpacity(isDark ? 0.28 : 0.1),
+                                blurRadius: 24,
+                                offset: const Offset(0, 6),
+                                spreadRadius: -4,
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(_icon, color: _color, size: 24),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (hasTitle)
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 2),
+                                        child: Text(
+                                          widget.title!,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                            color: isDark
+                                                ? Colors.white
+                                                : const Color(0xFF1C1C1E),
+                                            letterSpacing: -0.3,
+                                          ),
                                         ),
                                       ),
+                                    Text(
+                                      widget.message,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: isDark
+                                            ? Colors.white.withOpacity(0.65)
+                                            : const Color(0xFF3C3C43)
+                                                .withOpacity(
+                                                    hasTitle ? 0.6 : 0.85),
+                                        letterSpacing: -0.1,
+                                        height: 1.25,
+                                      ),
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  Text(
-                                    widget.message,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: isDark
-                                          ? Colors.white.withOpacity(0.65)
-                                          : const Color(0xFF3C3C43)
-                                              .withOpacity(
-                                                  hasTitle ? 0.6 : 0.85),
-                                      letterSpacing: -0.1,
-                                      height: 1.25,
-                                    ),
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -268,7 +270,6 @@ class _ToastState extends State<_Toast> with SingleTickerProviderStateMixin {
             ),
           ),
         ),
-      ),
       ),
     );
   }

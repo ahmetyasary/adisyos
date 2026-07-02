@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,31 +8,33 @@ import 'package:orderix/core/errors/auth_exception.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/services/staff_service.dart';
-import 'package:orderix/services/section_service.dart';
 import 'package:orderix/services/subscription_service.dart';
 import 'package:orderix/views/paywall_sheet.dart';
 import 'package:orderix/views/auth_screen.dart';
 import 'package:orderix/widgets/app_toast.dart';
 import 'package:orderix/widgets/app_dialog.dart';
 import 'package:orderix/widgets/responsive_content.dart';
+import 'package:orderix/widgets/shell_leading.dart';
 
 const _privacyUrl = 'https://orderix.tr/privacy';
-const _termsUrl   = 'https://orderix.tr/terms';
+const _termsUrl = 'https://orderix.tr/terms';
 
 // ── Design tokens ─────────────────────────────────────────────
-const _bg          = Color(0xFFF2F2F7);
-const _card        = Colors.white;
-const _orange      = Color(0xFFFF9500);
+const _bg = Colors.white;
+const _card = Colors.white;
+const _orange = Color(0xFFFF9500);
 const _textPrimary = Color(0xFF1C1C1E);
-const _textSec     = Color(0xFF8E8E93);
-const _border      = Color(0xFFE5E5EA);
+const _textSec = Color(0xFF8E8E93);
+const _border = Color(0xFFE5E5EA);
 
 // ──────────────────────────────────────────────────────────────
 // SettingsView
 // ──────────────────────────────────────────────────────────────
 
 class SettingsView extends StatefulWidget {
-  const SettingsView({super.key});
+  const SettingsView({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   State<SettingsView> createState() => _SettingsViewState();
@@ -121,7 +124,7 @@ class _SettingsViewState extends State<SettingsView> {
         child: Column(
           children: [
             // ── Header ───────────────────────────────────────
-            _Header(),
+            _Header(embedded: widget.embedded),
 
             // ── Scrollable content ───────────────────────────
             Expanded(
@@ -132,79 +135,71 @@ class _SettingsViewState extends State<SettingsView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                    // Account card
-                    _AccountCard(),
-                    const SizedBox(height: 28),
+                      // Account card
+                      _AccountCard(),
+                      const SizedBox(height: 28),
 
-                    // Subscription section
-                    _SectionLabel('Abonelik'),
-                    const SizedBox(height: 10),
-                    const _SubscriptionCard(),
-                    const SizedBox(height: 28),
+                      // Subscription section
+                      _SectionLabel('Abonelik'),
+                      const SizedBox(height: 10),
+                      const _SubscriptionCard(),
+                      const SizedBox(height: 28),
 
-                    // Business section
-                    _SectionLabel('İşletme'),
-                    const SizedBox(height: 10),
-                    _Card(
-                      child: Column(
-                        children: [
-                          _InlineField(
-                            icon: Icons.store_rounded,
-                            label: 'Şirket Adı',
-                            hint: 'Şirket adınızı girin',
-                            controller: _companyCtrl,
-                            textCapitalization: TextCapitalization.words,
-                          ),
-                          const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
-                          const _CurrencyRow(),
-                        ],
+                      // Business section
+                      _SectionLabel('İşletme'),
+                      const SizedBox(height: 10),
+                      _Card(
+                        child: Column(
+                          children: [
+                            _InlineField(
+                              icon: CupertinoIcons.bag_fill,
+                              label: 'Şirket Adı',
+                              hint: 'Şirket adınızı girin',
+                              controller: _companyCtrl,
+                              textCapitalization: TextCapitalization.words,
+                            ),
+                            const Divider(
+                                height: 1,
+                                color: _border,
+                                indent: 16,
+                                endIndent: 16),
+                            const _CurrencyRow(),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 28),
+                      const SizedBox(height: 28),
 
-                    // Staff section
-                    _SectionLabel('Personel'),
-                    const SizedBox(height: 10),
-                    _StaffManagementCard(),
-                    const SizedBox(height: 28),
-
-                    // Sections (floor areas)
-                    _SectionLabel('Bölümler'),
-                    const SizedBox(height: 10),
-                    _SectionsCard(),
-                    const SizedBox(height: 28),
-
-                    // Language section
-                    _SectionLabel('Dil'),
-                    const SizedBox(height: 10),
-                    _Card(
-                      child: _LanguageRow(
-                        value: _selectedLanguage,
-                        onChanged: (val) {
-                          if (val == null) return;
-                          setState(() => _selectedLanguage = val);
-                          Get.updateLocale(val == 'tr'
-                              ? const Locale('tr', 'TR')
-                              : const Locale('en', 'US'));
-                        },
+                      // Language section
+                      _SectionLabel('Dil'),
+                      const SizedBox(height: 10),
+                      _Card(
+                        child: _LanguageRow(
+                          value: _selectedLanguage,
+                          onChanged: (val) {
+                            if (val == null) return;
+                            setState(() => _selectedLanguage = val);
+                            Get.updateLocale(val == 'tr'
+                                ? const Locale('tr', 'TR')
+                                : const Locale('en', 'US'));
+                          },
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 36),
+                      const SizedBox(height: 36),
 
-                    // Save button
-                    _SaveButton(saving: _saving, onTap: _save),
-                    const SizedBox(height: 28),
+                      // Save button
+                      _SaveButton(saving: _saving, onTap: _save),
+                      const SizedBox(height: 28),
 
-                    // Legal — privacy policy / terms (App Store requirement)
-                    _SectionLabel('legal'.tr),
-                    const SizedBox(height: 10),
-                    const _LegalCard(),
-                    const SizedBox(height: 28),
+                      // Legal — privacy policy / terms (App Store requirement)
+                      _SectionLabel('legal'.tr),
+                      const SizedBox(height: 10),
+                      const _LegalCard(),
+                      const SizedBox(height: 28),
 
-                    // Danger zone — in-app account deletion (App Store 5.1.1(v))
-                    _SectionLabel('danger_zone'.tr),
-                    const SizedBox(height: 10),
-                    const _DeleteAccountCard(),
+                      // Danger zone — in-app account deletion (App Store 5.1.1(v))
+                      _SectionLabel('danger_zone'.tr),
+                      const SizedBox(height: 10),
+                      const _DeleteAccountCard(),
                     ],
                   ),
                 ),
@@ -222,6 +217,9 @@ class _SettingsViewState extends State<SettingsView> {
 // ──────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
+  const _Header({this.embedded = false});
+  final bool embedded;
+
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
@@ -229,19 +227,13 @@ class _Header extends StatelessWidget {
       padding: EdgeInsets.only(top: topPad, left: 8, right: 8),
       decoration: const BoxDecoration(
         color: _card,
-        boxShadow: [
-          BoxShadow(color: Color(0x0C000000), blurRadius: 16, offset: Offset(0, 2)),
-        ],
+        border: Border(bottom: BorderSide(color: _border, width: 1)),
       ),
       child: SizedBox(
         height: 52,
         child: Row(
           children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                  size: 18, color: _textPrimary),
-              onPressed: () => Get.back(),
-            ),
+            ShellLeading(embedded: embedded, color: _textPrimary),
             Text(
               'settings'.tr,
               style: const TextStyle(
@@ -266,18 +258,20 @@ class _AccountCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final user      = AuthController.to.user.value;
-      final email     = user?.email ?? '';
+      final user = AuthController.to.user.value;
+      final email = user?.email ?? '';
       final roleLabel = user?.role.name ?? '';
-      final initial   = email.isNotEmpty ? email[0].toUpperCase() : 'U';
+      final initial = email.isNotEmpty ? email[0].toUpperCase() : 'U';
 
       return Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: _card,
           borderRadius: BorderRadius.circular(18),
+          border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
           boxShadow: const [
-            BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
+            BoxShadow(
+                color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
           ],
         ),
         child: Row(
@@ -396,9 +390,12 @@ class _Card extends StatelessWidget {
       decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.circular(16),
+        border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
         boxShadow: const [
-          BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 4)),
-          BoxShadow(color: Color(0x05000000), blurRadius: 5,  offset: Offset(0, 1)),
+          BoxShadow(
+              color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(
+              color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 1)),
         ],
       ),
       child: child,
@@ -506,7 +503,8 @@ class _CurrencyRow extends StatelessWidget {
                 color: _orange.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: const Icon(Icons.currency_exchange_rounded, size: 17, color: _orange),
+              child: const Icon(CupertinoIcons.money_dollar,
+                  size: 17, color: _orange),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -525,7 +523,7 @@ class _CurrencyRow extends StatelessWidget {
                   Row(
                     children: _currencies.map((c) {
                       final symbol = c.$1;
-                      final label  = c.$2;
+                      final label = c.$2;
                       final selected = symbol == current;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
@@ -533,7 +531,8 @@ class _CurrencyRow extends StatelessWidget {
                           onTap: () => SettingsService.to.setCurrency(symbol),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 150),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
                             decoration: BoxDecoration(
                               color: selected ? _orange : _bg,
                               borderRadius: BorderRadius.circular(12),
@@ -542,7 +541,12 @@ class _CurrencyRow extends StatelessWidget {
                                 width: 1.5,
                               ),
                               boxShadow: selected
-                                  ? [BoxShadow(color: _orange.withOpacity(0.30), blurRadius: 10, offset: const Offset(0, 3))]
+                                  ? [
+                                      BoxShadow(
+                                          color: _orange.withOpacity(0.30),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 3))
+                                    ]
                                   : [],
                             ),
                             child: Column(
@@ -553,7 +557,8 @@ class _CurrencyRow extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w800,
-                                    color: selected ? Colors.white : _textPrimary,
+                                    color:
+                                        selected ? Colors.white : _textPrimary,
                                     height: 1.1,
                                   ),
                                 ),
@@ -563,7 +568,9 @@ class _CurrencyRow extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w500,
-                                    color: selected ? Colors.white.withOpacity(0.90) : _textSec,
+                                    color: selected
+                                        ? Colors.white.withOpacity(0.90)
+                                        : _textSec,
                                   ),
                                 ),
                               ],
@@ -604,7 +611,7 @@ class _LanguageRow extends StatelessWidget {
               color: _orange.withOpacity(0.12),
               borderRadius: BorderRadius.circular(9),
             ),
-            child: const Icon(Icons.language_rounded, size: 17, color: _orange),
+            child: const Icon(CupertinoIcons.globe, size: 17, color: _orange),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -630,7 +637,7 @@ class _LanguageRow extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                       color: _textPrimary,
                     ),
-                    icon: const Icon(Icons.expand_more_rounded,
+                    icon: const Icon(CupertinoIcons.chevron_down,
                         size: 18, color: _textSec),
                     items: const [
                       DropdownMenuItem(value: 'tr', child: Text('Türkçe')),
@@ -645,368 +652,6 @@ class _LanguageRow extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-// ── Staff Management Card ──────────────────────────────────────
-
-class _StaffManagementCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      final staffList = StaffService.to.staffList;
-      return _Card(
-        child: Column(
-          children: [
-            ...staffList.asMap().entries.map((entry) {
-              final i = entry.key;
-              final s = entry.value;
-              return Column(
-                children: [
-                  if (i > 0)
-                    const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
-                  _StaffRow(staff: s),
-                ],
-              );
-            }),
-            if (staffList.isNotEmpty)
-              const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
-            // Add staff button row
-            GestureDetector(
-              onTap: () => _showAddStaffDialog(context),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: _orange.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(9),
-                      ),
-                      child: const Icon(Icons.person_add_rounded, size: 17, color: _orange),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Personel Ekle',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: _orange,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    });
-  }
-
-  void _showAddStaffDialog(BuildContext context) {
-    final nameCtrl = TextEditingController();
-    final pinCtrl  = TextEditingController();
-    AppDialog.form(
-      title: 'Personel Ekle',
-      confirmText: 'Ekle',
-      onConfirm: () async {
-        final name = nameCtrl.text.trim();
-        final pin  = pinCtrl.text.trim();
-        if (name.isEmpty || pin.length != 4) return;
-        await StaffService.to.addStaff(name, pin);
-        Get.back();
-      },
-      body: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppDialogTextField(
-            controller: nameCtrl,
-            label: 'Ad Soyad',
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-          ),
-          const SizedBox(height: 14),
-          AppDialogTextField(
-            controller: pinCtrl,
-            label: '4 Haneli PIN',
-            keyboardType: TextInputType.number,
-            maxLength: 4,
-            obscureText: true,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StaffRow extends StatelessWidget {
-  const _StaffRow({required this.staff});
-  final Map<String, dynamic> staff;
-
-  @override
-  Widget build(BuildContext context) {
-    final name    = staff['name'] as String;
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: _orange.withOpacity(0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(initial,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: _orange,
-                      fontSize: 15)),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(name,
-                style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: _textPrimary)),
-          ),
-          // Edit button
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, size: 18, color: _textSec),
-            onPressed: () => _showEditDialog(context),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          ),
-          // Delete button
-          IconButton(
-            icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFFF3B30)),
-            onPressed: () => _confirmDelete(context),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showEditDialog(BuildContext context) {
-    final nameCtrl = TextEditingController(text: staff['name'] as String);
-    final pinCtrl  = TextEditingController();
-    AppDialog.form(
-      title: 'Personeli Düzenle',
-      confirmText: 'Kaydet',
-      onConfirm: () async {
-        final name = nameCtrl.text.trim();
-        final pin  = pinCtrl.text.trim().isEmpty
-            ? staff['pin'] as String
-            : pinCtrl.text.trim();
-        if (name.isEmpty) return;
-        await StaffService.to.updateStaff(
-          staff['id'] as String,
-          name: name,
-          pin: pin,
-        );
-        Get.back();
-      },
-      body: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppDialogTextField(
-            controller: nameCtrl,
-            label: 'Ad Soyad',
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-          ),
-          const SizedBox(height: 14),
-          AppDialogTextField(
-            controller: pinCtrl,
-            label: 'Yeni PIN',
-            hintText: 'Boş bırakın = değişmesin',
-            keyboardType: TextInputType.number,
-            maxLength: 4,
-            obscureText: true,
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmDelete(BuildContext context) async {
-    final ok = await AppDialog.confirm(
-      icon: Icons.delete_outline_rounded,
-      iconColor: const Color(0xFFFF3B30),
-      title: 'Personeli Sil',
-      message: '${staff['name']} silinsin mi?',
-      confirmText: 'Sil',
-      cancelText: 'İptal',
-      destructive: true,
-    );
-    if (ok) await StaffService.to.deleteStaff(staff['id'] as String);
-  }
-}
-
-// ── Sections Card ──────────────────────────────────────────────
-
-class _SectionsCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      final sections = SectionService.to.sections;
-      return _Card(
-        child: Column(
-          children: [
-            ...sections.asMap().entries.map((entry) {
-              final i = entry.key;
-              final s = entry.value;
-              return Column(
-                children: [
-                  if (i > 0)
-                    const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
-                  _SectionRow(section: s),
-                ],
-              );
-            }),
-            if (sections.isNotEmpty)
-              const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
-            GestureDetector(
-              onTap: () => _showAddDialog(context),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: _orange.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(9),
-                      ),
-                      child: const Icon(Icons.add_rounded, size: 17, color: _orange),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Bölüm Ekle',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: _orange,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    });
-  }
-
-  void _showAddDialog(BuildContext context) {
-    final ctrl = TextEditingController();
-    AppDialog.form(
-      title: 'Bölüm Ekle',
-      confirmText: 'Ekle',
-      onConfirm: () async {
-        if (ctrl.text.trim().isEmpty) return;
-        await SectionService.to.addSection(ctrl.text.trim());
-        Get.back();
-      },
-      body: AppDialogTextField(
-        controller: ctrl,
-        label: 'Bölüm Adı',
-        hintText: 'örn: İç Alan, Bahçe',
-        autofocus: true,
-        textCapitalization: TextCapitalization.words,
-      ),
-    );
-  }
-}
-
-class _SectionRow extends StatelessWidget {
-  const _SectionRow({required this.section});
-  final Map<String, dynamic> section;
-
-  @override
-  Widget build(BuildContext context) {
-    final name = section['name'] as String;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: _orange.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: const Icon(Icons.grid_view_rounded, size: 16, color: _orange),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(name,
-                style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: _textPrimary)),
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, size: 18, color: _textSec),
-            onPressed: () => _showEditDialog(context),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline_rounded,
-                size: 18, color: Color(0xFFFF3B30)),
-            onPressed: () => _confirmDelete(),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showEditDialog(BuildContext context) {
-    final ctrl = TextEditingController(text: section['name'] as String);
-    AppDialog.form(
-      title: 'Bölümü Düzenle',
-      confirmText: 'Kaydet',
-      onConfirm: () async {
-        if (ctrl.text.trim().isEmpty) return;
-        await SectionService.to.updateSection(
-            section['id'] as String, ctrl.text.trim());
-        Get.back();
-      },
-      body: AppDialogTextField(
-        controller: ctrl,
-        label: 'Bölüm Adı',
-        autofocus: true,
-        textCapitalization: TextCapitalization.words,
-      ),
-    );
-  }
-
-  void _confirmDelete() async {
-    final ok = await AppDialog.confirm(
-      icon: Icons.delete_outline_rounded,
-      iconColor: const Color(0xFFFF3B30),
-      title: 'Bölümü Sil',
-      message: '"${section['name']}" silinsin mi?',
-      confirmText: 'Sil',
-      cancelText: 'İptal',
-      destructive: true,
-    );
-    if (ok) await SectionService.to.deleteSection(section['id'] as String);
   }
 }
 
@@ -1085,15 +730,15 @@ class _LegalCard extends StatelessWidget {
       child: Column(
         children: [
           _LegalRow(
-            icon:  Icons.privacy_tip_outlined,
+            icon: CupertinoIcons.lock_shield,
             label: 'privacy_policy'.tr,
-            url:   _privacyUrl,
+            url: _privacyUrl,
           ),
           const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
           _LegalRow(
-            icon:  Icons.description_outlined,
+            icon: CupertinoIcons.doc_text,
             label: 'terms_of_use'.tr,
-            url:   _termsUrl,
+            url: _termsUrl,
           ),
         ],
       ),
@@ -1109,8 +754,8 @@ class _LegalRow extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   label;
-  final String   url;
+  final String label;
+  final String url;
 
   Future<void> _open() async {
     final uri = Uri.parse(url);
@@ -1153,7 +798,8 @@ class _LegalRow extends StatelessWidget {
                   ),
                 ),
               ),
-              const Icon(Icons.open_in_new_rounded, size: 16, color: _textSec),
+              const Icon(CupertinoIcons.arrow_up_right_square,
+                  size: 16, color: _textSec),
             ],
           ),
         ),
@@ -1174,11 +820,11 @@ class _SubscriptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final sub    = SubscriptionService.to;
-      final trial  = sub.isInTrial;
+      final sub = SubscriptionService.to;
+      final trial = sub.isInTrial;
       // "active" here means a full paid subscription (trial shown separately).
       final active = sub.isSubscribed && !trial;
-      final days   = sub.daysLeft;
+      final days = sub.daysLeft;
 
       return _Card(
         child: Column(
@@ -1189,7 +835,7 @@ class _SubscriptionCard extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width:  34,
+                    width: 34,
                     height: 34,
                     decoration: BoxDecoration(
                       color: active
@@ -1201,11 +847,11 @@ class _SubscriptionCard extends StatelessWidget {
                     ),
                     child: Icon(
                       active
-                          ? Icons.verified_rounded
+                          ? CupertinoIcons.checkmark_seal_fill
                           : trial
-                              ? Icons.hourglass_top_rounded
-                              : Icons.lock_outline_rounded,
-                      size:  17,
+                              ? CupertinoIcons.hourglass
+                              : CupertinoIcons.lock,
+                      size: 17,
                       color: active
                           ? _green
                           : trial
@@ -1225,9 +871,9 @@ class _SubscriptionCard extends StatelessWidget {
                                   ? 'Deneme Dönemi'
                                   : 'Abonelik Gerekli',
                           style: TextStyle(
-                            fontSize:   15,
+                            fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            color:      active
+                            color: active
                                 ? _green
                                 : trial
                                     ? _orange
@@ -1241,8 +887,7 @@ class _SubscriptionCard extends StatelessWidget {
                               : trial
                                   ? 'Ücretsiz deneme · $days gün kaldı'
                                   : 'Devam etmek için abone olun',
-                          style: const TextStyle(
-                              fontSize: 12, color: _textSec),
+                          style: const TextStyle(fontSize: 12, color: _textSec),
                         ),
                       ],
                     ),
@@ -1255,15 +900,15 @@ class _SubscriptionCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color:        _orange,
+                            color: _orange,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text(
                             'Abone Ol',
                             style: TextStyle(
-                              fontSize:   12,
+                              fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color:      Colors.white,
+                              color: Colors.white,
                             ),
                           ),
                         ),
@@ -1290,29 +935,26 @@ class _RestoreRow extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: () async {
-          final hasAccess =
-              await SubscriptionService.to.restorePurchases();
+          final hasAccess = await SubscriptionService.to.restorePurchases();
           if (hasAccess) {
             AppToast.success('Abonelik başarıyla geri yüklendi');
           } else {
             AppToast.error('Aktif abonelik bulunamadı');
           }
         },
-        borderRadius: const BorderRadius.vertical(
-            bottom: Radius.circular(16)),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
               Container(
-                width:  34,
+                width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  color:        _orange.withValues(alpha: 0.12),
+                  color: _orange.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(9),
                 ),
-                child: const Icon(Icons.restore_rounded,
+                child: const Icon(CupertinoIcons.arrow_clockwise,
                     size: 17, color: _orange),
               ),
               const SizedBox(width: 12),
@@ -1320,12 +962,12 @@ class _RestoreRow extends StatelessWidget {
                 child: Text(
                   'Satın Alımları Geri Yükle',
                   style: TextStyle(
-                      fontSize:   15,
+                      fontSize: 15,
                       fontWeight: FontWeight.w500,
-                      color:      _textPrimary),
+                      color: _textPrimary),
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded,
+              const Icon(CupertinoIcons.chevron_forward,
                   size: 18, color: _textSec),
             ],
           ),
@@ -1363,7 +1005,7 @@ class _DeleteAccountCard extends StatelessWidget {
                     color: _danger.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(9),
                   ),
-                  child: const Icon(Icons.delete_forever_rounded,
+                  child: const Icon(CupertinoIcons.trash_fill,
                       size: 18, color: _danger),
                 ),
                 const SizedBox(width: 12),
@@ -1390,7 +1032,7 @@ class _DeleteAccountCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded, color: _textSec),
+                const Icon(CupertinoIcons.chevron_forward, color: _textSec),
               ],
             ),
           ),
@@ -1401,7 +1043,7 @@ class _DeleteAccountCard extends StatelessWidget {
 
   Future<void> _confirmDelete(BuildContext context) async {
     final confirmed = await AppDialog.confirm(
-      icon: Icons.warning_amber_rounded,
+      icon: CupertinoIcons.exclamationmark_triangle_fill,
       iconColor: _danger,
       title: 'delete_account_title'.tr,
       message: 'delete_account_warning'.tr,
@@ -1428,7 +1070,8 @@ class _DeleteAccountCard extends StatelessWidget {
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
       // Surface the raw error for easier debugging during development.
-      final detail = e is UnknownAuthException ? (e.detail ?? '') : e.toString();
+      final detail =
+          e is UnknownAuthException ? (e.detail ?? '') : e.toString();
       AppToast.error(
         detail.isEmpty
             ? 'delete_account_failed'.tr

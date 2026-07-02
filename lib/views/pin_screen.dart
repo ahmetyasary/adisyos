@@ -1,19 +1,19 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/day_service.dart';
 import 'package:orderix/views/auth_screen.dart';
-import 'package:orderix/views/home_view.dart';
-import 'package:orderix/views/tables_view.dart';
+import 'package:orderix/navigation/app_shell.dart';
 
-const _bg          = Color(0xFFF2F2F7);
-const _card        = Colors.white;
-const _orange      = Color(0xFFFF9500);
+const _bg = Color(0xFFF2F2F7);
+const _card = Colors.white;
+const _orange = Color(0xFFFF9500);
 const _textPrimary = Color(0xFF1C1C1E);
-const _textSec     = Color(0xFF8E8E93);
-const _separator   = Color(0xFFE5E5EA);
-const _red         = Color(0xFFFF3B30);
+const _textSec = Color(0xFF8E8E93);
+const _separator = Color(0xFFE5E5EA);
+const _red = Color(0xFFFF3B30);
 
 class PinScreen extends StatefulWidget {
   const PinScreen({super.key});
@@ -57,7 +57,7 @@ class _PinScreenState extends State<PinScreen> {
     if (staff == null) return;
     if (StaffService.to.verifyPin(staff['id'] as String, _enteredPin)) {
       StaffService.to.setCurrentStaff(staff);
-      Get.offAll(() => const TablesView());
+      Get.offAll(() => const AppShell(initialSectionId: 'tables'));
     } else {
       setState(() {
         _hasError = true;
@@ -110,12 +110,12 @@ class _StaffPicker extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(0, 12, 16, 0),
             child: IconButton(
-              icon: const Icon(Icons.logout_rounded, size: 20, color: _textSec),
+              icon: const Icon(CupertinoIcons.square_arrow_right,
+                  size: 20, color: _textSec),
               tooltip: 'Hesaptan Çık',
               onPressed: () async {
                 final email = AuthController.to.user.value?.email ?? '';
-                if (email.isNotEmpty &&
-                    DayService.to.isDayStartedBy(email)) {
+                if (email.isNotEmpty && DayService.to.isDayStartedBy(email)) {
                   await DayService.to.endDay(email);
                 }
                 StaffService.to.clearCurrentStaff();
@@ -168,10 +168,10 @@ class _StaffPicker extends StatelessWidget {
               );
             }
 
-            // Admin with no staff → auto-navigate to HomeView
+            // Admin with no staff → auto-navigate to the app shell
             if (staff.isEmpty && AuthController.to.isAdmin) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                Get.offAll(() => const HomeView());
+                Get.offAll(() => const AppShell());
               });
               return const SizedBox.shrink();
             }
@@ -188,7 +188,7 @@ class _StaffPicker extends StatelessWidget {
                         color: _orange.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.people_outline_rounded,
+                      child: const Icon(CupertinoIcons.person_2,
                           size: 36, color: _orange),
                     ),
                     const SizedBox(height: 16),
@@ -231,7 +231,7 @@ class _StaffPicker extends StatelessWidget {
           return Padding(
             padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
             child: GestureDetector(
-              onTap: () => Get.offAll(() => const HomeView()),
+              onTap: () => Get.offAll(() => const AppShell()),
               child: Container(
                 height: 52,
                 decoration: BoxDecoration(
@@ -248,8 +248,7 @@ class _StaffPicker extends StatelessWidget {
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.admin_panel_settings_outlined,
-                        size: 18, color: _textSec),
+                    Icon(CupertinoIcons.lock_shield, size: 18, color: _textSec),
                     SizedBox(width: 8),
                     Text(
                       'Yönetici Girişi',
@@ -296,7 +295,8 @@ class _StaffCardState extends State<_StaffCard> {
       const Color(0xFF30B0C7),
       const Color(0xFF5856D6),
     ];
-    final color = colors[name.codeUnits.fold(0, (a, b) => a + b) % colors.length];
+    final color =
+        colors[name.codeUnits.fold(0, (a, b) => a + b) % colors.length];
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -408,7 +408,8 @@ class _PinPad extends StatelessWidget {
       const Color(0xFF30B0C7),
       const Color(0xFF5856D6),
     ];
-    final color = colors[name.codeUnits.fold(0, (a, b) => a + b) % colors.length];
+    final color =
+        colors[name.codeUnits.fold(0, (a, b) => a + b) % colors.length];
 
     return Column(
       children: [
@@ -418,7 +419,7 @@ class _PinPad extends StatelessWidget {
           child: Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                icon: const Icon(CupertinoIcons.chevron_back,
                     size: 18, color: _textPrimary),
                 onPressed: onBack,
               ),
@@ -573,7 +574,9 @@ class _PinKeyState extends State<_PinKey> {
         height: 80,
         decoration: BoxDecoration(
           color: _pressed
-              ? (widget.isDelete ? _red.withOpacity(0.1) : _orange.withOpacity(0.1))
+              ? (widget.isDelete
+                  ? _red.withOpacity(0.1)
+                  : _orange.withOpacity(0.1))
               : _card,
           shape: BoxShape.circle,
           boxShadow: _pressed
@@ -587,9 +590,8 @@ class _PinKeyState extends State<_PinKey> {
         ),
         child: Center(
           child: widget.isDelete
-              ? Icon(Icons.backspace_outlined,
-                  size: 22,
-                  color: _pressed ? _red : _textSec)
+              ? Icon(CupertinoIcons.delete_left,
+                  size: 22, color: _pressed ? _red : _textSec)
               : Text(
                   widget.label,
                   style: TextStyle(

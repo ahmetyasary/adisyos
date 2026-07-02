@@ -6,7 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:orderix/themes/app_theme.dart';
 import 'package:orderix/translations/app_translations.dart';
-import 'package:orderix/views/home_view.dart';
+import 'package:orderix/navigation/app_shell.dart';
 import 'package:orderix/views/auth_screen.dart';
 import 'package:orderix/services/sales_history_service.dart';
 import 'package:orderix/services/kitchen_service.dart';
@@ -47,8 +47,9 @@ Future<void> main() async {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,   // dark icons on light bg (Android)
-      statusBarBrightness: Brightness.light,       // dark icons on light bg (iOS)
+      statusBarIconBrightness:
+          Brightness.dark, // dark icons on light bg (Android)
+      statusBarBrightness: Brightness.light, // dark icons on light bg (iOS)
     ),
   );
 
@@ -100,12 +101,12 @@ void _registerAuth() {
   final repository = AuthRepositoryImpl(dataSource);
 
   Get.put(AuthController(
-    loginUseCase:          LoginUseCase(repository),
-    logoutUseCase:         LogoutUseCase(repository),
+    loginUseCase: LoginUseCase(repository),
+    logoutUseCase: LogoutUseCase(repository),
     getCurrentUserUseCase: GetCurrentUserUseCase(repository),
-    getUserRoleUseCase:    GetUserRoleUseCase(repository),
-    signUpUseCase:         SignUpUseCase(repository),
-    deleteAccountUseCase:  DeleteAccountUseCase(repository),
+    getUserRoleUseCase: GetUserRoleUseCase(repository),
+    signUpUseCase: SignUpUseCase(repository),
+    deleteAccountUseCase: DeleteAccountUseCase(repository),
   ));
 }
 
@@ -189,22 +190,22 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ),
         GetPage(
           name: AppRoutes.home,
-          page: () => const HomeView(),
+          page: () => const AppShell(),
           middlewares: [AuthMiddleware()],
         ),
         GetPage(
           name: AppRoutes.reports,
-          page: () => const HomeView(),
+          page: () => const AppShell(initialSectionId: 'reports'),
           middlewares: [AuthMiddleware()],
         ),
         GetPage(
           name: AppRoutes.employees,
-          page: () => const HomeView(),
+          page: () => const AppShell(initialSectionId: 'staff_report'),
           middlewares: [AuthMiddleware()],
         ),
         GetPage(
           name: AppRoutes.settings,
-          page: () => const HomeView(),
+          page: () => const AppShell(initialSectionId: 'settings'),
           middlewares: [AuthMiddleware()],
         ),
       ],
@@ -224,5 +225,6 @@ class _SmoothScrollBehavior extends ScrollBehavior {
     BuildContext context,
     Widget child,
     ScrollableDetails details,
-  ) => child;
+  ) =>
+      child;
 }
