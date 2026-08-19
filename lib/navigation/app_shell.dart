@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/features/ordi/presentation/ordi_launcher.dart';
 import 'package:orderix/models/app_role.dart';
 import 'package:orderix/navigation/app_bottom_bar.dart';
 import 'package:orderix/navigation/app_sections.dart';
@@ -349,11 +350,15 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                     setState(() => _collapsed = !_collapsed),
               ),
               Expanded(
-                child: ShellScope(
-                  hasDrawer: false,
-                  openDrawer: () {},
-                  selectSection: _select,
-                  child: content,
+                // Ordi floats over the content area only, so it never covers
+                // the sidebar's own controls.
+                child: withOrdiLauncher(
+                  ShellScope(
+                    hasDrawer: false,
+                    openDrawer: () {},
+                    selectSection: _select,
+                    child: content,
+                  ),
                 ),
               ),
             ],
@@ -369,11 +374,15 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
       return Scaffold(
         backgroundColor: _bg,
-        body: ShellScope(
-          hasDrawer: false,
-          openDrawer: () {},
-          selectSection: _select,
-          child: content,
+        // Inside `body`, so the launcher sits above the bottom bar rather than
+        // overlapping its tabs.
+        body: withOrdiLauncher(
+          ShellScope(
+            hasDrawer: false,
+            openDrawer: () {},
+            selectSection: _select,
+            child: content,
+          ),
         ),
         bottomNavigationBar: AppBottomBar(
           sections: bottomSections,

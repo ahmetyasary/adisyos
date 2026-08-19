@@ -30,6 +30,7 @@ import 'package:orderix/features/auth/domain/usecases/get_current_user_usecase.d
 import 'package:orderix/features/auth/domain/usecases/get_user_role_usecase.dart';
 import 'package:orderix/features/auth/domain/usecases/signup_usecase.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/features/ordi/presentation/ordi_controller.dart';
 import 'package:orderix/views/signup_screen.dart';
 import 'package:orderix/utils/app_info.dart';
 
@@ -78,6 +79,10 @@ Future<void> main() async {
   Get.put(DayService());
   Get.put(MenuService());
   Get.put(TableService());
+
+  // Ordi reads the services above to build its context snapshot, so it must be
+  // registered after them.
+  Get.put(OrdiController());
 
   runApp(const MyApp());
 }

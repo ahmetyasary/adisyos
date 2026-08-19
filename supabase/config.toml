@@ -7,3 +7,8 @@
 
 [functions.delete-account]
 verify_jwt = false
+
+# Same reasoning for `ordi`: it calls `admin.auth.getUser(jwt)` and then checks
+# the caller's role against `public.users`, so the platform gate adds nothing.
+[functions.ordi]
+verify_jwt = false
