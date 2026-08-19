@@ -6,6 +6,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:orderix/core/errors/auth_exception.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/models/app_role.dart';
+import 'package:orderix/navigation/app_sections.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/subscription_service.dart';
@@ -168,6 +170,17 @@ class _SettingsViewState extends State<SettingsView> {
                         ),
                       ),
                       const SizedBox(height: 28),
+
+                      if (AuthController.to.isAdmin) ...[
+                        _SectionLabel('nav_order'.tr),
+                        const SizedBox(height: 10),
+                        _Card(
+                          child: _NavOrderRow(
+                            onTap: () => _showNavOrderSheet(context),
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                      ],
 
                       // Language section
                       _SectionLabel('Dil'),
@@ -1079,5 +1092,225 @@ class _DeleteAccountCard extends StatelessWidget {
         duration: const Duration(seconds: 6),
       );
     }
+  }
+}
+
+// ── Sidebar order ──────────────────────────────────────────────
+
+class _NavOrderRow extends StatelessWidget {
+  const _NavOrderRow({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: _orange.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(CupertinoIcons.line_horizontal_3,
+                    size: 17, color: _orange),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'nav_order'.tr,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: _textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'nav_order_hint'.tr,
+                      style: const TextStyle(fontSize: 12, color: _textSec),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(CupertinoIcons.chevron_right,
+                  size: 16, color: _textSec),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void _showNavOrderSheet(BuildContext context) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: _card,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (_) => const _NavOrderSheet(),
+  );
+}
+
+class _NavOrderSheet extends StatefulWidget {
+  const _NavOrderSheet();
+
+  @override
+  State<_NavOrderSheet> createState() => _NavOrderSheetState();
+}
+
+class _NavOrderSheetState extends State<_NavOrderSheet> {
+  late List<AppSection> _items;
+
+  List<AppSection> get _defaultItems => appSections
+      .where((s) => s.allows(AppRole.admin) && !s.hidden && !s.footer)
+      .toList();
+
+  @override
+  void initState() {
+    super.initState();
+    _items = List<AppSection>.from(sectionsFor(AppRole.admin));
+  }
+
+  Future<void> _persist() =>
+      SettingsService.to.setNavOrder(_items.map((s) => s.id).toList());
+
+  @override
+  Widget build(BuildContext context) {
+    final h = MediaQuery.sizeOf(context).height * 0.72;
+    return SizedBox(
+      height: h,
+      child: Column(
+        children: [
+          const SizedBox(height: 10),
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: _border,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 8, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'nav_order'.tr,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: _textPrimary,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    setState(() => _items = _defaultItems);
+                    await SettingsService.to.resetNavOrder();
+                  },
+                  child: Text(
+                    'nav_order_reset'.tr,
+                    style: const TextStyle(
+                      color: _textSec,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'sort_done'.tr,
+                    style: const TextStyle(
+                      color: _orange,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: _border),
+          Expanded(
+            child: ReorderableListView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+              itemCount: _items.length,
+              proxyDecorator: (child, index, animation) {
+                return Material(
+                  elevation: 4,
+                  borderRadius: BorderRadius.circular(14),
+                  color: _card,
+                  child: child,
+                );
+              },
+              onReorder: (oldIndex, newIndex) {
+                setState(() {
+                  if (newIndex > oldIndex) newIndex -= 1;
+                  final item = _items.removeAt(oldIndex);
+                  _items.insert(newIndex, item);
+                });
+                _persist();
+              },
+              itemBuilder: (context, index) {
+                final s = _items[index];
+                return Container(
+                  key: ValueKey(s.id),
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF9F9F9),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: _border),
+                  ),
+                  child: Row(
+                    children: [
+                      ReorderableDragStartListener(
+                        index: index,
+                        child: const Padding(
+                          padding: EdgeInsets.only(right: 12),
+                          child: Icon(
+                            CupertinoIcons.line_horizontal_3,
+                            size: 20,
+                            color: _textSec,
+                          ),
+                        ),
+                      ),
+                      Icon(s.icon, size: 20, color: _orange),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          s.title(),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: _textPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

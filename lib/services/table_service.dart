@@ -95,21 +95,19 @@ class TableService extends GetxService {
     try {
       final rows = await _db.from('tables').select('*, orders(*)').order('id');
       if (seq != _loadSeq) return;
-      tables.assignAll(rows.map(_rowToTable).toList());
+      final mapped = rows.map((r) => _rowToTable(Map<String, dynamic>.from(r as Map))).toList();
+      if (seq != _loadSeq) return;
+      tables.assignAll(mapped);
+      for (var i = 0; i < mapped.length; i++) {
+        _repairHeaderIfStale(i, Map<String, dynamic>.from(rows[i] as Map));
+      }
     } catch (e) {
       _err('load', e);
     }
   }
 
-  Map<String, dynamic> _rowToTable(Map<String, dynamic> row) => {
-        'id': row['id'] as int,
-        'name': row['name'] as String,
-        'isOccupied': row['is_occupied'] as bool,
-        'total': (row['total'] as num).toDouble(),
-        'discount': (row['discount'] as num).toDouble(),
-        'staffEmail': (row['staff_email'] as String?) ?? '',
-        'sectionId': row['section_id'] as String?,
-        'orders': ((row['orders'] as List)
+  Map<String, dynamic> _rowToTable(Map<String, dynamic> row) {
+    final orders = ((row['orders'] as List)
             .map((o) => <String, dynamic>{
                   'id': o['id'] as int,
                   'name': o['name'] as String,
@@ -118,8 +116,29 @@ class TableService extends GetxService {
                 })
             .toList()
           ..sort(
-              (a, b) => (a['name'] as String).compareTo(b['name'] as String))),
-      };
+              (a, b) => (a['name'] as String).compareTo(b['name'] as String)));
+    var subtotal = 0.0;
+    for (final o in orders) {
+      subtotal += (o['price'] as double) * (o['quantity'] as int);
+    }
+    var discount = (row['discount'] as num).toDouble();
+    if (orders.isEmpty || subtotal <= 0) {
+      subtotal = 0;
+      discount = 0;
+    } else if (discount > subtotal) {
+      discount = 0;
+    }
+    return {
+      'id': row['id'] as int,
+      'name': row['name'] as String,
+      'isOccupied': orders.isNotEmpty,
+      'total': subtotal,
+      'discount': discount,
+      'staffEmail': (row['staff_email'] as String?) ?? '',
+      'sectionId': row['section_id'] as String?,
+      'orders': orders,
+    };
+  }
 
   // ── Partial payments — DB-backed realtime ────────────────────
 
@@ -307,8 +326,36 @@ class TableService extends GetxService {
 
   void _setOccupied(int tableIndex) {
     final orders = tables[tableIndex]['orders'] as List;
+    var subtotal = 0.0;
+    for (final raw in orders) {
+      final o = raw as Map;
+      subtotal += (o['price'] as num).toDouble() * (o['quantity'] as int);
+    }
+    if (orders.isEmpty || subtotal <= 0) {
+      tables[tableIndex]['total'] = 0.0;
+      tables[tableIndex]['discount'] = 0.0;
+    } else {
+      tables[tableIndex]['total'] = subtotal;
+      final discount = (tables[tableIndex]['discount'] as num).toDouble();
+      if (discount > subtotal) {
+        tables[tableIndex]['discount'] = 0.0;
+      }
+    }
     tables[tableIndex]['isOccupied'] = orders.isNotEmpty;
     tables.refresh();
+  }
+
+  void _repairHeaderIfStale(int tableIndex, Map<String, dynamic> row) {
+    final t = tables[tableIndex];
+    final dbTotal = (row['total'] as num).toDouble();
+    final dbDisc = (row['discount'] as num).toDouble();
+    final dbOcc = row['is_occupied'] as bool;
+    if ((dbTotal - (t['total'] as double)).abs() > 0.009 ||
+        (dbDisc - (t['discount'] as double)).abs() > 0.009 ||
+        dbOcc != t['isOccupied']) {
+      _syncTableHeader(tableIndex)
+          .catchError((e) => _err('repairHeader', e));
+    }
   }
 
   // ── Order mutations ──────────────────────────────────────────
@@ -323,10 +370,11 @@ class TableService extends GetxService {
     if (existingIdx != -1) {
       // ── Existing item — bump quantity optimistically, then write ────
       final order = orders[existingIdx]; // stable Map reference
+      final unit = (order['price'] as num).toDouble();
       final newQty = (order['quantity'] as int) + 1;
       order['quantity'] = newQty;
       tables[tableIndex]['total'] =
-          (tables[tableIndex]['total'] as double) + price;
+          (tables[tableIndex]['total'] as double) + unit;
       _setOccupied(tableIndex);
       KitchenService.to.addOrUpdateTicket(
         tableId: tableId,
@@ -344,9 +392,10 @@ class TableService extends GetxService {
         // commit the accumulated quantity — nothing for us to do here.
         if (orderId == -1) return;
         // Write whatever quantity is current after all optimistic taps.
-        await _db
-            .from('orders')
-            .update({'quantity': order['quantity'] as int}).eq('id', orderId);
+        await _db.from('orders').update({
+          'quantity': order['quantity'] as int,
+          'price': (order['price'] as num).toDouble(),
+        }).eq('id', orderId);
         await _syncTableHeader(tableIndex);
       });
     } else {
@@ -386,10 +435,10 @@ class TableService extends GetxService {
         }
         // Already given a real ID by a previous duplicate enqueue — just update.
         if ((newOrder['id'] as int) != -1) {
-          await _db
-              .from('orders')
-              .update({'quantity': newOrder['quantity'] as int}).eq(
-                  'id', newOrder['id'] as int);
+          await _db.from('orders').update({
+            'quantity': newOrder['quantity'] as int,
+            'price': (newOrder['price'] as num).toDouble(),
+          }).eq('id', newOrder['id'] as int);
           await _syncTableHeader(tableIndex);
           return;
         }
@@ -400,7 +449,7 @@ class TableService extends GetxService {
               'table_id': tableId,
               'name': name,
               'quantity': newOrder['quantity'] as int,
-              'price': price,
+              'price': (newOrder['price'] as num).toDouble(),
               'tenant_id': _tenantId,
             })
             .select()
@@ -518,6 +567,27 @@ class TableService extends GetxService {
       await _db
           .from('orders')
           .update({'quantity': order['quantity'] as int}).eq('id', orderId);
+      await _syncTableHeader(tableIndex);
+    });
+  }
+
+  /// Changes the unit price of one line on this table only. The menu catalog
+  /// is left untouched.
+  void updateOrderUnitPrice(int tableIndex, int orderIndex, double newPrice) {
+    final orders = tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
+    if (orderIndex >= orders.length) return;
+    if (newPrice <= 0 || newPrice > 100000) return;
+    final order = orders[orderIndex];
+    final oldPrice = (order['price'] as num).toDouble();
+    if ((oldPrice - newPrice).abs() < 0.005) return;
+    order['price'] = newPrice;
+    _setOccupied(tableIndex);
+
+    _enqueue(tableIndex, () async {
+      final orderId = order['id'] as int;
+      if (orderId != -1) {
+        await _db.from('orders').update({'price': newPrice}).eq('id', orderId);
+      }
       await _syncTableHeader(tableIndex);
     });
   }
@@ -669,14 +739,34 @@ class TableService extends GetxService {
   void applyDiscount(int tableIndex, double discountPercentage) {
     final currentTotal = tables[tableIndex]['total'] as double;
     final clamped = discountPercentage.clamp(0.0, 100.0);
-    final discountAmount = currentTotal * (clamped / 100);
+    _setDiscountAmount(tableIndex, currentTotal * (clamped / 100));
+  }
+
+  /// Fixed-amount discount in the table currency, capped at the subtotal.
+  void applyDiscountAmount(int tableIndex, double amount) {
+    _setDiscountAmount(tableIndex, amount);
+  }
+
+  void _setDiscountAmount(int tableIndex, double amount) {
+    final orders = tables[tableIndex]['orders'] as List;
+    if (orders.isEmpty) {
+      tables[tableIndex]['discount'] = 0.0;
+      tables[tableIndex]['total'] = 0.0;
+      tables.refresh();
+      _db
+          .from('tables')
+          .update({'discount': 0.0, 'total': 0.0})
+          .eq('id', _id(tableIndex))
+          .catchError((e) => _err('applyDiscount', e));
+      return;
+    }
+    final currentTotal = tables[tableIndex]['total'] as double;
+    final discountAmount = amount.clamp(0.0, currentTotal);
     tables[tableIndex]['discount'] = discountAmount;
     tables.refresh();
     _db
         .from('tables')
-        .update({
-          'discount': discountAmount,
-        })
+        .update({'discount': discountAmount})
         .eq('id', _id(tableIndex))
         .catchError((e) => _err('applyDiscount', e));
   }
@@ -755,18 +845,10 @@ class TableService extends GetxService {
             movedOrder['id'] = srcOrderId;
           }, onError: (e) => _err('moveOrder reparent', e));
     }
-    tables[toTableIndex]['total'] =
-        (tables[toTableIndex]['total'] as double) + price * qty;
     tables[toTableIndex]['isOccupied'] = true;
-    tables[fromTableIndex]['total'] =
-        ((tables[fromTableIndex]['total'] as double) - price * qty)
-            .clamp(0.0, double.infinity);
     srcOrders.removeAt(orderIndex);
-    tables[fromTableIndex]['isOccupied'] = srcOrders.isNotEmpty;
-    final srcDiscount = (tables[fromTableIndex]['discount'] ?? 0.0) as double;
-    if (srcDiscount > (tables[fromTableIndex]['total'] as double)) {
-      tables[fromTableIndex]['discount'] = 0.0;
-    }
+    _setOccupied(toTableIndex);
+    _setOccupied(fromTableIndex);
     KitchenService.to.removeTicketForItem(
       tableId: _id(fromTableIndex),
       itemName: name,
@@ -783,13 +865,11 @@ class TableService extends GetxService {
         List<Map<String, dynamic>>.from(getOrders(fromTableIndex));
     final destOrders = getOrders(toTableIndex);
     final destTableId = _id(toTableIndex);
-    double addedTotal = 0.0;
     for (final order in srcOrders) {
       final name = order['name'] as String;
       final price = order['price'] as double;
       final qty = order['quantity'] as int;
       final srcOrderId = order['id'] as int;
-      addedTotal += price * qty;
       final existingIdx = destOrders.indexWhere((o) => o['name'] == name);
       if (existingIdx != -1) {
         final newQty = (destOrders[existingIdx]['quantity'] as int) + qty;
@@ -836,15 +916,10 @@ class TableService extends GetxService {
         itemName: name,
       );
     }
-    tables[toTableIndex]['total'] =
-        (tables[toTableIndex]['total'] as double) + addedTotal;
-    tables[toTableIndex]['isOccupied'] = destOrders.isNotEmpty;
     tables[fromTableIndex]['orders'] = <Map<String, dynamic>>[];
-    tables[fromTableIndex]['total'] = 0.0;
-    tables[fromTableIndex]['discount'] = 0.0;
-    tables[fromTableIndex]['isOccupied'] = false;
     tables[fromTableIndex]['staffEmail'] = '';
-    tables.refresh();
+    _setOccupied(toTableIndex);
+    _setOccupied(fromTableIndex);
 
     // ── Transfer partial payments ─────────────────────────────
     final srcPartials = List<Map<String, dynamic>>.from(

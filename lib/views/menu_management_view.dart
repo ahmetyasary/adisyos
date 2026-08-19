@@ -82,6 +82,7 @@ class MenuManagementView extends StatefulWidget {
 }
 
 class _MenuManagementViewState extends State<MenuManagementView> {
+  bool _sortMode = false;
   @override
   void initState() {
     super.initState();
@@ -150,6 +151,25 @@ class _MenuManagementViewState extends State<MenuManagementView> {
     );
   }
 
+  Widget _menuCard(int menuIndex) {
+    final menu = MenuService.to.menus[menuIndex];
+    return _MenuCard(
+      key: ValueKey(menu['id']),
+      menu: menu,
+      menuIndex: menuIndex,
+      sortMode: _sortMode,
+      onAddItem: () => _showAddItemDialog(menuIndex),
+      onEditMenu: () =>
+          _showEditMenuDialog(menuIndex, menu['name'] as String),
+      onDeleteMenu: () =>
+          _showDeleteMenuConfirmation(menuIndex, menu['name'] as String),
+      onEditItem: (itemIndex, name, price, imageUrl) =>
+          _showEditItemDialog(menuIndex, itemIndex, name, price, imageUrl),
+      onDeleteItem: (itemIndex) =>
+          MenuService.to.removeMenuItem(menuIndex, itemIndex),
+    );
+  }
+
   // ── Build ──────────────────────────────────────────────────
 
   @override
@@ -183,16 +203,90 @@ class _MenuManagementViewState extends State<MenuManagementView> {
                       ),
                     ),
                     const Spacer(),
+                    if (_sortMode)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: GestureDetector(
+                          onTap: () => setState(() => _sortMode = false),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: _orangeLight,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              'sort_done'.tr,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: _orange,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     Padding(
                       padding: const EdgeInsets.only(right: 12),
-                      child: GestureDetector(
-                        onTap: _showAddMenuDialog,
+                      child: PopupMenuButton<String>(
+                        tooltip: 'İşlemler',
+                        padding: EdgeInsets.zero,
+                        offset: const Offset(0, 8),
+                        color: Colors.white,
+                        elevation: 8,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        onSelected: (value) {
+                          if (value == 'add') _showAddMenuDialog();
+                          if (value == 'sort') {
+                            setState(() => _sortMode = true);
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          PopupMenuItem(
+                            value: 'add',
+                            child: Row(
+                              children: [
+                                const Icon(CupertinoIcons.add,
+                                    size: 18, color: _orange),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'add_menu'.tr,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: _textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'sort',
+                            child: Row(
+                              children: [
+                                const Icon(CupertinoIcons.line_horizontal_3,
+                                    size: 18, color: _orange),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'reorder'.tr,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: _textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 7),
+                          width: 36,
+                          height: 36,
                           decoration: BoxDecoration(
                             color: _orange,
-                            borderRadius: BorderRadius.circular(20),
+                            shape: BoxShape.circle,
                             boxShadow: const [
                               BoxShadow(
                                 color: Color(0x44FF9500),
@@ -201,21 +295,10 @@ class _MenuManagementViewState extends State<MenuManagementView> {
                               ),
                             ],
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(CupertinoIcons.add,
-                                  size: 16, color: Colors.white),
-                              const SizedBox(width: 4),
-                              Text(
-                                'add_menu'.tr,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
+                          child: const Icon(
+                            CupertinoIcons.ellipsis_vertical,
+                            size: 18,
+                            color: Colors.white,
                           ),
                         ),
                       ),
@@ -279,27 +362,30 @@ class _MenuManagementViewState extends State<MenuManagementView> {
                             ],
                           ),
                         )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: MenuService.to.menus.length,
-                          itemBuilder: (_, menuIndex) {
-                            final menu = MenuService.to.menus[menuIndex];
-                            return _MenuCard(
-                              menu: menu,
-                              menuIndex: menuIndex,
-                              onAddItem: () => _showAddItemDialog(menuIndex),
-                              onEditMenu: () => _showEditMenuDialog(
-                                  menuIndex, menu['name'] as String),
-                              onDeleteMenu: () => _showDeleteMenuConfirmation(
-                                  menuIndex, menu['name'] as String),
-                              onEditItem: (itemIndex, name, price, imageUrl) =>
-                                  _showEditItemDialog(menuIndex, itemIndex,
-                                      name, price, imageUrl),
-                              onDeleteItem: (itemIndex) => MenuService.to
-                                  .removeMenuItem(menuIndex, itemIndex),
-                            );
-                          },
-                        ),
+                      : _sortMode
+                          ? ReorderableListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              buildDefaultDragHandles: false,
+                              itemCount: MenuService.to.menus.length,
+                              proxyDecorator: (child, index, animation) {
+                                return Material(
+                                  elevation: 8,
+                                  color: Colors.transparent,
+                                  shadowColor: const Color(0x33000000),
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: child,
+                                );
+                              },
+                              onReorder: MenuService.to.reorderMenus,
+                              itemBuilder: (_, menuIndex) =>
+                                  _menuCard(menuIndex),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: MenuService.to.menus.length,
+                              itemBuilder: (_, menuIndex) =>
+                                  _menuCard(menuIndex),
+                            ),
                 ),
               ),
             ),
@@ -865,8 +951,10 @@ class _ImagePickerArea extends StatelessWidget {
 
 class _MenuCard extends StatelessWidget {
   const _MenuCard({
+    super.key,
     required this.menu,
     required this.menuIndex,
+    required this.sortMode,
     required this.onAddItem,
     required this.onEditMenu,
     required this.onDeleteMenu,
@@ -876,6 +964,7 @@ class _MenuCard extends StatelessWidget {
 
   final Map<String, dynamic> menu;
   final int menuIndex;
+  final bool sortMode;
   final VoidCallback onAddItem;
   final VoidCallback onEditMenu;
   final VoidCallback onDeleteMenu;
@@ -906,10 +995,21 @@ class _MenuCard extends StatelessWidget {
         children: [
           // ── Menu header ──────────────────────────────
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: EdgeInsets.fromLTRB(sortMode ? 8 : 16, 14, 8, 14),
             child: Row(
               children: [
-                // Reactive icon — updates when user changes it
+                if (sortMode)
+                  ReorderableDragStartListener(
+                    index: menuIndex,
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      child: Icon(
+                        CupertinoIcons.line_horizontal_3,
+                        size: 20,
+                        color: _textSec,
+                      ),
+                    ),
+                  ),
                 Obx(() {
                   final key = MenuService.to.getMenuIcon(menuId);
                   final iconData = _iconData(key);
@@ -963,79 +1063,106 @@ class _MenuCard extends StatelessWidget {
           // ── Items list ───────────────────────────────
           if (items.isNotEmpty) ...[
             const Divider(height: 1, color: _border),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.zero,
-              itemCount: items.length,
-              separatorBuilder: (_, __) =>
-                  const Divider(height: 1, color: _border),
-              itemBuilder: (_, itemIndex) {
-                final item = items[itemIndex] as Map<String, dynamic>;
-                final itemName = item['name'] as String;
-                final itemPrice = item['price'] as double;
-                final imageUrl = item['imageUrl'] as String?;
-
-                return Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  child: Row(
-                    children: [
-                      // Thumbnail or default icon
-                      _ItemThumbnail(imageUrl: imageUrl),
-                      const SizedBox(width: 10),
-
-                      Expanded(
-                        child: Text(
-                          itemName,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: _textPrimary,
-                          ),
-                        ),
-                      ),
-
-                      // Price badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _orangeLight,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Obx(() => Text(
-                              '${SettingsService.cs}${itemPrice.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: _orange,
-                              ),
-                            )),
-                      ),
-                      const SizedBox(width: 4),
-
-                      _IconBtn(
-                        icon: CupertinoIcons.pencil,
-                        color: _orange,
-                        tooltip: 'edit_item'.tr,
-                        onTap: () => onEditItem(
-                            itemIndex, itemName, itemPrice, imageUrl),
-                        size: 18,
-                      ),
-                      _IconBtn(
-                        icon: CupertinoIcons.trash,
-                        color: AppTheme.errorColor,
-                        tooltip: 'delete'.tr,
-                        onTap: () => onDeleteItem(itemIndex),
-                        size: 18,
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+            if (sortMode)
+              ReorderableListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                buildDefaultDragHandles: false,
+                itemCount: items.length,
+                proxyDecorator: (child, index, animation) {
+                  return Material(
+                    color: _card,
+                    elevation: 4,
+                    child: child,
+                  );
+                },
+                onReorder: (oldIndex, newIndex) =>
+                    MenuService.to.reorderItems(menuIndex, oldIndex, newIndex),
+                itemBuilder: (_, itemIndex) => _itemTile(items, itemIndex),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                itemCount: items.length,
+                separatorBuilder: (_, __) =>
+                    const Divider(height: 1, color: _border),
+                itemBuilder: (_, itemIndex) => _itemTile(items, itemIndex),
+              ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _itemTile(List items, int itemIndex) {
+    final item = items[itemIndex] as Map<String, dynamic>;
+    final itemName = item['name'] as String;
+    final itemPrice = item['price'] as double;
+    final imageUrl = item['imageUrl'] as String?;
+    return Padding(
+      key: ValueKey(item['id']),
+      padding: EdgeInsets.symmetric(
+        horizontal: sortMode ? 8 : 16,
+        vertical: 10,
+      ),
+      child: Row(
+        children: [
+          if (sortMode)
+            ReorderableDragStartListener(
+              index: itemIndex,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Icon(
+                  CupertinoIcons.line_horizontal_3,
+                  size: 18,
+                  color: _textSec,
+                ),
+              ),
+            ),
+          _ItemThumbnail(imageUrl: imageUrl),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              itemName,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: _textPrimary,
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: _orangeLight,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Obx(() => Text(
+                  '${SettingsService.cs}${itemPrice.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: _orange,
+                  ),
+                )),
+          ),
+          const SizedBox(width: 4),
+          _IconBtn(
+            icon: CupertinoIcons.pencil,
+            color: _orange,
+            tooltip: 'edit_item'.tr,
+            onTap: () => onEditItem(itemIndex, itemName, itemPrice, imageUrl),
+            size: 18,
+          ),
+          _IconBtn(
+            icon: CupertinoIcons.trash,
+            color: AppTheme.errorColor,
+            tooltip: 'delete'.tr,
+            onTap: () => onDeleteItem(itemIndex),
+            size: 18,
+          ),
         ],
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:orderix/models/app_role.dart';
+import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/views/dashboard_view.dart';
 import 'package:orderix/views/tables_view.dart';
 import 'package:orderix/views/kitchen_display_view.dart';
@@ -141,10 +142,26 @@ AppSection? sectionById(String id) {
   return null;
 }
 
+/// Applies the tenant's saved sidebar order. Unknown / new sections stay
+/// after the saved ids, in their built-in relative order.
+List<AppSection> _withNavOrder(List<AppSection> list) {
+  final order = SettingsService.to.navOrder.toList();
+  if (order.isEmpty) return list;
+  final byId = {for (final s in list) s.id: s};
+  final out = <AppSection>[];
+  for (final id in order) {
+    final s = byId.remove(id);
+    if (s != null) out.add(s);
+  }
+  out.addAll(list.where((s) => byId.containsKey(s.id)));
+  return out;
+}
+
 /// Sections to show in the sidebar's main list for [role]
 /// (role-permitted, visible, non-footer).
-List<AppSection> sectionsFor(AppRole? role) =>
-    appSections.where((s) => s.allows(role) && !s.hidden && !s.footer).toList();
+List<AppSection> sectionsFor(AppRole? role) => _withNavOrder(
+      appSections.where((s) => s.allows(role) && !s.hidden && !s.footer).toList(),
+    );
 
 /// Sections to show in the sidebar's footer for [role].
 List<AppSection> footerSectionsFor(AppRole? role) =>
@@ -156,30 +173,37 @@ List<AppSection> footerSectionsFor(AppRole? role) =>
 const Set<String> _bottomBarIds = {'dashboard', 'tables', 'kitchen', 'reports'};
 
 /// Up to four most-used, role-permitted sections for the mobile bottom bar.
-List<AppSection> bottomBarSectionsFor(AppRole? role) => appSections
-    .where((s) =>
-        s.allows(role) &&
-        !s.hidden &&
-        !s.footer &&
-        _bottomBarIds.contains(s.id))
-    .take(4)
-    .toList();
+List<AppSection> bottomBarSectionsFor(AppRole? role) => _withNavOrder(
+      appSections
+          .where((s) =>
+              s.allows(role) &&
+              !s.hidden &&
+              !s.footer &&
+              _bottomBarIds.contains(s.id))
+          .toList(),
+    ).take(4).toList();
 
 /// Role-permitted main sections that are NOT in the bottom bar — they populate
 /// the first group of the mobile "Daha Fazla" sheet.
-List<AppSection> moreSectionsFor(AppRole? role) => appSections
-    .where((s) =>
-        s.allows(role) &&
-        !s.hidden &&
-        !s.footer &&
-        !_bottomBarIds.contains(s.id))
-    .toList();
+List<AppSection> moreSectionsFor(AppRole? role) => _withNavOrder(
+      appSections
+          .where((s) =>
+              s.allows(role) &&
+              !s.hidden &&
+              !s.footer &&
+              !_bottomBarIds.contains(s.id))
+          .toList(),
+    );
 
 /// The section a user of [role] should land on when entering the shell.
-/// Admin → Dashboard, staff → first permitted section (Tables).
+/// Admin → Dashboard when permitted, otherwise the first ordered section.
 String? landingSectionFor(AppRole? role) {
   final list = sectionsFor(role);
-  return list.isEmpty ? null : list.first.id;
+  if (list.isEmpty) return null;
+  for (final s in list) {
+    if (s.id == 'dashboard') return s.id;
+  }
+  return list.first.id;
 }
 
 /// Clamp a requested [sectionId] to one the [role] may actually open.

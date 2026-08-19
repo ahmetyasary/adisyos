@@ -26,6 +26,10 @@ class SettingsService extends GetxService {
   // Reactive state bound to the UI.
   final RxString companyName    = ''.obs;
   final RxString currencySymbol = '₺'.obs;
+  /// Ordered ids of main sidebar sections. Empty → built-in default order.
+  final RxList<String> navOrder = <String>[].obs;
+  /// Shared Ordi FAB corner for this account: `tl` | `tr` | `bl` | `br`.
+  final RxString ordiCorner = 'br'.obs;
 
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
@@ -37,6 +41,8 @@ class SettingsService extends GetxService {
 
   static const _kCompanyName    = 'company_name';
   static const _kCurrencySymbol = 'currency_symbol';
+  static const _kNavOrder       = 'nav_order';
+  static const _kOrdiCorner     = 'ordi_corner';
 
   @override
   void onInit() {
@@ -63,6 +69,8 @@ class SettingsService extends GetxService {
         // rehydrates instantly.
         companyName.value = '';
         currencySymbol.value = '₺';
+        navOrder.clear();
+        ordiCorner.value = 'br';
       }
     });
 
@@ -118,6 +126,45 @@ class SettingsService extends GetxService {
     await _writeValue(_kCompanyName, trimmed);
   }
 
+  /// Persists the admin-chosen sidebar order for this tenant.
+  Future<void> setNavOrder(List<String> ids) async {
+    navOrder.assignAll(ids);
+    final value = ids.join(',');
+    await _writePref(_kNavOrder, value);
+    try {
+      await _writeValue(_kNavOrder, value);
+    } catch (e) {
+      if (kDebugMode) print('[SettingsService] setNavOrder DB error: $e');
+    }
+  }
+
+  Future<void> resetNavOrder() => setNavOrder(const []);
+
+  /// Persists the account-wide Ordi corner. Local + prefs first, then Supabase
+  /// so iPhone and iPad stay in sync.
+  Future<void> setOrdiCorner(String corner) async {
+    final next = _sanitizeCorner(corner);
+    ordiCorner.value = next;
+    await _writePref(_kOrdiCorner, next);
+    try {
+      await _writeValue(_kOrdiCorner, next);
+    } catch (e) {
+      if (kDebugMode) print('[SettingsService] setOrdiCorner DB error: $e');
+    }
+  }
+
+  String _sanitizeCorner(String raw) {
+    switch (raw) {
+      case 'tl':
+      case 'tr':
+      case 'bl':
+      case 'br':
+        return raw;
+      default:
+        return 'br';
+    }
+  }
+
   /// Persists a new currency symbol. Same guarantees as [save].
   Future<void> setCurrency(String symbol) async {
     currencySymbol.value = symbol;
@@ -143,15 +190,21 @@ class SettingsService extends GetxService {
 
       String? readName;
       String? readSymbol;
+      String? readNav;
+      String? readCorner;
 
       if (tenantId != null) {
         readName   = prefs.getString(_tenantPrefKey(tenantId, _kCompanyName));
         readSymbol = prefs.getString(_tenantPrefKey(tenantId, _kCurrencySymbol));
+        readNav    = prefs.getString(_tenantPrefKey(tenantId, _kNavOrder));
+        readCorner = prefs.getString(_tenantPrefKey(tenantId, _kOrdiCorner));
       }
 
       // Legacy fallback — pre-tenant-scoping installs stored flat keys.
       readName   ??= prefs.getString('settings.$_kCompanyName');
       readSymbol ??= prefs.getString('settings.$_kCurrencySymbol');
+      readNav    ??= prefs.getString('settings.$_kNavOrder');
+      readCorner ??= prefs.getString('settings.$_kOrdiCorner');
 
       if (readName != null && readName.isNotEmpty) {
         companyName.value = readName;
@@ -159,10 +212,22 @@ class SettingsService extends GetxService {
       if (readSymbol != null && readSymbol.isNotEmpty) {
         currencySymbol.value = readSymbol;
       }
+      if (readNav != null) {
+        navOrder.assignAll(_parseNavOrder(readNav));
+      }
+      if (readCorner != null && readCorner.isNotEmpty) {
+        ordiCorner.value = _sanitizeCorner(readCorner);
+      }
     } catch (e) {
       if (kDebugMode) print('[SettingsService] prefs load error: $e');
     }
   }
+
+  List<String> _parseNavOrder(String raw) => raw
+      .split(',')
+      .map((e) => e.trim())
+      .where((e) => e.isNotEmpty)
+      .toList();
 
   Future<void> _writePref(String key, String value) async {
     try {
@@ -191,6 +256,9 @@ class SettingsService extends GetxService {
           .select()
           .eq('tenant_id', tenantId);
 
+      String? ordiFromShared;
+      String? ordiFromLegacyDevice;
+
       for (final row in rows) {
         final rawKey = row['key'] as String?;
         final rawVal = (row['value'] as String?) ?? '';
@@ -207,7 +275,24 @@ class SettingsService extends GetxService {
               currencySymbol.value = rawVal;
               await _writePref(_kCurrencySymbol, rawVal);
             }
+          case _kNavOrder:
+            navOrder.assignAll(_parseNavOrder(rawVal));
+            await _writePref(_kNavOrder, rawVal);
+          case _kOrdiCorner:
+            if (rawVal.isNotEmpty) {
+              ordiFromShared = rawVal;
+            }
+          default:
+            if (rawKey.startsWith('ordi_corner.') && rawVal.isNotEmpty) {
+              ordiFromLegacyDevice ??= rawVal;
+            }
         }
+      }
+
+      final ordiVal = ordiFromShared ?? ordiFromLegacyDevice;
+      if (ordiVal != null && ordiVal.isNotEmpty) {
+        ordiCorner.value = _sanitizeCorner(ordiVal);
+        await _writePref(_kOrdiCorner, ordiCorner.value);
       }
     } catch (e) {
       if (kDebugMode) print('[SettingsService] load error: $e');

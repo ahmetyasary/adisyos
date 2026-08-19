@@ -337,31 +337,29 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         // itself internally.
         return Scaffold(
           backgroundColor: _bg,
-          body: Row(
-            children: [
-              AppSidebar(
-                sections: mainSections,
-                footerSections: footerSections,
-                selectedId: effectiveId,
-                collapsed: _collapsed,
-                onSelect: _select,
-                onLogout: _handleLogout,
-                onToggleCollapse: () =>
-                    setState(() => _collapsed = !_collapsed),
-              ),
-              Expanded(
-                // Ordi floats over the content area only, so it never covers
-                // the sidebar's own controls.
-                child: withOrdiLauncher(
-                  ShellScope(
+          body: withOrdiLauncher(
+            Row(
+              children: [
+                AppSidebar(
+                  sections: mainSections,
+                  footerSections: footerSections,
+                  selectedId: effectiveId,
+                  collapsed: _collapsed,
+                  onSelect: _select,
+                  onLogout: _handleLogout,
+                  onToggleCollapse: () =>
+                      setState(() => _collapsed = !_collapsed),
+                ),
+                Expanded(
+                  child: ShellScope(
                     hasDrawer: false,
                     openDrawer: () {},
                     selectSection: _select,
                     child: content,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       }

@@ -3,15 +3,17 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:orderix/features/ordi/data/ordi_actions.dart';
 import 'package:orderix/features/ordi/data/ordi_local_brain.dart';
 import 'package:orderix/features/ordi/data/ordi_snapshot.dart';
 import 'package:orderix/features/ordi/domain/ordi_message.dart';
 
 class OrdiAnswer {
-  const OrdiAnswer(this.text, this.source);
+  const OrdiAnswer(this.text, this.source, {this.actions = const []});
 
   final String text;
   final OrdiSource source;
+  final List<OrdiToolCall> actions;
 }
 
 /// Data layer for Ordi: talks to the `ordi` edge function, degrades to the
@@ -57,9 +59,14 @@ class OrdiRepository {
           )
           .timeout(_timeout);
 
-      final answer = (res.data is Map ? res.data['answer'] : null) as String?;
-      if (answer != null && answer.trim().isNotEmpty) {
-        return OrdiAnswer(answer.trim(), OrdiSource.gemini);
+      final data = res.data is Map ? Map<String, dynamic>.from(res.data as Map) : null;
+      final answer = (data?['answer'] as String?)?.trim() ?? '';
+      final actions = <OrdiToolCall>[
+        for (final raw in (data?['actions'] as List? ?? const []))
+          if (OrdiToolCall.fromJson(raw) != null) OrdiToolCall.fromJson(raw)!,
+      ];
+      if (answer.isNotEmpty || actions.isNotEmpty) {
+        return OrdiAnswer(answer, OrdiSource.gemini, actions: actions);
       }
       return _offline(question, snapshot, reason: 'empty_response');
     } on FunctionException catch (e) {
@@ -97,6 +104,15 @@ class OrdiRepository {
     String? note,
   }) {
     if (kDebugMode) debugPrint('[Ordi] offline fallback ($reason)');
+
+    final parsed = OrdiIntentParser.parse(question, snapshot);
+    if (parsed.isNotEmpty) {
+      return OrdiAnswer(
+        note ?? '',
+        OrdiSource.local,
+        actions: parsed,
+      );
+    }
 
     final local = OrdiLocalBrain(snapshot).answer(question);
     if (local != null) {

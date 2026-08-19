@@ -25,6 +25,14 @@ class OrdiLocalBrain {
 
     final period = _period(q);
 
+    if (_any(q, ['kac gun', 'ne kadar sure', 'ne zamandir', 'kac saattir']) &&
+        _any(q, ['acik', 'gun', 'hesap', 'adisyon', 'masa'])) {
+      return _openDuration(q);
+    }
+    if (_any(q, ['nasil', 'nereden', 'hangi ekran', 'nerede', 'kilavuz']) &&
+        !_any(q, ['gidiyor', 'gidisat'])) {
+      return _howTo(q);
+    }
     if (_any(q, ['ciro', 'kazanc', 'hasilat', 'satis', 'gelir', 'para kazan'])) {
       return _revenue(period);
     }
@@ -162,6 +170,65 @@ class OrdiLocalBrain {
     return '${t['doluMasa']}/${t['toplamMasa']} masa dolu. '
         'Açık adisyon toplamı **${_money(t['acikAdisyonToplami'])}**.'
         '${lines.isEmpty ? '' : '\n${lines.join('\n')}'}';
+  }
+
+  /// "Kaç gündür açık hesap" — prefer the occupied table duration, also
+  /// report the active business-day elapsed time so the two aren't confused.
+  String _openDuration(String q) {
+    final days = snapshot['gunDurumu'] as Map?;
+    final active = (days?['aktifGunler'] as List?) ?? const [];
+    final tables = snapshot['masalar'] as Map?;
+    final occupied = (tables?['doluMasaDetay'] as List?) ?? const [];
+
+    final lines = <String>[];
+    if (active.isNotEmpty) {
+      final g = active.first as Map;
+      lines.add(
+        'Aktif çalışma günü **${g['sureMetin']}** süredir açık '
+        '(${g['acan']}, başlangıç ${g['baslangic']}).',
+      );
+    } else {
+      lines.add('Şu anda açık çalışma günü yok.');
+    }
+
+    if (occupied.isEmpty) {
+      lines.add('Açık masa adisyonu yok.');
+    } else {
+      for (final raw in occupied.take(8)) {
+        final t = raw as Map;
+        final sure = t['acikSureMetin'] as String?;
+        lines.add(
+          '• ${t['masa']}: ${_money(t['tutar'])}'
+          '${sure == null ? ' (ilk sipariş saati yok)' : ', ${sure}dir açık'}',
+        );
+      }
+    }
+    return lines.join('\n');
+  }
+
+  String _howTo(String q) {
+    final g = snapshot['uygulamaKilavuzu'] as Map?;
+    final how = g?['nasil'] as Map? ?? {};
+    if (_any(q, ['gunu bitir', 'gun kapat', 'gun sonu'])) {
+      return how['gunuBitir'] as String? ??
+          'Ana Ekran’dan Günü Bitir. Açık masa varsa önce kapatın.';
+    }
+    if (_any(q, ['odeme', 'hesap kapat', 'adisyon kapat'])) {
+      return how['odemeAl'] as String? ??
+          'Masalar → açık masa → ödeme.';
+    }
+    if (_any(q, ['siparis'])) {
+      return how['siparisYaz'] as String? ??
+          'Masalar → masa seç → menüden ürün ekle.';
+    }
+    final screens = g?['ekranlar'] as Map? ?? {};
+    if (screens.isEmpty) {
+      return 'Sol menüden Ana Ekran, Masalar, Mutfak, Menüler, Stoklar, Günler, Raporlar ve Personel’e geçebilirsiniz.';
+    }
+    final lines = [
+      for (final e in screens.entries.take(10)) '• ${e.key}: ${e.value}',
+    ];
+    return 'Orderix ekranları:\n${lines.join('\n')}';
   }
 
   String _stock() {

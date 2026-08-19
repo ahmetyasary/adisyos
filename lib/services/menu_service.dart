@@ -63,17 +63,37 @@ class MenuService extends GetxService {
       try {
         rows = await _db
             .from('menus')
-            .select('id, name, icon_key, menu_items(id, name, price, image_url)')
-            .order('id');
+            .select(
+              'id, name, icon_key, sort_order, menu_items(id, name, price, image_url, sort_order)',
+            )
+            .order('sort_order')
+            .order('sort_order', referencedTable: 'menu_items');
       } catch (_) {
-        rows = await _db
-            .from('menus')
-            .select('id, name, menu_items(id, name, price)')
-            .order('id');
+        try {
+          rows = await _db
+              .from('menus')
+              .select('id, name, icon_key, menu_items(id, name, price, image_url)')
+              .order('id');
+        } catch (_) {
+          rows = await _db
+              .from('menus')
+              .select('id, name, menu_items(id, name, price)')
+              .order('id');
+        }
       }
-      menus.assignAll(rows.cast<Map<String, dynamic>>().map(_rowToMenu).toList());
+      final mapped = rows
+          .cast<Map<String, dynamic>>()
+          .map(_rowToMenu)
+          .toList();
+      mapped.sort((a, b) =>
+          ((a['sortOrder'] as int?) ?? 0).compareTo((b['sortOrder'] as int?) ?? 0));
+      for (final m in mapped) {
+        final items = (m['items'] as List).cast<Map<String, dynamic>>();
+        items.sort((a, b) =>
+            ((a['sortOrder'] as int?) ?? 0).compareTo((b['sortOrder'] as int?) ?? 0));
+      }
+      menus.assignAll(mapped);
       _syncIconsFromMenus();
-      //if (menus.isEmpty && _db.auth.currentUser != null) await _seedDefaults();
     } catch (e) {
       if (kDebugMode) print('[MenuService] load error: $e');
     }
@@ -83,12 +103,14 @@ class MenuService extends GetxService {
         'id': row['id'] as int,
         'name': row['name'] as String,
         'iconKey': (row['icon_key'] as String?) ?? 'restaurant_menu',
+        'sortOrder': (row['sort_order'] as num?)?.toInt() ?? 0,
         'items': ((row['menu_items'] ?? []) as List)
             .map((i) => {
                   'id': i['id'] as int,
                   'name': i['name'] as String,
                   'price': (i['price'] as num).toDouble(),
                   'imageUrl': i['image_url'] as String?,
+                  'sortOrder': (i['sort_order'] as num?)?.toInt() ?? 0,
                 })
             .toList(),
       };
@@ -171,7 +193,12 @@ class MenuService extends GetxService {
     try {
       final row = await _db
           .from('menus')
-          .insert({'name': name, 'icon_key': 'restaurant_menu', 'tenant_id': _tenantId})
+          .insert({
+            'name': name,
+            'icon_key': 'restaurant_menu',
+            'tenant_id': _tenantId,
+            'sort_order': menus.length,
+          })
           .select()
           .single();
 
@@ -180,6 +207,7 @@ class MenuService extends GetxService {
         'id': id,
         'name': name,
         'iconKey': 'restaurant_menu',
+        'sortOrder': menus.length,
         'items': <Map<String, dynamic>>[],
       });
       menuIcons[id] = 'restaurant_menu';
@@ -208,6 +236,7 @@ class MenuService extends GetxService {
     );
     menus.removeAt(index);
     menuIcons.remove(id);
+    _persistMenuOrder();
     // Remove active orders and inventory tracking for every item in this menu.
     for (final item in items) {
       final name = item['name'] as String;
@@ -227,9 +256,16 @@ class MenuService extends GetxService {
     Uint8List? imageBytes,
   }) async {
     final menuId = menus[menuIndex]['id'] as int;
+    final items = menus[menuIndex]['items'] as List;
     final row = await _db
         .from('menu_items')
-        .insert({'menu_id': menuId, 'name': name, 'price': price, 'tenant_id': _tenantId})
+        .insert({
+          'menu_id': menuId,
+          'name': name,
+          'price': price,
+          'tenant_id': _tenantId,
+          'sort_order': items.length,
+        })
         .select()
         .single();
 
@@ -249,6 +285,7 @@ class MenuService extends GetxService {
       'name': name,
       'price': price,
       'imageUrl': imageUrl,
+      'sortOrder': items.length,
     });
     menus.refresh();
   }
@@ -291,6 +328,7 @@ class MenuService extends GetxService {
     final itemName = item['name'] as String;
     items.removeAt(itemIndex);
     menus.refresh();
+    _persistItemOrder(menuIndex);
     // Remove active orders and inventory tracking for this item.
     TableService.to.removeOrdersByItemName(itemName);
     InventoryService.to.removeTracking(itemName);
@@ -298,5 +336,48 @@ class MenuService extends GetxService {
         .delete()
         .eq('id', itemId)
         .catchError((e) => _err('removeMenuItem', e));
+  }
+
+  void reorderMenus(int oldIndex, int newIndex) {
+    if (newIndex > oldIndex) newIndex -= 1;
+    if (oldIndex == newIndex) return;
+    final menu = menus.removeAt(oldIndex);
+    menus.insert(newIndex, menu);
+    menus.refresh();
+    _persistMenuOrder();
+  }
+
+  void reorderItems(int menuIndex, int oldIndex, int newIndex) {
+    if (newIndex > oldIndex) newIndex -= 1;
+    if (oldIndex == newIndex) return;
+    final items = menus[menuIndex]['items'] as List;
+    final item = items.removeAt(oldIndex);
+    items.insert(newIndex, item);
+    menus.refresh();
+    _persistItemOrder(menuIndex);
+  }
+
+  void _persistMenuOrder() {
+    for (var i = 0; i < menus.length; i++) {
+      menus[i]['sortOrder'] = i;
+      _db
+          .from('menus')
+          .update({'sort_order': i})
+          .eq('id', menus[i]['id'] as int)
+          .catchError((e) => _err('persistMenuOrder', e));
+    }
+  }
+
+  void _persistItemOrder(int menuIndex) {
+    final items = menus[menuIndex]['items'] as List;
+    for (var i = 0; i < items.length; i++) {
+      final item = items[i] as Map<String, dynamic>;
+      item['sortOrder'] = i;
+      _db
+          .from('menu_items')
+          .update({'sort_order': i})
+          .eq('id', item['id'] as int)
+          .catchError((e) => _err('persistItemOrder', e));
+    }
   }
 }

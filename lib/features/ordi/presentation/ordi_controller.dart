@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:ui' show Offset;
 
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/features/ordi/data/ordi_actions.dart';
 import 'package:orderix/features/ordi/data/ordi_local_brain.dart';
 import 'package:orderix/features/ordi/data/ordi_repository.dart';
 import 'package:orderix/features/ordi/data/ordi_snapshot.dart';
@@ -51,6 +53,10 @@ class OrdiController extends GetxController {
   Timer? _bubbleHideTimer;
   DateTime? _snoozedUntil;
   bool _historyLoaded = false;
+  List<OrdiToolCall>? _pendingChanges;
+
+  /// Top-left of the Ordi FAB in the overlay, or null to use the layout default.
+  Offset? launcherOffset;
 
   List<String> _suggestions = const [];
   int _suggestionIndex = 0;
@@ -184,9 +190,9 @@ class OrdiController extends GetxController {
     }
 
     messages.add(OrdiMessage.assistant(
-      'Merhaba, ben Ordi. İşletmenizin verilerini okuyup sorularınızı '
-      'yanıtlıyorum.\n\n${OrdiLocalBrain(OrdiSnapshot.build()).summary()}\n\n'
-      'Ciro, masalar, stok, menü ve personel hakkında dilediğinizi sorun.',
+      'Merhaba, ben Ordi. Sorularınızı yanıtlarım; eklemeleri hemen yaparım, '
+      'değişikliklerde onay isterim. Silme yapmam.\n\n'
+      '${OrdiLocalBrain(OrdiSnapshot.build()).summary()}',
       source: OrdiSource.local,
     ));
   }
@@ -207,11 +213,59 @@ class OrdiController extends GetxController {
     _repo.persist(userMessage);
 
     try {
+      if (_pendingChanges != null && ordiIsAffirmative(question)) {
+        final result = await OrdiActionRunner.run(_pendingChanges!);
+        _pendingChanges = null;
+        final reply = OrdiMessage.assistant(
+          result.trim().isEmpty ? 'Onaylanan işlem uygulandı.' : result.trim(),
+          source: OrdiSource.local,
+        );
+        messages.add(reply);
+        _repo.persist(reply);
+        return;
+      }
+      if (_pendingChanges != null && ordiIsNegative(question)) {
+        _pendingChanges = null;
+        final reply = OrdiMessage.assistant(
+          'İşlemi iptal ettim. Başka bir şey yapmamı ister misiniz?',
+          source: OrdiSource.local,
+        );
+        messages.add(reply);
+        _repo.persist(reply);
+        return;
+      }
+      _pendingChanges = null;
+
       // Exclude the just-added question; it is sent separately.
       final priorTurns = messages.sublist(0, messages.length - 1);
       final answer = await _repo.ask(question, priorTurns);
+      var body = answer.text.trim();
+      final split = OrdiActionRunner.split(answer.actions);
+      if (split.adds.isNotEmpty) {
+        final result = await OrdiActionRunner.run(split.adds);
+        body = [
+          if (body.isNotEmpty) body,
+          if (result.trim().isNotEmpty) result.trim(),
+        ].join('\n\n');
+      }
+      if (split.blocked.isNotEmpty) {
+        body = [
+          if (body.isNotEmpty) body,
+          'Silme işlemi yapamam. Desteklenmeyen istekler atlandı.',
+        ].join('\n\n');
+      }
+      if (split.changes.isNotEmpty) {
+        _pendingChanges = split.changes;
+        body = [
+          if (body.isNotEmpty) body,
+          OrdiActionRunner.confirmPrompt(split.changes),
+        ].join('\n\n');
+      }
+      if (body.isEmpty) {
+        body = 'İsteğinizi aldım ama uygulanacak bir işlem çıkmadı.';
+      }
 
-      final reply = OrdiMessage.assistant(answer.text, source: answer.source);
+      final reply = OrdiMessage.assistant(body, source: answer.source);
       messages.add(reply);
       _repo.persist(reply);
     } finally {
@@ -222,6 +276,7 @@ class OrdiController extends GetxController {
   Future<void> clearConversation() async {
     messages.clear();
     _historyLoaded = false;
+    _pendingChanges = null;
     await _repo.clearHistory();
     await ensureHistory();
   }
@@ -231,9 +286,11 @@ class OrdiController extends GetxController {
   void resetForNewSession() {
     messages.clear();
     _historyLoaded = false;
+    _pendingChanges = null;
     _snoozedUntil = null;
     _suggestions = const [];
     _suggestionIndex = 0;
     bubble.value = '';
+    launcherOffset = null;
   }
 }

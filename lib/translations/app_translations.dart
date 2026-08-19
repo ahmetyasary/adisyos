@@ -106,8 +106,12 @@ class AppTranslations extends Translations {
           // Discount
           'apply_discount': 'İndirim Uygula',
           'discount_percent': 'İndirim Yüzdesi (%)',
+          'discount_amount': 'İndirim Tutarı',
+          'discount_mode_percent': '% Yüzde',
+          'discount_mode_amount': 'Miktar',
           'discount_applied': 'İndirim uygulandı',
           'valid_discount': 'Geçerli bir indirim yüzdesi girin (1-100)',
+          'valid_discount_amount': 'Toplamı aşmayan geçerli bir tutar girin',
 
           // Print
           'printing': 'Adisyon yazdırılıyor...',
@@ -130,6 +134,8 @@ class AppTranslations extends Translations {
           'no_menu_defined': 'Tanımlı menü yok',
           'add_item': 'Ürün Ekle',
           'edit_item': 'Ürün Düzenle',
+          'reorder': 'Sırala',
+          'sort_done': 'Tamam',
           'menu_name': 'Menü Adı',
           'item_name': 'Ürün Adı',
           'invalid_price': 'Geçersiz fiyat formatı',
@@ -141,6 +147,9 @@ class AppTranslations extends Translations {
           'default_discount_hint': 'Örn: 10',
           'language': 'Dil',
           'save_settings': 'Kaydet',
+          'nav_order': 'Menü sırası',
+          'nav_order_hint': 'Sol menüyü sürükleyerek sırala',
+          'nav_order_reset': 'Varsayılan',
 
           // Danger zone / Account deletion (App Store 5.1.1(v))
           'danger_zone': 'Hesap Silme',
@@ -361,8 +370,12 @@ class AppTranslations extends Translations {
           // Discount
           'apply_discount': 'Apply Discount',
           'discount_percent': 'Discount Percentage (%)',
+          'discount_amount': 'Discount Amount',
+          'discount_mode_percent': '% Percent',
+          'discount_mode_amount': 'Amount',
           'discount_applied': 'Discount applied',
           'valid_discount': 'Enter a valid discount percentage (1-100)',
+          'valid_discount_amount': 'Enter a valid amount that does not exceed the total',
 
           // Print
           'printing': 'Printing receipt...',
@@ -385,6 +398,8 @@ class AppTranslations extends Translations {
           'no_menu_defined': 'No menu defined',
           'add_item': 'Add Item',
           'edit_item': 'Edit Item',
+          'reorder': 'Reorder',
+          'sort_done': 'Done',
           'menu_name': 'Menu Name',
           'item_name': 'Item Name',
           'invalid_price': 'Invalid price format',
@@ -396,6 +411,9 @@ class AppTranslations extends Translations {
           'default_discount_hint': 'e.g. 10',
           'language': 'Language',
           'save_settings': 'Save',
+          'nav_order': 'Menu order',
+          'nav_order_hint': 'Drag to reorder the side menu',
+          'nav_order_reset': 'Default',
 
           // Danger zone / Account deletion (App Store 5.1.1(v))
           'danger_zone': 'Account Deletion',

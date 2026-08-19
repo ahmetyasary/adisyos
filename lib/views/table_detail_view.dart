@@ -324,6 +324,136 @@ class _TableDetailViewState extends State<TableDetailView> {
     );
   }
 
+  Widget _orderOverflowButton({
+    required String name,
+    required int index,
+    required double unitPrice,
+    required double size,
+  }) {
+    return PopupMenuButton<String>(
+      tooltip: 'İşlemler',
+      padding: EdgeInsets.zero,
+      offset: const Offset(0, 8),
+      color: Colors.white,
+      elevation: 8,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      onSelected: (value) {
+        if (value == 'delete') _confirmDelete(name, index);
+        if (value == 'price') _showChangeLinePrice(name, index, unitPrice);
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(CupertinoIcons.trash, size: 18, color: Color(0xFFFF3B30)),
+              SizedBox(width: 10),
+              Text(
+                'Sil',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFFFF3B30),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'price',
+          child: Row(
+            children: [
+              Icon(CupertinoIcons.pencil, size: 18, color: Color(0xFF1C1C1E)),
+              SizedBox(width: 10),
+              Text(
+                'Fiyat Değiştir',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1C1C1E),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: _chip,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: const Icon(
+          CupertinoIcons.ellipsis_vertical,
+          size: 18,
+          color: _textSecondary,
+        ),
+      ),
+    );
+  }
+
+  void _showChangeLinePrice(String itemName, int index, double current) {
+    final controller = TextEditingController(
+      text: current == current.roundToDouble()
+          ? current.toStringAsFixed(0)
+          : current.toStringAsFixed(2).replaceAll('.', ','),
+    );
+
+    AppDialog.form(
+      title: 'Fiyat Değiştir',
+      confirmText: 'Kaydet',
+      cancelText: 'Vazgeç',
+      onConfirm: () {
+        final parsed = _parseMoney(controller.text);
+        if (parsed == null || parsed <= 0 || parsed > 100000) {
+          AppToast.error('Geçerli bir fiyat girin', title: 'Hata');
+          return;
+        }
+        TableService.to.updateOrderUnitPrice(widget.tableIndex, index, parsed);
+        Get.back();
+        AppToast.success(
+          '“$itemName” bu adisyonda ${SettingsService.cs}${parsed.toStringAsFixed(2)} olarak güncellendi.',
+          title: 'Tamam',
+        );
+      },
+      body: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '“$itemName” için yeni birim fiyat. Menü fiyatı değişmez; yalnızca bu adisyon geçerlidir.',
+            style: const TextStyle(
+              fontSize: 13,
+              height: 1.4,
+              color: Color(0xFF8E8E93),
+            ),
+          ),
+          const SizedBox(height: 14),
+          AppDialogTextField(
+            controller: controller,
+            label: 'Birim fiyat',
+            hintText: '0,00',
+            autofocus: true,
+            textCapitalization: TextCapitalization.none,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  double? _parseMoney(String raw) {
+    var s = raw.trim().replaceAll('₺', '').replaceAll(RegExp(r'\s'), '');
+    s = s.replaceAll(RegExp(r'(tl|TL)$'), '');
+    if (s.contains(',') && s.contains('.')) {
+      s = s.replaceAll('.', '').replaceAll(',', '.');
+    } else if (s.contains(',')) {
+      s = s.replaceAll(',', '.');
+    }
+    return double.tryParse(s);
+  }
+
   Widget _buildMobileOrderTop(BuildContext context) {
     return ColoredBox(
       color: _bg,
@@ -560,21 +690,13 @@ class _TableDetailViewState extends State<TableDetailView> {
                                         ),
                                       ),
                                     ),
-                                  )
-                                : GestureDetector(
-                                    onTap: () => _confirmDelete(name, index),
-                                    child: Container(
-                                      width: 34,
-                                      height: 34,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFF3B30)
-                                            .withOpacity(0.08),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: const Icon(CupertinoIcons.trash,
-                                          size: 18, color: Color(0xFFFF3B30)),
-                                    ),
-                                  ),
+                              )
+                            : _orderOverflowButton(
+                                name: name,
+                                index: index,
+                                unitPrice: price,
+                                size: 34,
+                              ),
                           ],
                         ),
                       ));
@@ -830,66 +952,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                       ),
                     ],
                   )
-                : Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 56,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF3A3A3C),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(18)),
-                            ),
-                            onPressed: () {
-                              final orders =
-                                  TableService.to.getOrders(widget.tableIndex);
-                              if (orders.isEmpty) {
-                                AppToast.warning('empty_no_pay'.tr,
-                                    title: 'warning'.tr);
-                                return;
-                              }
-                              setState(() => _isPartialPayMode = true);
-                            },
-                            child: const Text(
-                              'Parçalı Ödeme Al',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: SizedBox(
-                          height: 56,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _orange,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(18)),
-                            ),
-                            onPressed: _handlePayment,
-                            child: const Text(
-                              'Toplu Ödeme Al',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                : _payActionButtons(height: 56, radius: 18, fontSize: 15),
           ),
         ],
       ),
@@ -1676,9 +1739,7 @@ class _TableDetailViewState extends State<TableDetailView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image — ~60% of card height, proportional
             Expanded(
-              flex: 10,
               child: ClipRRect(
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(20)),
@@ -1694,81 +1755,77 @@ class _TableDetailViewState extends State<TableDetailView> {
                     : _cardGradient(),
               ),
             ),
-            // Info — ~40% of card height
-            Expanded(
-              flex: 7,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  // Compact layout for narrow cards (phone 3-col ~111px wide)
-                  final isCompact = constraints.maxWidth < 140;
-                  final btnSize = isCompact ? 24.0 : 30.0;
-                  final btnRadius = isCompact ? 8.0 : 10.0;
-                  final iconSize = isCompact ? 14.0 : 18.0;
-                  final priceSize = isCompact ? 13.0 : 15.0;
-                  final hPad = isCompact ? 8.0 : 12.0;
-                  return Padding(
-                    padding: EdgeInsets.fromLTRB(hPad, isCompact ? 6 : 8,
-                        isCompact ? 7 : 10, isCompact ? 8 : 10),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          name,
-                          style: TextStyle(
-                            fontSize: isCompact ? 12.0 : 13.0,
-                            color: const Color(0xFF1C1C1E),
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: -0.2,
-                            height: 1.25,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact = constraints.maxWidth < 140;
+                final btnSize = isCompact ? 24.0 : 30.0;
+                final btnRadius = isCompact ? 8.0 : 10.0;
+                final iconSize = isCompact ? 14.0 : 18.0;
+                final priceSize = isCompact ? 13.0 : 15.0;
+                final hPad = isCompact ? 8.0 : 12.0;
+                return Padding(
+                  padding: EdgeInsets.fromLTRB(hPad, isCompact ? 6 : 8,
+                      isCompact ? 7 : 10, isCompact ? 8 : 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        name,
+                        style: TextStyle(
+                          fontSize: isCompact ? 12.0 : 13.0,
+                          color: const Color(0xFF1C1C1E),
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.2,
+                          height: 1.25,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: isCompact ? 6 : 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              price,
+                              style: TextStyle(
+                                fontSize: priceSize,
+                                color: _orange,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: -0.3,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                price,
-                                style: TextStyle(
-                                  fontSize: priceSize,
-                                  color: _orange,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: -0.3,
-                                ),
-                                overflow: TextOverflow.ellipsis,
+                          const SizedBox(width: 4),
+                          Container(
+                            width: btnSize,
+                            height: btnSize,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFFFFBF4D), _orange],
                               ),
+                              borderRadius: BorderRadius.circular(btnRadius),
+                              boxShadow: [
+                                BoxShadow(
+                                    color: _orange.withOpacity(0.40),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3)),
+                              ],
                             ),
-                            const SizedBox(width: 4),
-                            Container(
-                              width: btnSize,
-                              height: btnSize,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [Color(0xFFFFBF4D), _orange],
-                                ),
-                                borderRadius: BorderRadius.circular(btnRadius),
-                                boxShadow: [
-                                  BoxShadow(
-                                      color: _orange.withOpacity(0.40),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 3)),
-                                ],
-                              ),
-                              child: Icon(CupertinoIcons.add,
-                                  color: Colors.white, size: iconSize),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+                            child: Icon(CupertinoIcons.add,
+                                color: Colors.white, size: iconSize),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -2006,19 +2063,11 @@ class _TableDetailViewState extends State<TableDetailView> {
                                       ),
                                     ),
                                   )
-                                : GestureDetector(
-                                    onTap: () => _confirmDelete(name, index),
-                                    child: Container(
-                                      width: 38,
-                                      height: 38,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFF3B30)
-                                            .withOpacity(0.08),
-                                        borderRadius: BorderRadius.circular(11),
-                                      ),
-                                      child: const Icon(CupertinoIcons.trash,
-                                          size: 20, color: Color(0xFFFF3B30)),
-                                    ),
+                                : _orderOverflowButton(
+                                    name: name,
+                                    index: index,
+                                    unitPrice: price,
+                                    size: 38,
                                   ),
                           ],
                         ),
@@ -2265,65 +2314,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                       ),
                     ],
                   )
-                : Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 52,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF3A3A3C),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16)),
-                            ),
-                            onPressed: () {
-                              final orders =
-                                  TableService.to.getOrders(widget.tableIndex);
-                              if (orders.isEmpty) {
-                                AppToast.warning('empty_no_pay'.tr,
-                                    title: 'warning'.tr);
-                                return;
-                              }
-                              setState(() => _isPartialPayMode = true);
-                            },
-                            child: const Text(
-                              'Parçalı Ödeme Al',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: SizedBox(
-                          height: 52,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _orange,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            onPressed: _handlePayment,
-                            child: const Text(
-                              'Toplu Ödeme Al',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                : _payActionButtons(height: 52, radius: 16, fontSize: 14),
           ),
         ],
       ),
@@ -2362,61 +2353,144 @@ class _TableDetailViewState extends State<TableDetailView> {
     }
 
     final TextEditingController discountController = TextEditingController();
+    var isPercent = true;
+    final subtotal = TableService.to.getTotal(widget.tableIndex);
 
     AppDialog.form(
       title: 'apply_discount'.tr,
       confirmText: 'apply'.tr,
       cancelText: 'cancel'.tr,
       onConfirm: () {
-        final discount = double.tryParse(discountController.text);
-        if (discount != null && discount > 0 && discount <= 100) {
-          TableService.to.applyDiscount(widget.tableIndex, discount);
-          Get.back();
-          AppToast.success('discount_applied'.tr, title: 'success'.tr);
+        final value = _parseMoney(discountController.text);
+        if (isPercent) {
+          if (value == null || value <= 0 || value > 100) {
+            AppToast.error('valid_discount'.tr, title: 'error'.tr);
+            return;
+          }
+          TableService.to.applyDiscount(widget.tableIndex, value);
         } else {
-          AppToast.error('valid_discount'.tr, title: 'error'.tr);
+          if (value == null || value <= 0 || value > subtotal) {
+            AppToast.error('valid_discount_amount'.tr, title: 'error'.tr);
+            return;
+          }
+          TableService.to.applyDiscountAmount(widget.tableIndex, value);
         }
+        Get.back();
+        AppToast.success('discount_applied'.tr, title: 'success'.tr);
       },
-      body: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF2F2F7),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'total'.tr,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF8E8E93),
-                    fontWeight: FontWeight.w500,
-                  ),
+      body: StatefulBuilder(
+        builder: (context, setLocal) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2F2F7),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                Text(
-                  '${SettingsService.cs}${TableService.to.getTotal(widget.tableIndex).toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1C1C1E),
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'total'.tr,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF8E8E93),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      '${SettingsService.cs}${subtotal.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1C1C1E),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2F2F7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _discountModeChip(
+                        label: 'discount_mode_percent'.tr,
+                        selected: isPercent,
+                        onTap: () => setLocal(() => isPercent = true),
+                      ),
+                    ),
+                    Expanded(
+                      child: _discountModeChip(
+                        label: 'discount_mode_amount'.tr,
+                        selected: !isPercent,
+                        onTap: () => setLocal(() => isPercent = false),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              AppDialogTextField(
+                controller: discountController,
+                label: isPercent
+                    ? 'discount_percent'.tr
+                    : '${'discount_amount'.tr} (${SettingsService.cs})',
+                hintText: isPercent ? '10' : '100',
+                autofocus: true,
+                textCapitalization: TextCapitalization.none,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _discountModeChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+          boxShadow: selected
+              ? const [
+                  BoxShadow(
+                    color: Color(0x14000000),
+                    blurRadius: 6,
+                    offset: Offset(0, 1),
+                  ),
+                ]
+              : null,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: selected ? _orange : const Color(0xFF8E8E93),
           ),
-          const SizedBox(height: 14),
-          AppDialogTextField(
-            controller: discountController,
-            label: 'discount_percent'.tr,
-            autofocus: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -3309,16 +3383,89 @@ class _TableDetailViewState extends State<TableDetailView> {
     );
   }
 
+  Widget _payActionButtons({
+    required double height,
+    required double radius,
+    required double fontSize,
+  }) {
+    return Obx(() {
+      final canPay =
+          TableService.to.getTotalWithDiscount(widget.tableIndex) > 0.005;
+      final mutedDark = const Color(0xFF3A3A3C).withValues(alpha: 0.38);
+      final mutedOrange = _orange.withValues(alpha: 0.38);
+      return Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: height,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      canPay ? const Color(0xFF3A3A3C) : mutedDark,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: mutedDark,
+                  disabledForegroundColor: Colors.white70,
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(radius),
+                  ),
+                ),
+                onPressed: canPay
+                    ? () => setState(() => _isPartialPayMode = true)
+                    : null,
+                child: Text(
+                  'Parçalı Ödeme Al',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: fontSize,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: SizedBox(
+              height: height,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: canPay ? _orange : mutedOrange,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: mutedOrange,
+                  disabledForegroundColor: Colors.white70,
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(radius),
+                  ),
+                ),
+                onPressed: canPay ? _handlePayment : null,
+                child: Text(
+                  'Toplu Ödeme Al',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: fontSize,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
   void _handlePayment() {
     final orders = TableService.to.getOrders(widget.tableIndex);
-    if (orders.isEmpty) {
+    final finalTotal = TableService.to.getTotalWithDiscount(widget.tableIndex);
+    if (orders.isEmpty || finalTotal <= 0) {
       AppToast.warning('empty_no_pay'.tr, title: 'warning'.tr);
       return;
     }
 
     final total = TableService.to.getTotal(widget.tableIndex);
     final discount = TableService.to.getDiscount(widget.tableIndex);
-    final finalTotal = TableService.to.getTotalWithDiscount(widget.tableIndex);
     String selectedMethod = 'cash';
     bool splitEnabled = false;
     int splitCount = 2;
