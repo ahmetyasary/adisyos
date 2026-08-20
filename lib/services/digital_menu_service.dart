@@ -22,8 +22,7 @@ class DigitalMenuService extends GetxService {
 
   String? get _tenantId => _db.auth.currentUser?.id;
 
-  static const _pagesBase =
-      'https://ahmetyasary.github.io/adisyos/digital-menu.html';
+  static const _pagesBase = 'https://menu.orderix.tr/';
 
   /// Public URL for [tableId] / [tableName]. Omitting both yields the generic
   /// menu link (no table context).
