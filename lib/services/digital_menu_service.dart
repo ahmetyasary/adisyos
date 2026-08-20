@@ -16,16 +16,31 @@ class DigitalMenuService extends GetxService {
   final RxString token = ''.obs;
   final RxList<int> selectedMenuIds = <int>[].obs;
 
+  /// Selected table for the QR currently shown in the admin UI (not persisted
+  /// as a single global choice — each table gets its own link/QR).
+  final RxnInt selectedTableId = RxnInt();
+
   String? get _tenantId => _db.auth.currentUser?.id;
 
-  /// Public URL customers open after scanning the QR.
-  ///
-  /// Hosted on GitHub Pages (not Supabase) because supabase.co forces HTML to
-  /// `text/plain` and Safari shows source / downloads `.txt`.
-  String get publicUrl {
+  static const _pagesBase =
+      'https://ahmetyasary.github.io/adisyos/digital-menu.html';
+
+  /// Public URL for [tableId] / [tableName]. Omitting both yields the generic
+  /// menu link (no table context).
+  String publicUrl({int? tableId, String? tableName}) {
     final t = token.value.trim();
     if (t.isEmpty) return '';
-    return 'https://ahmetyasary.github.io/adisyos/digital-menu.html?t=$t';
+    final params = <String, String>{'t': t};
+    if (tableId != null) params['table'] = '$tableId';
+    final name = tableName?.trim() ?? '';
+    if (name.isNotEmpty) params['name'] = name;
+    return Uri.parse(_pagesBase).replace(queryParameters: params).toString();
+  }
+
+  /// Compact Code128 payload for printed stickers (future order binding).
+  String barcodePayload({required int tableId}) {
+    final t = token.value.trim();
+    return 'OX:$t:$tableId';
   }
 
   @override
@@ -39,6 +54,7 @@ class DigitalMenuService extends GetxService {
       if (data.event == AuthChangeEvent.signedOut) {
         token.value = '';
         selectedMenuIds.clear();
+        selectedTableId.value = null;
         enabled.value = true;
       }
     });

@@ -15,6 +15,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Robot
 .title-wrap{min-width:0}
 .title{font-size:20px;font-weight:800;letter-spacing:-.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .subtitle{margin-top:2px;font-size:12px;color:var(--t2)}
+.badge{display:none;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:var(--ol);color:var(--or);font-size:12px;font-weight:700;white-space:nowrap}
 .tabs-wrap{background:var(--card);border-bottom:1px solid var(--bd);overflow-x:auto;scrollbar-width:none}
 .tabs-wrap::-webkit-scrollbar{display:none}
 .tabs{display:flex;gap:8px;width:max-content;padding:10px 16px 12px}
@@ -47,6 +48,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Robot
       <div id="companyName" class="title">Dijital Menü</div>
       <div class="subtitle">Dijital Menü</div>
     </div>
+    <div id="tableBadge" class="badge"></div>
   </div>
 </header>
 <div id="tabsWrap" class="tabs-wrap" hidden><div id="tabs" class="tabs"></div></div>
@@ -61,7 +63,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Robot
 const API = 'https://kngooyurybseyprunvzr.supabase.co/functions/v1/digital-menu';
 const esc = v => String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const $ = id => document.getElementById(id);
-const token = (new URLSearchParams(location.search).get('t') || '').trim();
+const P = new URLSearchParams(location.search);
+const token = (P.get('t') || '').trim();
+const tableId = (P.get('table') || '').trim();
+const tableName = (P.get('name') || '').trim();
 let ai = 0;
 
 function state(icon, t, s) {
@@ -73,6 +78,11 @@ function state(icon, t, s) {
 function render(d) {
   $('companyName').textContent = d.companyName || 'Dijital Menü';
   document.title = (d.companyName || 'Menü') + ' · Orderix';
+  if (tableName || tableId) {
+    const badge = $('tableBadge');
+    badge.style.display = 'inline-flex';
+    badge.textContent = tableName || ('Masa ' + tableId);
+  }
   const menus = d.menus || [];
   if (!menus.length) {
     state('🍽️', 'Menü henüz eklenmedi', 'Lütfen daha sonra tekrar kontrol edin.');

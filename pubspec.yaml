@@ -50,6 +50,7 @@ dependencies:
   url_launcher: ^6.3.0
   purchases_flutter: ^10.2.2
   qr_flutter: ^4.1.0
+  barcode: ^2.2.9
 
 dev_dependencies:
   flutter_test:
