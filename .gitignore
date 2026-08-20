@@ -4,6 +4,9 @@ env.json
 .env.server.local
 .env
 
+# Supabase CLI local cache (project ref, pooler URL, versions)
+supabase/.temp/
+
 # Miscellaneous
 *.class
 *.log
