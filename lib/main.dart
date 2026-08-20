@@ -14,6 +14,7 @@ import 'package:orderix/services/inventory_service.dart';
 import 'package:orderix/services/shift_service.dart';
 import 'package:orderix/services/day_service.dart';
 import 'package:orderix/services/menu_service.dart';
+import 'package:orderix/services/digital_menu_service.dart';
 import 'package:orderix/services/table_service.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/services/staff_service.dart';
@@ -78,6 +79,7 @@ Future<void> main() async {
   Get.put(ShiftService());
   Get.put(DayService());
   Get.put(MenuService());
+  Get.put(DigitalMenuService());
   Get.put(TableService());
 
   // Ordi reads the services above to build its context snapshot, so it must be

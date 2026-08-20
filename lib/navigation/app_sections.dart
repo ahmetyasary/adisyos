@@ -7,6 +7,7 @@ import 'package:orderix/views/dashboard_view.dart';
 import 'package:orderix/views/tables_view.dart';
 import 'package:orderix/views/kitchen_display_view.dart';
 import 'package:orderix/views/menu_management_view.dart';
+import 'package:orderix/views/digital_menu_view.dart';
 import 'package:orderix/views/inventory_management_view.dart';
 import 'package:orderix/views/day_management_view.dart';
 import 'package:orderix/views/reports_view.dart';
@@ -76,6 +77,13 @@ final List<AppSection> appSections = [
     icon: CupertinoIcons.square_list_fill,
     roles: const [AppRole.admin],
     builder: () => const MenuManagementView(embedded: true),
+  ),
+  AppSection(
+    id: 'digital_menu',
+    title: () => 'digital_menu'.tr,
+    icon: CupertinoIcons.qrcode,
+    roles: const [AppRole.admin],
+    builder: () => const DigitalMenuView(embedded: true),
   ),
   AppSection(
     id: 'inventory',

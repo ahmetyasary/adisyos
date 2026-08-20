@@ -33,6 +33,7 @@ class AppTranslations extends Translations {
 
           // Menu categories (legacy keys)
           'menu': 'Menüler',
+          'digital_menu': 'Dijital Menü',
           'drinks': 'İçecekler',
           'desserts': 'Tatlılar',
           'appetizers': 'Atıştırmalıklar',
@@ -296,6 +297,7 @@ class AppTranslations extends Translations {
 
           // Menu categories
           'menu': 'Menu',
+          'digital_menu': 'Digital Menu',
           'drinks': 'Drinks',
           'desserts': 'Desserts',
           'appetizers': 'Appetizers',

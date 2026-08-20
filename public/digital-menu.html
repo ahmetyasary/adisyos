@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="theme-color" content="#FF9500">
+<title>Dijital Menü</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--or:#FF9500;--ol:#FFF4E0;--bg:#F9F9FB;--card:#fff;--t1:#1C1C1E;--t2:#8E8E93;--bd:#E5E5EA}
+html{-webkit-text-size-adjust:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased;min-height:100vh}
+.header{position:sticky;top:0;z-index:10;background:var(--card);padding-top:env(safe-area-inset-top,0);border-bottom:1px solid var(--bd)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px}
+.title-wrap{min-width:0}
+.title{font-size:20px;font-weight:800;letter-spacing:-.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.subtitle{margin-top:2px;font-size:12px;color:var(--t2)}
+.tabs-wrap{background:var(--card);border-bottom:1px solid var(--bd);overflow-x:auto;scrollbar-width:none}
+.tabs-wrap::-webkit-scrollbar{display:none}
+.tabs{display:flex;gap:8px;width:max-content;padding:10px 16px 12px}
+.tab{border:none;border-radius:999px;padding:8px 14px;background:#F2F2F7;color:var(--t2);font:inherit;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.tab.active{background:var(--or);color:#fff}
+.cnt{padding:1px 6px;border-radius:999px;font-size:10px;font-weight:800;background:rgba(0,0,0,.08)}
+.tab.active .cnt{background:rgba(255,255,255,.25)}
+.content{padding:16px 16px 56px;max-width:640px;margin:0 auto}
+.sec{display:none}.sec.active{display:block}
+.card{display:flex;align-items:center;background:var(--card);border-radius:16px;margin-bottom:10px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.055),0 1px 3px rgba(0,0,0,.04)}
+.media{width:82px;height:82px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--ol);overflow:hidden}
+.media img{width:100%;height:100%;object-fit:cover;display:block}
+.ico{font-size:30px;line-height:1}
+.info{flex:1;min-width:0;padding:0 12px}
+.name{font-size:15px;font-weight:600;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.price{margin-right:14px;padding:5px 12px;border-radius:999px;background:var(--ol);color:var(--or);font-size:13px;font-weight:800;white-space:nowrap}
+.state{min-height:calc(100vh - 96px);display:flex;align-items:center;justify-content:center;text-align:center;padding:32px 20px;color:var(--t2)}
+.state-card{max-width:320px}
+.state-ico{font-size:56px;margin-bottom:14px}
+.state-t{font-size:18px;font-weight:800;color:var(--t1)}
+.state-s{margin-top:8px;font-size:14px;line-height:1.5}
+.footer{padding:16px 0 4px;text-align:center;color:#C7C7CC;font-size:11px;letter-spacing:.2px}
+@media(min-width:600px){.header-inner{padding:18px 32px}.tabs{padding:12px 24px 14px}.content{padding:20px 32px 72px}}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="header-inner">
+    <div class="title-wrap">
+      <div id="companyName" class="title">Dijital Menü</div>
+      <div class="subtitle">Dijital Menü</div>
+    </div>
+  </div>
+</header>
+<div id="tabsWrap" class="tabs-wrap" hidden><div id="tabs" class="tabs"></div></div>
+<main id="app" class="content">
+  <div class="state"><div class="state-card">
+    <div class="state-ico">⏳</div>
+    <div class="state-t">Menü yükleniyor</div>
+    <div class="state-s">Lütfen bekleyin…</div>
+  </div></div>
+</main>
+<script>
+const API = 'https://kngooyurybseyprunvzr.supabase.co/functions/v1/digital-menu';
+const esc = v => String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const $ = id => document.getElementById(id);
+const token = (new URLSearchParams(location.search).get('t') || '').trim();
+let ai = 0;
+
+function state(icon, t, s) {
+  $('tabsWrap').hidden = true;
+  $('app').innerHTML = '<div class="state"><div class="state-card"><div class="state-ico">' + icon +
+    '</div><div class="state-t">' + esc(t) + '</div><div class="state-s">' + esc(s) + '</div></div></div>';
+}
+
+function render(d) {
+  $('companyName').textContent = d.companyName || 'Dijital Menü';
+  document.title = (d.companyName || 'Menü') + ' · Orderix';
+  const menus = d.menus || [];
+  if (!menus.length) {
+    state('🍽️', 'Menü henüz eklenmedi', 'Lütfen daha sonra tekrar kontrol edin.');
+    return;
+  }
+  $('tabsWrap').hidden = false;
+  $('tabs').innerHTML = menus.map((m, i) =>
+    '<button class="tab' + (i === 0 ? ' active' : '') + '" data-i="' + i + '">' +
+    esc(m.name) + ' <span class="cnt">' + (m.items || []).length + '</span></button>'
+  ).join('');
+  $('app').innerHTML = menus.map((m, i) => {
+    const items = m.items || [];
+    if (!items.length) {
+      return '<div class="sec' + (i === 0 ? ' active' : '') + '" data-i="' + i +
+        '"><div class="state" style="min-height:280px"><div class="state-card"><div class="state-ico">🍽️</div>' +
+        '<div class="state-t">Bu kategoride ürün yok</div></div></div></div>';
+    }
+    return '<div class="sec' + (i === 0 ? ' active' : '') + '" data-i="' + i + '">' +
+      items.map(it =>
+        '<div class="card"><div class="media">' +
+        (it.imageUrl
+          ? '<img src="' + esc(it.imageUrl) + '" alt="' + esc(it.name) +
+            '" onerror="this.replaceWith(Object.assign(document.createElement(\'div\'),{className:\'ico\',textContent:\'🍽️\'}))">'
+          : '<div class="ico">🍽️</div>') +
+        '</div><div class="info"><div class="name">' + esc(it.name) +
+        '</div></div><div class="price">' + esc(d.currency || '₺') +
+        Number(it.price).toFixed(2) + '</div></div>'
+      ).join('') + '</div>';
+  }).join('') + '<div class="footer">Orderix ile güçlendirildi</div>';
+  document.querySelectorAll('.tab').forEach(b => b.onclick = () => { ai = +b.dataset.i; sync(); });
+}
+
+function sync() {
+  document.querySelectorAll('.tab').forEach((b, i) => b.classList.toggle('active', i === ai));
+  document.querySelectorAll('.sec').forEach((s, i) => s.classList.toggle('active', i === ai));
+  const t = document.querySelector('.tab[data-i="' + ai + '"]');
+  if (t) t.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+}
+
+(async () => {
+  if (!token) {
+    state('⚠️', 'Menü bağlantısı eksik', 'QR kodunu yeniden oluşturun.');
+    return;
+  }
+  try {
+    const r = await fetch(API + '?t=' + encodeURIComponent(token), {
+      headers: { Accept: 'application/json' }
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+    render(data);
+  } catch (e) {
+    console.error(e);
+    state('⚠️', 'Menü yüklenemedi', e.message || 'Bağlantıyı kontrol edin.');
+  }
+})();
+</script>
+</body>
+</html>
