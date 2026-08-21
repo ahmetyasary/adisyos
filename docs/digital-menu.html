@@ -7,9 +7,9 @@
 <title>Dijital Menü</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--or:#FF9500;--ol:#FFF4E0;--bg:#F9F9FB;--card:#fff;--t1:#1C1C1E;--t2:#8E8E93;--bd:#E5E5EA}
+:root{--or:#FF9500;--ol:#FFF4E0;--bg:#F9F9FB;--card:#fff;--t1:#1C1C1E;--t2:#8E8E93;--bd:#E5E5EA;--ok:#34C759}
 html{-webkit-text-size-adjust:100%}
-body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased;min-height:100vh}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased;min-height:100vh;padding-bottom:88px}
 .header{position:sticky;top:0;z-index:10;background:var(--card);padding-top:env(safe-area-inset-top,0);border-bottom:1px solid var(--bd)}
 .header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px}
 .title-wrap{min-width:0}
@@ -23,9 +23,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Robot
 .tab.active{background:var(--or);color:#fff}
 .cnt{padding:1px 6px;border-radius:999px;font-size:10px;font-weight:800;background:rgba(0,0,0,.08)}
 .tab.active .cnt{background:rgba(255,255,255,.25)}
-.content{padding:16px 16px 56px;max-width:640px;margin:0 auto}
+.content{padding:16px 16px 24px;max-width:640px;margin:0 auto}
 .sec{display:none}.sec.active{display:block}
-.card{display:flex;align-items:center;background:var(--card);border-radius:16px;margin-bottom:10px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.055),0 1px 3px rgba(0,0,0,.04)}
+.card{display:flex;align-items:center;background:var(--card);border-radius:16px;margin-bottom:10px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.055),0 1px 3px rgba(0,0,0,.04);border:none;width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .media{width:82px;height:82px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--ol);overflow:hidden}
 .media img{width:100%;height:100%;object-fit:cover;display:block}
 .ico{font-size:30px;line-height:1}
@@ -38,7 +38,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Robot
 .state-t{font-size:18px;font-weight:800;color:var(--t1)}
 .state-s{margin-top:8px;font-size:14px;line-height:1.5}
 .footer{padding:16px 0 4px;text-align:center;color:#C7C7CC;font-size:11px;letter-spacing:.2px}
-@media(min-width:600px){.header-inner{padding:18px 32px}.tabs{padding:12px 24px 14px}.content{padding:20px 32px 72px}}
+.cart-bar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0));background:linear-gradient(180deg,rgba(249,249,251,0),var(--bg) 28%);pointer-events:none}
+.cart-bar>*{pointer-events:auto}
+.cart-btn{display:none;width:100%;max-width:640px;margin:0 auto;border:none;border-radius:16px;padding:14px 16px;background:var(--or);color:#fff;font:inherit;font-size:15px;font-weight:800;box-shadow:0 8px 24px rgba(255,149,0,.35);cursor:pointer}
+.cart-btn.show{display:flex;align-items:center;justify-content:space-between}
+.sheet{position:fixed;inset:0;z-index:30;display:none;align-items:flex-end;background:rgba(0,0,0,.35)}
+.sheet.open{display:flex}
+.sheet-panel{width:100%;max-width:640px;margin:0 auto;background:var(--card);border-radius:20px 20px 0 0;padding:12px 16px calc(16px + env(safe-area-inset-bottom,0));max-height:85vh;overflow:auto}
+.handle{width:36px;height:4px;border-radius:2px;background:var(--bd);margin:4px auto 12px}
+.sheet-title{font-size:17px;font-weight:800;margin-bottom:12px}
+.line{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.line-name{font-size:14px;font-weight:600;flex:1;min-width:0}
+.qty{display:flex;align-items:center;gap:8px}
+.qty button{width:32px;height:32px;border-radius:10px;border:1px solid var(--bd);background:#F2F2F7;font-size:18px;font-weight:700;cursor:pointer}
+.note{width:100%;min-height:72px;margin:12px 0;padding:12px;border-radius:12px;border:1px solid var(--bd);font:inherit;font-size:14px;resize:vertical}
+.send{width:100%;border:none;border-radius:14px;padding:14px;background:var(--or);color:#fff;font:inherit;font-size:15px;font-weight:800;cursor:pointer}
+.send:disabled{opacity:.55}
+.ok-banner{display:none;margin-bottom:12px;padding:12px;border-radius:12px;background:#E8F8EE;color:#1B7A3A;font-size:13px;font-weight:600}
+.warn{margin:0 0 10px;padding:10px 12px;border-radius:12px;background:var(--ol);color:#9A5B00;font-size:12px;line-height:1.4}
+@media(min-width:600px){.header-inner{padding:18px 32px}.tabs{padding:12px 24px 14px}.content{padding:20px 32px 24px}}
 </style>
 </head>
 <body>
@@ -59,6 +77,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Robot
     <div class="state-s">Lütfen bekleyin…</div>
   </div></div>
 </main>
+<div class="cart-bar"><button id="cartBtn" class="cart-btn" type="button"><span id="cartLabel">Sepet</span><span id="cartTotal"></span></button></div>
+<div id="sheet" class="sheet" aria-hidden="true">
+  <div class="sheet-panel">
+    <div class="handle"></div>
+    <div class="sheet-title">Sepetiniz</div>
+    <div id="okBanner" class="ok-banner"></div>
+    <div id="noTableWarn" class="warn" hidden>Sipariş için masa QR kodunu kullanın.</div>
+    <div id="cartLines"></div>
+    <textarea id="note" class="note" placeholder="İsteğiniz var mı? (az pişmiş, sos ayrı…)" maxlength="500"></textarea>
+    <button id="sendBtn" class="send" type="button">Siparişi gönder</button>
+  </div>
+</div>
 <script>
 const API = 'https://kngooyurybseyprunvzr.supabase.co/functions/v1/digital-menu';
 const esc = v => String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -68,14 +98,119 @@ const token = (P.get('t') || '').trim();
 const tableId = (P.get('table') || '').trim();
 const tableName = (P.get('name') || '').trim();
 let ai = 0;
+let currency = '₺';
+/** @type {Record<string, {id:any,name:string,price:number,qty:number}>} */
+const cart = {};
 
 function state(icon, t, s) {
   $('tabsWrap').hidden = true;
+  $('cartBtn').classList.remove('show');
   $('app').innerHTML = '<div class="state"><div class="state-card"><div class="state-ico">' + icon +
     '</div><div class="state-t">' + esc(t) + '</div><div class="state-s">' + esc(s) + '</div></div></div>';
 }
 
+function cartCount() {
+  return Object.values(cart).reduce((n, i) => n + i.qty, 0);
+}
+function cartSum() {
+  return Object.values(cart).reduce((n, i) => n + i.qty * i.price, 0);
+}
+function keyOf(it) { return String(it.id != null ? it.id : it.name); }
+
+function syncCartBar() {
+  const n = cartCount();
+  const btn = $('cartBtn');
+  if (n <= 0) { btn.classList.remove('show'); return; }
+  btn.classList.add('show');
+  $('cartLabel').textContent = 'Sepet · ' + n + ' ürün';
+  $('cartTotal').textContent = currency + cartSum().toFixed(2);
+}
+
+function addItem(it) {
+  const k = keyOf(it);
+  if (!cart[k]) cart[k] = { id: it.id, name: it.name, price: Number(it.price), qty: 0 };
+  cart[k].qty = Math.min(99, cart[k].qty + 1);
+  syncCartBar();
+}
+
+function setQty(k, qty) {
+  if (!cart[k]) return;
+  if (qty <= 0) delete cart[k];
+  else cart[k].qty = Math.min(99, qty);
+  renderSheetLines();
+  syncCartBar();
+}
+
+function renderSheetLines() {
+  const lines = Object.entries(cart);
+  if (!lines.length) {
+    $('cartLines').innerHTML = '<div style="color:var(--t2);font-size:14px;padding:8px 0">Sepet boş</div>';
+    $('sendBtn').disabled = true;
+    return;
+  }
+  $('cartLines').innerHTML = lines.map(([k, it]) =>
+    '<div class="line"><div class="line-name">' + esc(it.name) +
+    '<div style="color:var(--t2);font-size:12px;font-weight:500;margin-top:2px">' +
+    currency + Number(it.price).toFixed(2) + '</div></div><div class="qty">' +
+    '<button type="button" data-dec="' + esc(k) + '">−</button><span>' + it.qty +
+    '</span><button type="button" data-inc="' + esc(k) + '">+</button></div></div>'
+  ).join('');
+  $('sendBtn').disabled = !tableId;
+  $('cartLines').querySelectorAll('[data-dec]').forEach(b => b.onclick = () => setQty(b.dataset.dec, cart[b.dataset.dec].qty - 1));
+  $('cartLines').querySelectorAll('[data-inc]').forEach(b => b.onclick = () => setQty(b.dataset.inc, cart[b.dataset.inc].qty + 1));
+}
+
+function openSheet() {
+  $('noTableWarn').hidden = !!tableId;
+  $('okBanner').style.display = 'none';
+  renderSheetLines();
+  $('sheet').classList.add('open');
+  $('sheet').setAttribute('aria-hidden', 'false');
+}
+function closeSheet() {
+  $('sheet').classList.remove('open');
+  $('sheet').setAttribute('aria-hidden', 'true');
+}
+
+async function sendOrder() {
+  if (!tableId) return;
+  const items = Object.values(cart).map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty }));
+  if (!items.length) return;
+  const btn = $('sendBtn');
+  btn.disabled = true;
+  btn.textContent = 'Gönderiliyor…';
+  try {
+    const r = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        t: token,
+        tableId: Number(tableId),
+        tableName,
+        note: $('note').value.trim(),
+        items,
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+    Object.keys(cart).forEach(k => delete cart[k]);
+    $('note').value = '';
+    syncCartBar();
+    renderSheetLines();
+    const banner = $('okBanner');
+    banner.style.display = 'block';
+    banner.textContent = data.message || 'Siparişiniz alındı. Onay bekleniyor.';
+    btn.textContent = 'Siparişi gönder';
+    setTimeout(closeSheet, 1600);
+  } catch (e) {
+    alert(e.message || 'Sipariş gönderilemedi');
+    btn.disabled = !tableId || cartCount() === 0;
+    btn.textContent = 'Siparişi gönder';
+  }
+}
+
 function render(d) {
+  currency = d.currency || '₺';
   $('companyName').textContent = d.companyName || 'Dijital Menü';
   document.title = (d.companyName || 'Menü') + ' · Orderix';
   if (tableName || tableId) {
@@ -101,18 +236,26 @@ function render(d) {
         '<div class="state-t">Bu kategoride ürün yok</div></div></div></div>';
     }
     return '<div class="sec' + (i === 0 ? ' active' : '') + '" data-i="' + i + '">' +
-      items.map(it =>
-        '<div class="card"><div class="media">' +
+      items.map((it, j) =>
+        '<button type="button" class="card" data-mi="' + i + '" data-ii="' + j + '"><div class="media">' +
         (it.imageUrl
           ? '<img src="' + esc(it.imageUrl) + '" alt="' + esc(it.name) +
             '" onerror="this.replaceWith(Object.assign(document.createElement(\'div\'),{className:\'ico\',textContent:\'🍽️\'}))">'
           : '<div class="ico">🍽️</div>') +
         '</div><div class="info"><div class="name">' + esc(it.name) +
-        '</div></div><div class="price">' + esc(d.currency || '₺') +
-        Number(it.price).toFixed(2) + '</div></div>'
+        '</div><div style="margin-top:4px;font-size:12px;color:var(--t2);font-weight:600">Ekle</div></div><div class="price">' +
+        esc(currency) + Number(it.price).toFixed(2) + '</div></button>'
       ).join('') + '</div>';
   }).join('') + '<div class="footer">Orderix ile güçlendirildi</div>';
+  window.__menus = menus;
   document.querySelectorAll('.tab').forEach(b => b.onclick = () => { ai = +b.dataset.i; sync(); });
+  document.querySelectorAll('.card[data-mi]').forEach(b => {
+    b.onclick = () => {
+      const m = window.__menus[+b.dataset.mi];
+      const it = m && m.items && m.items[+b.dataset.ii];
+      if (it) addItem(it);
+    };
+  });
 }
 
 function sync() {
@@ -121,6 +264,10 @@ function sync() {
   const t = document.querySelector('.tab[data-i="' + ai + '"]');
   if (t) t.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
 }
+
+$('cartBtn').onclick = openSheet;
+$('sheet').onclick = (e) => { if (e.target === $('sheet')) closeSheet(); };
+$('sendBtn').onclick = sendOrder;
 
 (async () => {
   if (!token) {

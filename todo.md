@@ -1,18 +1,27 @@
 #Yapılacaklar
 
 -Dashboard ekranı güzelliştirilecek (widget mantığı olabilir.drag&drop)
--Yapay zeka ikonu üstlerde olunca kendi kendine konuşmaları alta gelsin. 
---ikonu yer değişikliği olunca titreşim. iphone'da haptic olsun.
-
 -pos entegrasyonu
--adisyon yazıcı çıktı düzenleme olsun
 -getir,trendyol,yemeksepeti entegrasyonu
--dijital menü üzerinden sipariş oluşturulsun. uygulama kısmındaki soldaki menüde "onay bekleyen siparişler" yada bekleyen siparişler olsun. onaylanınca masaboş ise direkt o ürünle masaya aktarılsın.
 
--Günü Bitir onaylandığında (hüzünlü) tık tık tıık şeklinden titreşim haptic olsun
--Güne başlarken mutlu bir haptic olsun.
+-yazdırma önizlemesi✅
 
--ödeme alınca kısa ve mutlu haptic olsun.
--yapayzeka butonunu ayarlardan gizleme olsun. buton boyutunu 3 seçenekte seçebilsin
+-dijital menü üzerinden sipariş + bekleyen siparişler + onay/masaya aktarım ✅ (canlı HTML: menu.orderix.tr index yükle)
 
--ödeme tiplerine nakit, kart, havale, yemek kartları ekleyebilsin ve raporlardada görelim
+-haptic olan her şeye ses ekle. ayarlardan kapatılabilsin. ✅
+
+
+-adisyon yazıcı çıktı düzenleme olsun ✅
+
+-Günü Bitir onaylandığında (hüzünlü) tık tık tıık şeklinden titreşim haptic olsun ✅
+-Güne başlarken mutlu bir haptic olsun. ✅
+
+
+-Yapay zeka ikonu üstlerde olunca kendi kendine konuşmaları alta gelsin. ✅
+--ikonu yer değişikliği olunca titreşim. haptic olsun. ✅
+
+-ödeme tamamlanınca kısa ve mutlu haptic(titreşim) olsun. genel olarak uygulama içi titreşimleri ayarlardan kapatabilsin ✅
+
+-yapay zeka butonunu ayarlardan gizleme olsun. buton boyutunu 3 (küçük, orta,büyük)seçenekte seçebilsin ✅
+
+-ödeme tipleri: nakit, kart, havale var. ama başka ödeme tipleride ekleyebilsin. örnek; yemek kartları ekleyebilsin ve bunlarıda raporlardada görelim. Ödeme tipleri ekleme menüsünü Ayarlar kısmında bir menü olsun. ✅

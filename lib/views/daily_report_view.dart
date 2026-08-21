@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:orderix/models/payment_type.dart';
 import 'package:orderix/services/sales_history_service.dart';
 import 'package:orderix/services/table_service.dart';
 import 'package:orderix/services/section_service.dart';
@@ -264,31 +265,17 @@ class DailyReportView extends StatelessWidget {
 
   Widget _buildPaymentBreakdown(
       Map<String, double> totals, double grandTotal, String cs) {
-    final methods = [
-      {
-        'key': 'cash',
-        'label': 'pay_cash',
-        'icon': CupertinoIcons.money_dollar,
-        'color': const Color(0xFF52C97F)
-      },
-      {
-        'key': 'card',
-        'label': 'pay_card',
-        'icon': CupertinoIcons.creditcard_fill,
-        'color': const Color(0xFF5DADE2)
-      },
-      {
-        'key': 'transfer',
-        'label': 'pay_transfer',
-        'icon': CupertinoIcons.building_2_fill,
-        'color': const Color(0xFFAB84F5)
-      },
+    final configured = SettingsService.to.paymentTypes.toList();
+    final keys = <String>[
+      ...configured.map((t) => t.id),
+      ...totals.keys.where((k) => !configured.any((t) => t.id == k)),
     ];
     return Column(
-      children: methods.map((m) {
-        final amount = totals[m['key'] as String] ?? 0.0;
+      children: keys.map((key) {
+        final amount = totals[key] ?? 0.0;
         final fraction = grandTotal > 0 ? amount / grandTotal : 0.0;
-        final color = m['color'] as Color;
+        final (icon, color) = paymentTypeVisual(key);
+        final label = SettingsService.to.paymentMethodLabel(key);
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Row(
@@ -299,7 +286,7 @@ class DailyReportView extends StatelessWidget {
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(m['icon'] as IconData, color: color, size: 18),
+                child: Icon(icon, color: color, size: 18),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -309,7 +296,7 @@ class DailyReportView extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text((m['label'] as String).tr,
+                        Text(label,
                             style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -658,19 +645,8 @@ class _PayMethodBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (label, icon, color) = switch (method) {
-      'card' => (
-          'Kart',
-          CupertinoIcons.creditcard_fill,
-          const Color(0xFF5DADE2)
-        ),
-      'transfer' => (
-          'Havale',
-          CupertinoIcons.building_2_fill,
-          const Color(0xFFAB84F5)
-        ),
-      _ => ('Nakit', CupertinoIcons.money_dollar, const Color(0xFF52C97F)),
-    };
+    final (icon, color) = paymentTypeVisual(method);
+    final label = SettingsService.to.paymentMethodLabel(method);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(

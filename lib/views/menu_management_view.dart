@@ -125,13 +125,6 @@ class _MenuManagementViewState extends State<MenuManagementView> {
     if (ok) MenuService.to.removeMenu(menuIndex);
   }
 
-  void _showAddItemDialog(int menuIndex) {
-    showDialog(
-      context: context,
-      builder: (_) => _ItemFormDialog(menuIndex: menuIndex),
-    );
-  }
-
   void _showEditItemDialog(
     int menuIndex,
     int itemIndex,
@@ -158,7 +151,6 @@ class _MenuManagementViewState extends State<MenuManagementView> {
       menu: menu,
       menuIndex: menuIndex,
       sortMode: _sortMode,
-      onAddItem: () => _showAddItemDialog(menuIndex),
       onEditMenu: () =>
           _showEditMenuDialog(menuIndex, menu['name'] as String),
       onDeleteMenu: () =>
@@ -949,13 +941,12 @@ class _ImagePickerArea extends StatelessWidget {
 // _MenuCard
 // ──────────────────────────────────────────────────────────────
 
-class _MenuCard extends StatelessWidget {
+class _MenuCard extends StatefulWidget {
   const _MenuCard({
     super.key,
     required this.menu,
     required this.menuIndex,
     required this.sortMode,
-    required this.onAddItem,
     required this.onEditMenu,
     required this.onDeleteMenu,
     required this.onEditItem,
@@ -965,17 +956,93 @@ class _MenuCard extends StatelessWidget {
   final Map<String, dynamic> menu;
   final int menuIndex;
   final bool sortMode;
-  final VoidCallback onAddItem;
   final VoidCallback onEditMenu;
   final VoidCallback onDeleteMenu;
   final void Function(int, String, double, String?) onEditItem;
   final void Function(int) onDeleteItem;
 
   @override
+  State<_MenuCard> createState() => _MenuCardState();
+}
+
+class _MenuCardState extends State<_MenuCard> {
+  bool _quickAdd = false;
+  bool _saving = false;
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _priceCtrl;
+  final FocusNode _nameFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController();
+    _priceCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _priceCtrl.dispose();
+    _nameFocus.dispose();
+    super.dispose();
+  }
+
+  void _openQuickAdd() {
+    if (widget.sortMode) return;
+    setState(() => _quickAdd = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _nameFocus.requestFocus();
+    });
+  }
+
+  void _closeQuickAdd() {
+    setState(() {
+      _quickAdd = false;
+      _saving = false;
+      _nameCtrl.clear();
+      _priceCtrl.clear();
+    });
+  }
+
+  Future<void> _submitQuickAdd() async {
+    if (_saving) return;
+    final name = _nameCtrl.text.trim();
+    final priceText = _priceCtrl.text.trim().replaceAll(',', '.');
+    if (name.isEmpty) {
+      AppToast.warning('Ürün adı girin', title: 'warning'.tr);
+      _nameFocus.requestFocus();
+      return;
+    }
+    final price = double.tryParse(priceText);
+    if (price == null || price < 0) {
+      AppToast.error('invalid_price'.tr, title: 'error'.tr);
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await MenuService.to.addMenuItem(widget.menuIndex, name, price);
+      if (!mounted) return;
+      _nameCtrl.clear();
+      _priceCtrl.clear();
+      setState(() => _saving = false);
+      _nameFocus.requestFocus();
+      AppToast.success('Ürün eklendi', title: 'success'.tr);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      AppToast.error('$e', title: 'error'.tr);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final items = menu['items'] as List;
+    final menu = widget.menu;
+    final menuIndex = widget.menuIndex;
+    final sortMode = widget.sortMode;
     final menuName = menu['name'] as String;
     final menuId = menu['id'] as int;
+    final items = menu['items'] as List;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -993,7 +1060,6 @@ class _MenuCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Menu header ──────────────────────────────
           Padding(
             padding: EdgeInsets.fromLTRB(sortMode ? 8 : 16, 14, 8, 14),
             child: Row(
@@ -1039,28 +1105,34 @@ class _MenuCard extends StatelessWidget {
                   ),
                 ),
                 _IconBtn(
-                  icon: CupertinoIcons.plus_circle,
-                  color: AppTheme.successColor,
-                  tooltip: 'add_item'.tr,
-                  onTap: onAddItem,
+                  icon: _quickAdd
+                      ? CupertinoIcons.xmark_circle
+                      : CupertinoIcons.plus_circle,
+                  color: _quickAdd
+                      ? AppTheme.errorColor
+                      : AppTheme.successColor,
+                  tooltip: _quickAdd ? 'cancel'.tr : 'add_item'.tr,
+                  onTap: _quickAdd ? _closeQuickAdd : _openQuickAdd,
                 ),
                 _IconBtn(
                   icon: CupertinoIcons.pencil,
                   color: _orange,
                   tooltip: 'edit_menu'.tr,
-                  onTap: onEditMenu,
+                  onTap: widget.onEditMenu,
                 ),
                 _IconBtn(
                   icon: CupertinoIcons.trash,
                   color: AppTheme.errorColor,
                   tooltip: 'delete_menu'.tr,
-                  onTap: onDeleteMenu,
+                  onTap: widget.onDeleteMenu,
                 ),
               ],
             ),
           ),
-
-          // ── Items list ───────────────────────────────
+          if (_quickAdd && !sortMode) ...[
+            const Divider(height: 1, color: _border),
+            _quickAddRow(),
+          ],
           if (items.isNotEmpty) ...[
             const Divider(height: 1, color: _border),
             if (sortMode)
@@ -1096,6 +1168,99 @@ class _MenuCard extends StatelessWidget {
     );
   }
 
+  Widget _quickAddRow() {
+    final cs = SettingsService.cs;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F8EE),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(CupertinoIcons.plus,
+                size: 18, color: AppTheme.successColor),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            flex: 3,
+            child: TextField(
+              controller: _nameCtrl,
+              focusNode: _nameFocus,
+              textInputAction: TextInputAction.next,
+              textCapitalization: TextCapitalization.sentences,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: _textPrimary,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: 'Ürün adı',
+                hintStyle: const TextStyle(color: _textSec, fontSize: 14),
+                filled: true,
+                fillColor: _chip,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              onSubmitted: (_) => _submitQuickAdd(),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: TextField(
+              controller: _priceCtrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              textInputAction: TextInputAction.done,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: _textPrimary,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: 'Fiyat',
+                prefixText: '$cs ',
+                prefixStyle: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: _orange,
+                ),
+                hintStyle: const TextStyle(color: _textSec, fontSize: 14),
+                filled: true,
+                fillColor: _chip,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              onSubmitted: (_) => _submitQuickAdd(),
+            ),
+          ),
+          const SizedBox(width: 4),
+          _IconBtn(
+            icon: CupertinoIcons.checkmark_circle_fill,
+            color: AppTheme.successColor,
+            tooltip: 'save'.tr,
+            onTap: _saving ? () {} : _submitQuickAdd,
+            size: 22,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _itemTile(List items, int itemIndex) {
     final item = items[itemIndex] as Map<String, dynamic>;
     final itemName = item['name'] as String;
@@ -1104,12 +1269,12 @@ class _MenuCard extends StatelessWidget {
     return Padding(
       key: ValueKey(item['id']),
       padding: EdgeInsets.symmetric(
-        horizontal: sortMode ? 8 : 16,
+        horizontal: widget.sortMode ? 8 : 16,
         vertical: 10,
       ),
       child: Row(
         children: [
-          if (sortMode)
+          if (widget.sortMode)
             ReorderableDragStartListener(
               index: itemIndex,
               child: const Padding(
@@ -1153,14 +1318,15 @@ class _MenuCard extends StatelessWidget {
             icon: CupertinoIcons.pencil,
             color: _orange,
             tooltip: 'edit_item'.tr,
-            onTap: () => onEditItem(itemIndex, itemName, itemPrice, imageUrl),
+            onTap: () =>
+                widget.onEditItem(itemIndex, itemName, itemPrice, imageUrl),
             size: 18,
           ),
           _IconBtn(
             icon: CupertinoIcons.trash,
             color: AppTheme.errorColor,
             tooltip: 'delete'.tr,
-            onTap: () => onDeleteItem(itemIndex),
+            onTap: () => widget.onDeleteItem(itemIndex),
             size: 18,
           ),
         ],

@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:orderix/features/ordi/presentation/ordi_chat_sheet.dart';
 import 'package:orderix/features/ordi/presentation/ordi_controller.dart';
 import 'package:orderix/services/settings_service.dart';
+import 'package:orderix/utils/app_haptics.dart';
 
 // ── Apple-inspired design tokens (matched to the rest of the shell) ────────
 const _orange = Color(0xFFFF9500);
@@ -13,8 +14,6 @@ const _card = Colors.white;
 const _labelPrimary = Color(0xFF1C1C1E);
 const _labelSecondary = Color(0xFF8E8E93);
 
-const double _fabSize = 58;
-const double _hitSize = _fabSize + 24;
 const double _edgePad = 16;
 const Duration _dockDuration = Duration(milliseconds: 420);
 
@@ -36,6 +35,7 @@ class _OrdiLauncherState extends State<OrdiLauncher>
   late final Animation<double> _ring;
 
   Worker? _nudgeWorker;
+  Worker? _cornerWorker;
   bool _dragging = false;
   bool _docking = false;
   Offset? _dragOrigin;
@@ -88,11 +88,20 @@ class _OrdiLauncherState extends State<OrdiLauncher>
     _nudgeWorker = ever(OrdiController.to.nudgeTick, (_) {
       if (mounted && !_dragging) _anim.forward(from: 0);
     });
+
+    // Another device (or Settings) changed the shared corner — drop any
+    // leftover absolute offset so the FAB docks to the new corner.
+    _cornerWorker = ever(SettingsService.to.ordiCorner, (_) {
+      if (!mounted || _dragging) return;
+      OrdiController.to.launcherOffset = null;
+      setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _nudgeWorker?.dispose();
+    _cornerWorker?.dispose();
     _anim.dispose();
     super.dispose();
   }
@@ -104,11 +113,11 @@ class _OrdiLauncherState extends State<OrdiLauncher>
     showOrdiChatSheet(context, initialPrompt: prompt);
   }
 
-  Offset _clamp(Offset raw, Size size, EdgeInsets pad) {
+  Offset _clamp(Offset raw, Size size, EdgeInsets pad, double hitSize) {
     final minX = pad.left + _edgePad;
     final minY = pad.top + _edgePad;
-    final maxX = size.width - pad.right - _edgePad - _hitSize;
-    final maxY = size.height - pad.bottom - _edgePad - _hitSize;
+    final maxX = size.width - pad.right - _edgePad - hitSize;
+    final maxY = size.height - pad.bottom - _edgePad - hitSize;
     return Offset(
       raw.dx.clamp(minX, maxX < minX ? minX : maxX),
       raw.dy.clamp(minY, maxY < minY ? minY : maxY),
@@ -116,11 +125,11 @@ class _OrdiLauncherState extends State<OrdiLauncher>
   }
 
   /// Always docks to one of the four overlay corners.
-  Offset _snapToCorner(Offset raw, Size size, EdgeInsets pad) {
+  Offset _snapToCorner(Offset raw, Size size, EdgeInsets pad, double hitSize) {
     final minX = pad.left + _edgePad;
     final minY = pad.top + _edgePad;
-    final maxX = size.width - pad.right - _edgePad - _hitSize;
-    final maxY = size.height - pad.bottom - _edgePad - _hitSize;
+    final maxX = size.width - pad.right - _edgePad - hitSize;
+    final maxY = size.height - pad.bottom - _edgePad - hitSize;
     final safeMaxX = maxX < minX ? minX : maxX;
     final safeMaxY = maxY < minY ? minY : maxY;
     final corners = <Offset>[
@@ -141,11 +150,12 @@ class _OrdiLauncherState extends State<OrdiLauncher>
     return best;
   }
 
-  Offset _offsetForCorner(String corner, Size size, EdgeInsets pad) {
+  Offset _offsetForCorner(
+      String corner, Size size, EdgeInsets pad, double hitSize) {
     final minX = pad.left + _edgePad;
     final minY = pad.top + _edgePad;
-    final maxX = size.width - pad.right - _edgePad - _hitSize;
-    final maxY = size.height - pad.bottom - _edgePad - _hitSize;
+    final maxX = size.width - pad.right - _edgePad - hitSize;
+    final maxY = size.height - pad.bottom - _edgePad - hitSize;
     final safeMaxX = maxX < minX ? minX : maxX;
     final safeMaxY = maxY < minY ? minY : maxY;
     switch (corner) {
@@ -160,8 +170,9 @@ class _OrdiLauncherState extends State<OrdiLauncher>
     }
   }
 
-  String _cornerOf(Offset snapped, Size size, EdgeInsets pad) {
-    final target = _snapToCorner(snapped, size, pad);
+  String _cornerOf(
+      Offset snapped, Size size, EdgeInsets pad, double hitSize) {
+    final target = _snapToCorner(snapped, size, pad, hitSize);
     final minX = pad.left + _edgePad;
     final minY = pad.top + _edgePad;
     final atLeft = (target.dx - minX).abs() < 0.5;
@@ -172,24 +183,33 @@ class _OrdiLauncherState extends State<OrdiLauncher>
     return 'br';
   }
 
-  Offset _defaultOffset(Size size, EdgeInsets pad) {
-    return _offsetForCorner('br', size, pad);
+  Offset _defaultOffset(Size size, EdgeInsets pad, double hitSize) {
+    return _offsetForCorner('br', size, pad, hitSize);
   }
 
-  Offset _resolved(Size size, EdgeInsets pad) {
+  Offset _resolved(Size size, EdgeInsets pad, double hitSize) {
     if (_dragging) {
       final stored = OrdiController.to.launcherOffset;
-      return _clamp(stored ?? _defaultOffset(size, pad), size, pad);
+      return _clamp(
+          stored ?? _defaultOffset(size, pad, hitSize), size, pad, hitSize);
     }
-    return _offsetForCorner(SettingsService.to.ordiCorner.value, size, pad);
+    return _offsetForCorner(
+        SettingsService.to.ordiCorner.value, size, pad, hitSize);
   }
 
-  void _commit(Offset next, Size size, EdgeInsets pad) {
-    final target = _snapToCorner(next, size, pad);
-    final from = _clamp(next, size, pad);
+  void _commit(Offset next, Size size, EdgeInsets pad, double hitSize) {
+    final target = _snapToCorner(next, size, pad, hitSize);
+    final from = _clamp(next, size, pad, hitSize);
+    final newCorner = _cornerOf(target, size, pad, hitSize);
+    final oldCorner = SettingsService.to.ordiCorner.value;
     _docking = (from - target).distanceSquared > 1;
-    OrdiController.to.launcherOffset = target;
-    SettingsService.to.setOrdiCorner(_cornerOf(target, size, pad));
+    // Prefer corner-based layout so other devices (and size changes) stay aligned.
+    OrdiController.to.launcherOffset = null;
+    SettingsService.to.setOrdiCorner(newCorner);
+    // Snap / corner change feedback (respects Settings → Titreşim).
+    if (newCorner != oldCorner || _docking) {
+      AppHaptics.selection();
+    }
     setState(() {});
   }
 
@@ -199,19 +219,31 @@ class _OrdiLauncherState extends State<OrdiLauncher>
 
     return Positioned.fill(
       child: Obx(() {
-        if (!ordi.isAvailable || ordi.isSheetOpen.value) {
+        if (!ordi.isAvailable ||
+            ordi.isSheetOpen.value ||
+            !SettingsService.to.ordiVisible.value) {
           return const SizedBox.shrink();
         }
 
         final bubbleText = ordi.bubble.value;
         final pad = MediaQuery.paddingOf(context);
-        // Rebuild when the saved corner changes (this device or another).
-        SettingsService.to.ordiCorner.value;
+        // Rebuild when corner / size changes (this device or another).
+        final corner = SettingsService.to.ordiCorner.value;
+        final sizeKey = SettingsService.to.ordiSize.value;
+        final fabSize = SettingsService.to.ordiFabSize;
+        final hitSize = SettingsService.to.ordiHitSize;
+        // Top corners: show suggestion speech under the FAB so it stays on-screen.
+        final bubbleBelow = corner == 'tl' || corner == 'tr';
+        final bubbleW = _bubbleWidthFor(sizeKey);
 
         return LayoutBuilder(
           builder: (context, constraints) {
             final size = Size(constraints.maxWidth, constraints.maxHeight);
-            final pos = _resolved(size, pad);
+            final pos = _resolved(size, pad, hitSize);
+            final bubbleLeft = (pos.dx + hitSize / 2 - bubbleW / 2).clamp(
+              _edgePad,
+              size.width - _edgePad - bubbleW,
+            );
 
             return _PassThrough(
               child: Stack(
@@ -222,13 +254,15 @@ class _OrdiLauncherState extends State<OrdiLauncher>
                   curve: Curves.easeOutCubic,
                   left: pos.dx,
                   top: pos.dy,
-                  width: _hitSize,
-                  height: _hitSize,
+                  width: hitSize,
+                  height: hitSize,
                   onEnd: () {
                     if (!mounted || !_docking) return;
                     setState(() => _docking = false);
                   },
                   child: _OrdiButton(
+                    fabSize: fabSize,
+                    hitSize: hitSize,
                     anim: _anim,
                     scale: _scale,
                     tilt: _tilt,
@@ -249,7 +283,7 @@ class _OrdiLauncherState extends State<OrdiLauncher>
                       if (start == null || origin == null) return;
                       final delta = details.globalPosition - start;
                       OrdiController.to.launcherOffset =
-                          _clamp(origin + delta, size, pad);
+                          _clamp(origin + delta, size, pad, hitSize);
                       setState(() {});
                     },
                     onLongPressEnd: (_) {
@@ -258,21 +292,20 @@ class _OrdiLauncherState extends State<OrdiLauncher>
                       _dragging = false;
                       _dragOrigin = null;
                       _dragGlobalStart = null;
-                      _commit(released, size, pad);
+                      _commit(released, size, pad, hitSize);
                     },
                   ),
                 ),
                 if (!_dragging && !_docking && bubbleText.isNotEmpty)
                   Positioned(
-                    left: (pos.dx + _hitSize / 2 - 130).clamp(
-                      _edgePad,
-                      size.width - _edgePad - 260,
-                    ),
-                    bottom: size.height - pos.dy + 6,
-                    width: 260,
+                    left: bubbleLeft,
+                    top: bubbleBelow ? pos.dy + hitSize + 6 : null,
+                    bottom: bubbleBelow ? null : size.height - pos.dy + 6,
+                    width: bubbleW,
                     child: _SuggestionBubble(
-                      key: ValueKey(bubbleText),
+                      key: ValueKey('$bubbleText-$sizeKey'),
                       text: bubbleText,
+                      sizeKey: sizeKey,
                       onTap: () => _open(prompt: bubbleText),
                       onDismiss: ordi.snoozeBubble,
                     ),
@@ -287,8 +320,21 @@ class _OrdiLauncherState extends State<OrdiLauncher>
   }
 }
 
+double _bubbleWidthFor(String sizeKey) {
+  switch (sizeKey) {
+    case 'sm':
+      return 210;
+    case 'lg':
+      return 300;
+    default:
+      return 260;
+  }
+}
+
 class _OrdiButton extends StatelessWidget {
   const _OrdiButton({
+    required this.fabSize,
+    required this.hitSize,
     required this.anim,
     required this.scale,
     required this.tilt,
@@ -300,6 +346,8 @@ class _OrdiButton extends StatelessWidget {
     required this.dragging,
   });
 
+  final double fabSize;
+  final double hitSize;
   final Animation<double> anim;
   final Animation<double> scale;
   final Animation<double> tilt;
@@ -324,8 +372,8 @@ class _OrdiButton extends StatelessWidget {
           const LongPressEndDetails(),
         ),
         child: SizedBox(
-          width: _hitSize,
-          height: _hitSize,
+          width: hitSize,
+          height: hitSize,
           child: AnimatedBuilder(
             animation: anim,
             builder: (context, child) {
@@ -342,8 +390,8 @@ class _OrdiButton extends StatelessWidget {
                         child: Opacity(
                           opacity: (1 - t) * 0.35,
                           child: Container(
-                            width: _fabSize,
-                            height: _fabSize,
+                            width: fabSize,
+                            height: fabSize,
                             decoration: const BoxDecoration(
                               shape: BoxShape.circle,
                               color: _orange,
@@ -360,7 +408,7 @@ class _OrdiButton extends StatelessWidget {
                 ),
               );
             },
-            child: const _OrdiBadge(),
+            child: _OrdiBadge(fabSize: fabSize),
           ),
         ),
       ),
@@ -369,13 +417,18 @@ class _OrdiButton extends StatelessWidget {
 }
 
 class _OrdiBadge extends StatelessWidget {
-  const _OrdiBadge();
+  const _OrdiBadge({required this.fabSize});
+
+  final double fabSize;
 
   @override
   Widget build(BuildContext context) {
+    final pad = fabSize * 0.155;
+    final spark = (fabSize * 0.21).clamp(10.0, 16.0);
+    final fallbackFont = fabSize * 0.45;
     return Container(
-        width: _fabSize,
-        height: _fabSize,
+        width: fabSize,
+        height: fabSize,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: _card,
@@ -397,16 +450,16 @@ class _OrdiBadge extends StatelessWidget {
           alignment: Alignment.center,
           children: [
             Padding(
-              padding: const EdgeInsets.all(9),
+              padding: EdgeInsets.all(pad),
               child: Image.asset(
                 'assets/images/app_logo.png',
                 fit: BoxFit.contain,
                 // The bundled logo is the brand "O"; if it ever goes missing
                 // the button must still render something tappable.
-                errorBuilder: (_, __, ___) => const Text(
+                errorBuilder: (_, __, ___) => Text(
                   'O',
                   style: TextStyle(
-                    fontSize: 26,
+                    fontSize: fallbackFont,
                     fontWeight: FontWeight.w800,
                     color: _orange,
                   ),
@@ -424,9 +477,9 @@ class _OrdiBadge extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: _card,
                 ),
-                child: const Icon(
+                child: Icon(
                   CupertinoIcons.sparkles,
-                  size: 12,
+                  size: spark,
                   color: _orange,
                 ),
               ),
@@ -442,25 +495,28 @@ class _SuggestionBubble extends StatelessWidget {
   const _SuggestionBubble({
     super.key,
     required this.text,
+    required this.sizeKey,
     required this.onTap,
     required this.onDismiss,
   });
 
   final String text;
+  final String sizeKey;
   final VoidCallback onTap;
   final VoidCallback onDismiss;
 
   @override
   Widget build(BuildContext context) {
-    const shape = BorderRadius.only(
-      topLeft: Radius.circular(18),
-      topRight: Radius.circular(18),
-      bottomLeft: Radius.circular(18),
-      bottomRight: Radius.circular(18),
-    );
+    final (maxW, titleSize, bodySize, padH, padV, radius, iconSize) =
+        switch (sizeKey) {
+      'sm' => (210.0, 10.0, 11.0, 10.0, 8.0, 14.0, 11.0),
+      'lg' => (300.0, 13.0, 15.0, 16.0, 12.0, 20.0, 15.0),
+      _ => (260.0, 11.0, 13.0, 14.0, 10.0, 18.0, 13.0),
+    };
+    final shape = BorderRadius.circular(radius);
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 260),
+      constraints: BoxConstraints(maxWidth: maxW),
       child: Material(
         color: _card,
         elevation: 0,
@@ -480,7 +536,7 @@ class _SuggestionBubble extends StatelessWidget {
                 ),
               ],
             ),
-            padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+            padding: EdgeInsets.fromLTRB(padH, padV, padH * 0.45, padV),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -489,20 +545,20 @@ class _SuggestionBubble extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
+                      Text(
                         'Ordi',
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: titleSize,
                           fontWeight: FontWeight.w700,
                           color: _orange,
                           letterSpacing: 0.2,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: sizeKey == 'sm' ? 1 : 2),
                       Text(
                         text,
-                        style: const TextStyle(
-                          fontSize: 13,
+                        style: TextStyle(
+                          fontSize: bodySize,
                           height: 1.3,
                           fontWeight: FontWeight.w500,
                           color: _labelPrimary,
@@ -515,11 +571,12 @@ class _SuggestionBubble extends StatelessWidget {
                 GestureDetector(
                   onTap: onDismiss,
                   behavior: HitTestBehavior.opaque,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: padH * 0.4, vertical: 4),
                     child: Icon(
                       CupertinoIcons.xmark,
-                      size: 13,
+                      size: iconSize,
                       color: _labelSecondary,
                     ),
                   ),

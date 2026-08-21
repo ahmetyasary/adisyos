@@ -8,6 +8,8 @@ import 'package:orderix/views/tables_view.dart';
 import 'package:orderix/views/kitchen_display_view.dart';
 import 'package:orderix/views/menu_management_view.dart';
 import 'package:orderix/views/digital_menu_view.dart';
+import 'package:orderix/views/pending_menu_orders_view.dart';
+import 'package:orderix/services/digital_menu_order_service.dart';
 import 'package:orderix/views/inventory_management_view.dart';
 import 'package:orderix/views/day_management_view.dart';
 import 'package:orderix/views/reports_view.dart';
@@ -77,6 +79,20 @@ final List<AppSection> appSections = [
     icon: CupertinoIcons.square_list_fill,
     roles: const [AppRole.admin],
     builder: () => const MenuManagementView(embedded: true),
+  ),
+  AppSection(
+    id: 'pending_orders',
+    title: () {
+      try {
+        final n = DigitalMenuOrderService.to.pendingCount;
+        return n > 0 ? 'Bekleyen siparişler ($n)' : 'Bekleyen siparişler';
+      } catch (_) {
+        return 'Bekleyen siparişler';
+      }
+    },
+    icon: CupertinoIcons.bell_fill,
+    roles: const [AppRole.admin, AppRole.staff],
+    builder: () => const PendingMenuOrdersView(embedded: true),
   ),
   AppSection(
     id: 'digital_menu',

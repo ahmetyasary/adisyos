@@ -11,6 +11,7 @@ import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/services/shift_service.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/table_service.dart';
+import 'package:orderix/utils/app_haptics.dart';
 
 class OrdiToolCall {
   const OrdiToolCall(this.name, this.args);
@@ -446,6 +447,7 @@ class OrdiActionRunner {
       qty,
       paymentMethod: method,
     );
+    AppHaptics.success();
     return '${_str(args['table'])} / $item ×$qty ${_payLabel(method)} ödendi.';
   }
 

@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:orderix/utils/app_haptics.dart';
 
 /// Tracks per-user work days. Each user (identified by their login email)
 /// has their own active day independently — starting/ending is not shared.
@@ -117,6 +118,7 @@ class DayService extends GetxService {
 
       activeDays.add(Map<String, dynamic>.from(row));
       isLoading.value = false;
+      AppHaptics.dayStarted();
       return true;
     } catch (e) {
       if (kDebugMode) print('[DayService] startDay error: $e');
@@ -144,6 +146,8 @@ class DayService extends GetxService {
       allDays[idx] = updated;
       allDays.refresh();
     }
+
+    AppHaptics.dayEnded();
 
     // DB write in background.
     _db.from('day_status')

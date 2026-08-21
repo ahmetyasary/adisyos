@@ -455,7 +455,7 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                               ),
                               const SizedBox(height: 4),
                               const Text(
-                                'Her masa kendi QR’ına sahip olur. İleride bu masadan sipariş alınacak.',
+                                'Her masa kendi QR’ına sahip olur. Müşteri bu masadan sipariş gönderebilir.',
                                 style: TextStyle(fontSize: 12, color: _textSec),
                               ),
                               const SizedBox(height: 12),
@@ -655,7 +655,7 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        'Şimdilik menü görüntüleme. İleride müşteri seçili masanın QR’ından sipariş verebilecek.',
+                        'Müşteri masa QR’ından ürün seçip sipariş gönderir. Onay bekleyenler sol menüde görünür.',
                         style: TextStyle(
                           fontSize: 12,
                           color: _textSec,

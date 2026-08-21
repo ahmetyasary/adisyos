@@ -6,6 +6,7 @@ import 'package:orderix/services/sales_history_service.dart';
 import 'package:orderix/services/kitchen_service.dart';
 import 'package:orderix/services/inventory_service.dart';
 import 'package:orderix/services/staff_service.dart';
+import 'package:orderix/utils/app_haptics.dart';
 
 class TableService extends GetxService {
   static TableService get to => Get.find();
@@ -627,6 +628,7 @@ class TableService extends GetxService {
     final staffEmail = (table['staffEmail'] as String? ?? '');
     final tableName = table['name'] as String;
     clearTable(tableIndex);
+    AppHaptics.success();
     SalesHistoryService.to
         .recordSale(
           tableName: tableName,

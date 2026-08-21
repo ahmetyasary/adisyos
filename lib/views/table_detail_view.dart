@@ -1,16 +1,15 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
+import 'package:orderix/models/payment_type.dart';
 import 'package:orderix/services/menu_service.dart';
 import 'package:orderix/services/table_service.dart';
 import 'package:orderix/services/section_service.dart';
 import 'package:orderix/services/inventory_service.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/themes/app_theme.dart';
+import 'package:orderix/utils/app_haptics.dart';
+import 'package:orderix/views/receipt_print_preview_view.dart';
 import 'package:orderix/widgets/app_toast.dart';
 import 'package:orderix/widgets/app_dialog.dart';
 
@@ -2353,7 +2352,7 @@ class _TableDetailViewState extends State<TableDetailView> {
     }
 
     final TextEditingController discountController = TextEditingController();
-    var isPercent = true;
+    var isPercent = SettingsService.to.isDiscountPercent;
     final subtotal = TableService.to.getTotal(widget.tableIndex);
 
     AppDialog.form(
@@ -2426,14 +2425,20 @@ class _TableDetailViewState extends State<TableDetailView> {
                       child: _discountModeChip(
                         label: 'discount_mode_percent'.tr,
                         selected: isPercent,
-                        onTap: () => setLocal(() => isPercent = true),
+                        onTap: () {
+                          setLocal(() => isPercent = true);
+                          SettingsService.to.setDiscountMode('percent');
+                        },
                       ),
                     ),
                     Expanded(
                       child: _discountModeChip(
                         label: 'discount_mode_amount'.tr,
                         selected: !isPercent,
-                        onTap: () => setLocal(() => isPercent = false),
+                        onTap: () {
+                          setLocal(() => isPercent = false);
+                          SettingsService.to.setDiscountMode('amount');
+                        },
                       ),
                     ),
                   ],
@@ -2495,7 +2500,7 @@ class _TableDetailViewState extends State<TableDetailView> {
     );
   }
 
-  // Print receipt — generates a real PDF
+  // Print receipt — custom preview, then system print with configured paper.
   Future<void> _handlePrint() async {
     final orders = TableService.to.getOrders(widget.tableIndex);
     if (orders.isEmpty) {
@@ -2503,115 +2508,18 @@ class _TableDetailViewState extends State<TableDetailView> {
       return;
     }
 
-    final subtotal = TableService.to.getTotal(widget.tableIndex);
-    final discount = TableService.to.getDiscount(widget.tableIndex);
-    final finalTotal = TableService.to.getTotalWithDiscount(widget.tableIndex);
-
-    try {
-      final companyName = SettingsService.to.companyName.value.isNotEmpty
-          ? SettingsService.to.companyName.value
-          : 'Orderix';
-
-      final regularFont = await PdfGoogleFonts.notoSansRegular();
-      final boldFont = await PdfGoogleFonts.notoSansBold();
-
-      final doc = pw.Document();
-      doc.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.roll80,
-          margin: const pw.EdgeInsets.all(16),
-          build: (pw.Context context) {
-            return pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Center(
-                  child: pw.Text(
-                    companyName,
-                    style: pw.TextStyle(font: boldFont, fontSize: 16),
-                  ),
-                ),
-                pw.Center(
-                  child: pw.Text(
-                    _fullTableLabel,
-                    style: pw.TextStyle(font: regularFont, fontSize: 12),
-                  ),
-                ),
-                pw.Center(
-                  child: pw.Text(
-                    DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()),
-                    style: pw.TextStyle(font: regularFont, fontSize: 10),
-                  ),
-                ),
-                pw.SizedBox(height: 8),
-                pw.Divider(),
-                pw.SizedBox(height: 4),
-                ...orders.map(
-                  (order) => pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 2),
-                    child: pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Text(
-                          '${order['quantity']}x  ${order['name']}',
-                          style: pw.TextStyle(font: regularFont, fontSize: 12),
-                        ),
-                        pw.Text(
-                          'TL ${((order['price'] as double) * (order['quantity'] as int)).toStringAsFixed(2)}',
-                          style: pw.TextStyle(font: regularFont, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                pw.SizedBox(height: 4),
-                pw.Divider(),
-                pw.SizedBox(height: 4),
-                if (discount > 0) ...[
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Text('Ara Toplam',
-                          style: pw.TextStyle(font: regularFont, fontSize: 11)),
-                      pw.Text('TL ${subtotal.toStringAsFixed(2)}',
-                          style: pw.TextStyle(font: regularFont, fontSize: 11)),
-                    ],
-                  ),
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Text('Indirim',
-                          style: pw.TextStyle(font: regularFont, fontSize: 11)),
-                      pw.Text('-TL ${discount.toStringAsFixed(2)}',
-                          style: pw.TextStyle(font: regularFont, fontSize: 11)),
-                    ],
-                  ),
-                ],
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('TOPLAM',
-                        style: pw.TextStyle(font: boldFont, fontSize: 14)),
-                    pw.Text('TL ${finalTotal.toStringAsFixed(2)}',
-                        style: pw.TextStyle(font: boldFont, fontSize: 14)),
-                  ],
-                ),
-                pw.SizedBox(height: 16),
-                pw.Center(
-                  child: pw.Text(
-                    'Tesekkur ederiz!',
-                    style: pw.TextStyle(font: regularFont, fontSize: 11),
-                  ),
-                ),
-              ],
-            );
-          },
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ReceiptPrintPreviewView(
+          tableLabel: _fullTableLabel,
+          orders: List<Map<String, dynamic>>.from(orders),
+          subtotal: TableService.to.getTotal(widget.tableIndex),
+          discount: TableService.to.getDiscount(widget.tableIndex),
+          finalTotal: TableService.to.getTotalWithDiscount(widget.tableIndex),
         ),
-      );
-
-      await Printing.layoutPdf(onLayout: (format) async => doc.save());
-    } catch (e) {
-      AppToast.error('PDF olusturulurken hata: $e', title: 'error'.tr);
-    }
+      ),
+    );
   }
 
   // Move orders to another table
@@ -3024,16 +2932,10 @@ class _TableDetailViewState extends State<TableDetailView> {
                         endIndent: 16),
                     itemBuilder: (ctx, i) {
                       final p = payments[i];
-                      final methodIcon = p['method'] == 'cash'
-                          ? CupertinoIcons.money_dollar
-                          : p['method'] == 'card'
-                              ? CupertinoIcons.creditcard_fill
-                              : CupertinoIcons.building_2_fill;
-                      final methodLabel = p['method'] == 'cash'
-                          ? 'Nakit'
-                          : p['method'] == 'card'
-                              ? 'Kart'
-                              : 'Havale';
+                      final methodId = (p['method'] as String?) ?? 'cash';
+                      final (methodIcon, _) = paymentTypeVisual(methodId);
+                      final methodLabel =
+                          SettingsService.to.paymentMethodLabel(methodId);
                       return Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 12),
@@ -3281,31 +3183,18 @@ class _TableDetailViewState extends State<TableDetailView> {
                 ),
               ),
               const SizedBox(height: 10),
-              Row(
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
                 children: [
-                  _PartialPayMethodBtn(
-                    icon: CupertinoIcons.money_dollar,
-                    label: 'pay_cash'.tr,
-                    value: 'cash',
-                    selected: selectedMethod == 'cash',
-                    onTap: () => setSheet(() => selectedMethod = 'cash'),
-                  ),
-                  const SizedBox(width: 10),
-                  _PartialPayMethodBtn(
-                    icon: CupertinoIcons.creditcard_fill,
-                    label: 'pay_card'.tr,
-                    value: 'card',
-                    selected: selectedMethod == 'card',
-                    onTap: () => setSheet(() => selectedMethod = 'card'),
-                  ),
-                  const SizedBox(width: 10),
-                  _PartialPayMethodBtn(
-                    icon: CupertinoIcons.building_2_fill,
-                    label: 'pay_transfer'.tr,
-                    value: 'transfer',
-                    selected: selectedMethod == 'transfer',
-                    onTap: () => setSheet(() => selectedMethod = 'transfer'),
-                  ),
+                  for (final t in SettingsService.to.paymentTypes)
+                    _PartialPayMethodBtn(
+                      icon: paymentTypeVisual(t.id).$1,
+                      label: t.name,
+                      value: t.id,
+                      selected: selectedMethod == t.id,
+                      onTap: () => setSheet(() => selectedMethod = t.id),
+                    ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -3363,6 +3252,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                       }
                     });
 
+                    AppHaptics.success();
                     AppToast.info(
                       '${toProcess.length} kalem · ${SettingsService.cs}${totalAmount.toStringAsFixed(2)}',
                       title: 'Parça Ödeme Alındı',
@@ -3768,29 +3658,19 @@ class _TableDetailViewState extends State<TableDetailView> {
                 ),
                 const SizedBox(height: 10),
 
-                // ── Payment method 3-card row ────────────────────
-                Row(
+                // ── Payment method cards (configured in Settings) ─
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    _PayCard(
-                      label: 'pay_cash'.tr,
-                      icon: CupertinoIcons.money_dollar,
-                      selected: selectedMethod == 'cash',
-                      onTap: () => setState(() => selectedMethod = 'cash'),
-                    ),
-                    const SizedBox(width: 8),
-                    _PayCard(
-                      label: 'pay_card'.tr,
-                      icon: CupertinoIcons.creditcard_fill,
-                      selected: selectedMethod == 'card',
-                      onTap: () => setState(() => selectedMethod = 'card'),
-                    ),
-                    const SizedBox(width: 8),
-                    _PayCard(
-                      label: 'pay_transfer'.tr,
-                      icon: CupertinoIcons.building_2_fill,
-                      selected: selectedMethod == 'transfer',
-                      onTap: () => setState(() => selectedMethod = 'transfer'),
-                    ),
+                    for (final t in SettingsService.to.paymentTypes)
+                      _PayCard(
+                        label: t.name,
+                        icon: paymentTypeVisual(t.id).$1,
+                        selected: selectedMethod == t.id,
+                        onTap: () =>
+                            setState(() => selectedMethod = t.id),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -3929,34 +3809,35 @@ class _PartialPayMethodBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: selected ? _orange : const Color(0xFFF2F2F7),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon,
-                  size: 22,
-                  color: selected ? Colors.white : const Color(0xFF8E8E93)),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : const Color(0xFF8E8E93),
-                ),
-                textAlign: TextAlign.center,
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 108,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+        decoration: BoxDecoration(
+          color: selected ? _orange : const Color(0xFFF2F2F7),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 22,
+                color: selected ? Colors.white : const Color(0xFF8E8E93)),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : const Color(0xFF8E8E93),
               ),
-            ],
-          ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
@@ -4032,41 +3913,43 @@ class _PayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: selected ? AppTheme.successColor : _bg,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: AppTheme.successColor.withValues(alpha: 0.25),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    )
-                  ]
-                : null,
-          ),
-          child: Column(
-            children: [
-              Icon(icon,
-                  size: 22, color: selected ? Colors.white : _textSecondary),
-              const SizedBox(height: 5),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : _textSecondary,
-                ),
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: 108,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.successColor : _bg,
+          borderRadius: BorderRadius.circular(14),
+          border: selected ? null : Border.all(color: _border),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: AppTheme.successColor.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  )
+                ]
+              : null,
+        ),
+        child: Column(
+          children: [
+            Icon(icon,
+                size: 22, color: selected ? Colors.white : _textSecondary),
+            const SizedBox(height: 5),
+            Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : _textSecondary,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

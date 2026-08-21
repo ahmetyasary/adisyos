@@ -1,16 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:orderix/core/errors/auth_exception.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/models/app_role.dart';
+import 'package:orderix/models/payment_type.dart';
+import 'package:orderix/models/receipt_layout.dart';
 import 'package:orderix/navigation/app_sections.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/subscription_service.dart';
+import 'package:orderix/utils/app_haptics.dart';
 import 'package:orderix/views/paywall_sheet.dart';
 import 'package:orderix/views/auth_screen.dart';
 import 'package:orderix/widgets/app_toast.dart';
@@ -44,9 +47,9 @@ class SettingsView extends StatefulWidget {
 
 class _SettingsViewState extends State<SettingsView> {
   final _companyCtrl = TextEditingController();
-  String _selectedLanguage = 'tr';
-  bool _saving = false;
   Worker? _companyWorker;
+  Timer? _companyDebounce;
+  bool _companyFocused = false;
 
   @override
   void initState() {
@@ -54,66 +57,40 @@ class _SettingsViewState extends State<SettingsView> {
     // Pre-fill from already-loaded value
     _companyCtrl.text = SettingsService.to.companyName.value;
 
-    // If service is still loading, sync when it arrives
+    // If service is still loading, sync when it arrives — skip while typing.
     _companyWorker = ever(SettingsService.to.companyName, (val) {
-      if (mounted && _companyCtrl.text.isEmpty && val.isNotEmpty) {
+      if (!mounted || _companyFocused) return;
+      if (_companyCtrl.text != val) {
         _companyCtrl.text = val;
-      }
-    });
-
-    SharedPreferences.getInstance().then((prefs) {
-      if (mounted) {
-        setState(() {
-          _selectedLanguage =
-              prefs.getString('language') ?? (Get.locale?.languageCode ?? 'tr');
-        });
       }
     });
   }
 
   @override
   void dispose() {
+    _companyDebounce?.cancel();
     _companyWorker?.dispose();
     _companyCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _save() async {
-    setState(() => _saving = true);
-    try {
-      await SettingsService.to.save(newCompanyName: _companyCtrl.text.trim());
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('language', _selectedLanguage);
-      if (mounted) {
-        AppToast.success('Ayarlar kaydedildi', title: 'success'.tr);
-        Get.back();
-      }
-    } catch (e) {
-      if (mounted) {
-        AppToast.error(
-          _describeSaveError(e),
-          duration: const Duration(seconds: 6),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
+  void _onCompanyChanged(String _) {
+    _companyDebounce?.cancel();
+    _companyDebounce = Timer(const Duration(milliseconds: 500), _persistCompany);
   }
 
-  /// Build a user-facing message that still includes enough detail to
-  /// diagnose Supabase-side failures (missing constraint, RLS block, etc).
-  String _describeSaveError(Object e) {
-    const base = 'Ayarlar kaydedilemedi.';
-    if (e is PostgrestException) {
-      final parts = <String>[
-        if (e.message.isNotEmpty) e.message,
-        if ((e.details?.toString().isNotEmpty ?? false)) e.details.toString(),
-        if ((e.code?.isNotEmpty ?? false)) 'code: ${e.code}',
-      ];
-      return parts.isEmpty ? base : '$base\n${parts.join(' · ')}';
+  Future<void> _persistCompany() async {
+    final next = _companyCtrl.text.trim();
+    if (next == SettingsService.to.companyName.value) return;
+    try {
+      await SettingsService.to.save(newCompanyName: next);
+    } catch (e) {
+      if (!mounted) return;
+      AppToast.error(
+        'Şirket adı kaydedilemedi',
+        duration: const Duration(seconds: 4),
+      );
     }
-    final msg = e.toString();
-    return msg.isEmpty ? base : '$base\n$msg';
   }
 
   @override
@@ -159,6 +136,11 @@ class _SettingsViewState extends State<SettingsView> {
                               hint: 'Şirket adınızı girin',
                               controller: _companyCtrl,
                               textCapitalization: TextCapitalization.words,
+                              onChanged: _onCompanyChanged,
+                              onFocusChange: (focused) {
+                                _companyFocused = focused;
+                                if (!focused) _persistCompany();
+                              },
                             ),
                             const Divider(
                                 height: 1,
@@ -166,9 +148,35 @@ class _SettingsViewState extends State<SettingsView> {
                                 indent: 16,
                                 endIndent: 16),
                             const _CurrencyRow(),
+                            const Divider(
+                                height: 1,
+                                color: _border,
+                                indent: 16,
+                                endIndent: 16),
+                            _PaymentTypesRow(
+                              onTap: () => _showPaymentTypesSheet(context),
+                            ),
+                            const Divider(
+                                height: 1,
+                                color: _border,
+                                indent: 16,
+                                endIndent: 16),
+                            _ReceiptLayoutRow(
+                              onTap: () => _showReceiptLayoutSheet(context),
+                            ),
                           ],
                         ),
                       ),
+                      const SizedBox(height: 28),
+
+                      _SectionLabel('Genel'),
+                      const SizedBox(height: 10),
+                      const _Card(child: _FeedbackSettingsCard()),
+                      const SizedBox(height: 28),
+
+                      _SectionLabel('Ordi'),
+                      const SizedBox(height: 10),
+                      const _Card(child: _OrdiSettingsCard()),
                       const SizedBox(height: 28),
 
                       if (AuthController.to.isAdmin) ...[
@@ -186,21 +194,17 @@ class _SettingsViewState extends State<SettingsView> {
                       _SectionLabel('Dil'),
                       const SizedBox(height: 10),
                       _Card(
-                        child: _LanguageRow(
-                          value: _selectedLanguage,
-                          onChanged: (val) {
-                            if (val == null) return;
-                            setState(() => _selectedLanguage = val);
-                            Get.updateLocale(val == 'tr'
-                                ? const Locale('tr', 'TR')
-                                : const Locale('en', 'US'));
-                          },
-                        ),
+                        child: Obx(() {
+                          final lang = SettingsService.to.language.value;
+                          return _LanguageRow(
+                            value: lang,
+                            onChanged: (val) {
+                              if (val == null) return;
+                              SettingsService.to.setLanguage(val);
+                            },
+                          );
+                        }),
                       ),
-                      const SizedBox(height: 36),
-
-                      // Save button
-                      _SaveButton(saving: _saving, onTap: _save),
                       const SizedBox(height: 28),
 
                       // Legal — privacy policy / terms (App Store requirement)
@@ -425,6 +429,8 @@ class _InlineField extends StatelessWidget {
     required this.hint,
     required this.controller,
     this.textCapitalization = TextCapitalization.none,
+    this.onChanged,
+    this.onFocusChange,
   });
 
   final IconData icon;
@@ -432,6 +438,8 @@ class _InlineField extends StatelessWidget {
   final String hint;
   final TextEditingController controller;
   final TextCapitalization textCapitalization;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<bool>? onFocusChange;
 
   @override
   Widget build(BuildContext context) {
@@ -462,22 +470,28 @@ class _InlineField extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                TextField(
-                  controller: controller,
-                  textCapitalization: textCapitalization,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: _textPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: hint,
-                    hintStyle: const TextStyle(color: _textSec, fontSize: 14),
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
+                Focus(
+                  onFocusChange: onFocusChange,
+                  child: TextField(
+                    controller: controller,
+                    textCapitalization: textCapitalization,
+                    onChanged: onChanged,
+                    onEditingComplete: () =>
+                        onFocusChange?.call(false),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: _textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: hint,
+                      hintStyle: const TextStyle(color: _textSec, fontSize: 14),
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                    ),
                   ),
                 ),
               ],
@@ -663,68 +677,6 @@ class _LanguageRow extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── Save button ────────────────────────────────────────────────
-
-class _SaveButton extends StatelessWidget {
-  const _SaveButton({required this.saving, required this.onTap});
-
-  final bool saving;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 52,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFFFB340), _orange],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x44FF9500),
-              blurRadius: 16,
-              offset: Offset(0, 6),
-            ),
-          ],
-        ),
-        child: ElevatedButton(
-          onPressed: saving ? null : onTap,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            foregroundColor: Colors.white,
-            shadowColor: Colors.transparent,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-          child: saving
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                )
-              : Text(
-                  'save_settings'.tr,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-        ),
       ),
     );
   }
@@ -1308,6 +1260,933 @@ class _NavOrderSheetState extends State<_NavOrderSheet> {
                 );
               },
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Haptics + sounds ──────────────────────────────────────────
+
+class _FeedbackSettingsCard extends StatelessWidget {
+  const _FeedbackSettingsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final hapticsOn = SettingsService.to.hapticsEnabled.value;
+      final soundsOn = SettingsService.to.soundsEnabled.value;
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: _orange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: const Icon(CupertinoIcons.waveform,
+                      size: 17, color: _orange),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Titreşim',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: _textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Ödeme, gün ve Ordi haptic geri bildirimleri',
+                        style: TextStyle(fontSize: 12, color: _textSec),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch.adaptive(
+                  value: hapticsOn,
+                  activeColor: _orange,
+                  onChanged: (v) {
+                    SettingsService.to.setHapticsEnabled(v);
+                    if (v) AppHaptics.success();
+                  },
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: _orange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: const Icon(CupertinoIcons.speaker_2_fill,
+                      size: 17, color: _orange),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ses',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: _textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Haptic anlarında kısa tık sesleri',
+                        style: TextStyle(fontSize: 12, color: _textSec),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch.adaptive(
+                  value: soundsOn,
+                  activeColor: _orange,
+                  onChanged: (v) {
+                    SettingsService.to.setSoundsEnabled(v);
+                    if (v) AppHaptics.previewSound();
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    });
+  }
+}
+
+// ── Ordi (AI assistant) ───────────────────────────────────────
+
+class _OrdiSettingsCard extends StatelessWidget {
+  const _OrdiSettingsCard();
+
+  static const _sizes = [
+    ('sm', 'Küçük'),
+    ('md', 'Orta'),
+    ('lg', 'Büyük'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final visible = SettingsService.to.ordiVisible.value;
+      final size = SettingsService.to.ordiSize.value;
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: _orange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: const Icon(CupertinoIcons.sparkles,
+                      size: 17, color: _orange),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Yapay zeka butonu',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: _textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Ekranda Ordi butonunu göster',
+                        style: TextStyle(fontSize: 12, color: _textSec),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch.adaptive(
+                  value: visible,
+                  activeColor: _orange,
+                  onChanged: (v) => SettingsService.to.setOrdiVisible(v),
+                ),
+              ],
+            ),
+          ),
+          if (visible) ...[
+            const Divider(
+                height: 1, color: _border, indent: 16, endIndent: 16),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Buton boyutu',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _textSec,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: _sizes.map((s) {
+                      final id = s.$1;
+                      final label = s.$2;
+                      final selected = id == size;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onTap: () => SettingsService.to.setOrdiSize(id),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: selected ? _orange : _bg,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: selected ? _orange : _border,
+                              ),
+                            ),
+                            child: Text(
+                              label,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: selected ? Colors.white : _textPrimary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      );
+    });
+  }
+}
+
+// ── Payment types ──────────────────────────────────────────────
+
+class _PaymentTypesRow extends StatelessWidget {
+  const _PaymentTypesRow({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: _orange.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(CupertinoIcons.creditcard_fill,
+                    size: 17, color: _orange),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Ödeme tipleri',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: _textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Obx(() {
+                      final names = SettingsService.to.paymentTypes
+                          .map((t) => t.name)
+                          .join(', ');
+                      return Text(
+                        names,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12, color: _textSec),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+              const Icon(CupertinoIcons.chevron_right,
+                  size: 16, color: _textSec),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void _showPaymentTypesSheet(BuildContext context) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: _card,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (_) => const _PaymentTypesSheet(),
+  );
+}
+
+class _PaymentTypesSheet extends StatelessWidget {
+  const _PaymentTypesSheet();
+
+  Future<void> _add(BuildContext context) async {
+    final ctrl = TextEditingController();
+    final ok = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Ödeme tipi ekle'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            hintText: 'Örn. Multinet, Sodexo…',
+          ),
+          onSubmitted: (_) => Get.back(result: true),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text('cancel'.tr),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Ekle'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final added = await SettingsService.to.addPaymentType(ctrl.text);
+    if (!added) {
+      AppToast.warning('Geçersiz veya tekrar eden isim');
+    } else {
+      AppToast.success('Ödeme tipi eklendi');
+    }
+  }
+
+  Future<void> _rename(PaymentType type) async {
+    final ctrl = TextEditingController(text: type.name);
+    final ok = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Yeniden adlandır'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          onSubmitted: (_) => Get.back(result: true),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text('cancel'.tr),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Kaydet'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final renamed =
+        await SettingsService.to.renamePaymentType(type.id, ctrl.text);
+    if (!renamed) {
+      AppToast.warning('Geçersiz veya tekrar eden isim');
+    }
+  }
+
+  Future<void> _remove(PaymentType type) async {
+    if (type.builtin) return;
+    final confirmed = await AppDialog.confirm(
+      icon: CupertinoIcons.trash_fill,
+      iconColor: const Color(0xFFFF3B30),
+      title: 'Ödeme tipini sil',
+      message:
+          '“${type.name}” silinsin mi?\nEski satış kayıtlarındaki tutarlar raporda bu isimle görünmeye devam eder.',
+      confirmText: 'Sil',
+      cancelText: 'Vazgeç',
+      destructive: true,
+    );
+    if (!confirmed) return;
+    await SettingsService.to.removePaymentType(type.id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final h = MediaQuery.sizeOf(context).height * 0.72;
+    return SizedBox(
+      height: h,
+      child: Column(
+        children: [
+          const SizedBox(height: 10),
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: _border,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 8, 8),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Ödeme tipleri',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: _textPrimary,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => _add(context),
+                  icon: const Icon(CupertinoIcons.plus, size: 16),
+                  label: const Text('Ekle'),
+                  style: TextButton.styleFrom(foregroundColor: _orange),
+                ),
+              ],
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Text(
+              'Nakit, kart ve havale sabittir. Yemek kartı gibi ek tipler ekleyebilirsiniz; raporlarda ayrı görünür.',
+              style: TextStyle(fontSize: 13, color: _textSec, height: 1.35),
+            ),
+          ),
+          Expanded(
+            child: Obx(() {
+              final types = SettingsService.to.paymentTypes.toList();
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                itemCount: types.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (_, i) {
+                  final t = types[i];
+                  final (icon, color) = paymentTypeVisual(t.id);
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9F9F9),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: _border),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: Icon(icon, size: 17, color: color),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                t.name,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: _textPrimary,
+                                ),
+                              ),
+                              if (t.builtin)
+                                const Text(
+                                  'Varsayılan',
+                                  style:
+                                      TextStyle(fontSize: 11, color: _textSec),
+                                ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Yeniden adlandır',
+                          onPressed: () => _rename(t),
+                          icon: const Icon(CupertinoIcons.pencil,
+                              size: 18, color: _textSec),
+                        ),
+                        if (!t.builtin)
+                          IconButton(
+                            tooltip: 'Sil',
+                            onPressed: () => _remove(t),
+                            icon: const Icon(CupertinoIcons.trash,
+                                size: 18, color: Color(0xFFFF3B30)),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Receipt (adisyon) layout ──────────────────────────────────
+
+class _ReceiptLayoutRow extends StatelessWidget {
+  const _ReceiptLayoutRow({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: _orange.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(CupertinoIcons.printer_fill,
+                    size: 17, color: _orange),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Adisyon yazdırma',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: _textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Yazıcı çıktısı düzeni ve metinler',
+                      style: TextStyle(fontSize: 12, color: _textSec),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(CupertinoIcons.chevron_right,
+                  size: 16, color: _textSec),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void _showReceiptLayoutSheet(BuildContext context) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: _card,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (_) => const _ReceiptLayoutSheet(),
+  );
+}
+
+class _ReceiptLayoutSheet extends StatefulWidget {
+  const _ReceiptLayoutSheet();
+
+  @override
+  State<_ReceiptLayoutSheet> createState() => _ReceiptLayoutSheetState();
+}
+
+class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
+  late final TextEditingController _headerCtrl;
+  late final TextEditingController _footerCtrl;
+
+  static const _sizes = [
+    ('sm', 'Küçük'),
+    ('md', 'Orta'),
+    ('lg', 'Büyük'),
+  ];
+
+  static const _papers = [
+    ('roll58', '58 mm'),
+    ('roll80', '80 mm'),
+    ('a4', 'A4'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    final layout = SettingsService.to.receiptLayout.value;
+    _headerCtrl = TextEditingController(text: layout.headerNote);
+    _footerCtrl = TextEditingController(text: layout.footerText);
+  }
+
+  @override
+  void dispose() {
+    _headerCtrl.dispose();
+    _footerCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _patch(ReceiptLayout Function(ReceiptLayout) fn) =>
+      SettingsService.to.updateReceiptLayout(fn);
+
+  Widget _toggle({
+    required String title,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: _textPrimary,
+              ),
+            ),
+          ),
+          Switch.adaptive(
+            value: value,
+            activeColor: _orange,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final h = MediaQuery.sizeOf(context).height * 0.82;
+    return SizedBox(
+      height: h,
+      child: Column(
+        children: [
+          const SizedBox(height: 10),
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: _border,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 14, 20, 4),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Adisyon yazdırma',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: _textPrimary,
+                ),
+              ),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Text(
+              'Yazıcıya giden fişte hangi bilgilerin görüneceğini ve metinleri buradan ayarlayın.',
+              style: TextStyle(fontSize: 13, color: _textSec, height: 1.35),
+            ),
+          ),
+          Expanded(
+            child: Obx(() {
+              final layout = SettingsService.to.receiptLayout.value;
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+                children: [
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9F9F9),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: _border),
+                    ),
+                    child: Column(
+                      children: [
+                        _toggle(
+                          title: 'Şirket adı',
+                          value: layout.showCompanyName,
+                          onChanged: (v) =>
+                              _patch((l) => l.copyWith(showCompanyName: v)),
+                        ),
+                        _toggle(
+                          title: 'Masa / bölüm',
+                          value: layout.showTable,
+                          onChanged: (v) =>
+                              _patch((l) => l.copyWith(showTable: v)),
+                        ),
+                        _toggle(
+                          title: 'Tarih ve saat',
+                          value: layout.showDateTime,
+                          onChanged: (v) =>
+                              _patch((l) => l.copyWith(showDateTime: v)),
+                        ),
+                        _toggle(
+                          title: 'Ürün kalemleri',
+                          value: layout.showItems,
+                          onChanged: (v) =>
+                              _patch((l) => l.copyWith(showItems: v)),
+                        ),
+                        _toggle(
+                          title: 'Ara toplam / indirim',
+                          value: layout.showDiscountBreakdown,
+                          onChanged: (v) => _patch(
+                              (l) => l.copyWith(showDiscountBreakdown: v)),
+                        ),
+                        _toggle(
+                          title: 'Toplam',
+                          value: layout.showTotal,
+                          onChanged: (v) =>
+                              _patch((l) => l.copyWith(showTotal: v)),
+                        ),
+                        _toggle(
+                          title: 'Alt mesaj',
+                          value: layout.showFooter,
+                          onChanged: (v) =>
+                              _patch((l) => l.copyWith(showFooter: v)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Kağıt ölçüsü',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _textSec,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Yazıcıya gönderirken sistem yazdırma ekranına bu ölçü aktarılır.',
+                    style: TextStyle(fontSize: 12, color: _textSec, height: 1.35),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: _papers.map((s) {
+                      final id = s.$1;
+                      final label = s.$2;
+                      final selected = id == layout.paperSize;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onTap: () =>
+                              _patch((l) => l.copyWith(paperSize: id)),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: selected ? _orange : _bg,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: selected ? _orange : _border,
+                              ),
+                            ),
+                            child: Text(
+                              label,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: selected ? Colors.white : _textPrimary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Yazı boyutu',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _textSec,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: _sizes.map((s) {
+                      final id = s.$1;
+                      final label = s.$2;
+                      final selected = id == layout.fontSize;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onTap: () =>
+                              _patch((l) => l.copyWith(fontSize: id)),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: selected ? _orange : _bg,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: selected ? _orange : _border,
+                              ),
+                            ),
+                            child: Text(
+                              label,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: selected ? Colors.white : _textPrimary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Üst not (adres, telefon…)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _textSec,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _headerCtrl,
+                    maxLines: 2,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      hintText: 'Örn. Tel: 0212…',
+                      hintStyle: const TextStyle(color: _textSec, fontSize: 14),
+                      filled: true,
+                      fillColor: const Color(0xFFF9F9F9),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: _border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: _border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: _orange),
+                      ),
+                    ),
+                    onChanged: (v) =>
+                        _patch((l) => l.copyWith(headerNote: v)),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Alt mesaj',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _textSec,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _footerCtrl,
+                    maxLines: 2,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      hintText: 'Teşekkür ederiz!',
+                      hintStyle: const TextStyle(color: _textSec, fontSize: 14),
+                      filled: true,
+                      fillColor: const Color(0xFFF9F9F9),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: _border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: _border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: _orange),
+                      ),
+                    ),
+                    onChanged: (v) =>
+                        _patch((l) => l.copyWith(footerText: v)),
+                  ),
+                ],
+              );
+            }),
           ),
         ],
       ),

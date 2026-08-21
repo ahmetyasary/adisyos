@@ -261,11 +261,17 @@ class OrdiSnapshot {
     );
   }
 
-  static String _paymentLabel(String key) => switch (key) {
-        'cash' => 'nakit',
-        'card' || 'credit' || 'creditCard' => 'kart',
-        _ => key,
-      };
+  static String _paymentLabel(String key) {
+    if (Get.isRegistered<SettingsService>()) {
+      return SettingsService.to.paymentMethodLabel(key);
+    }
+    return switch (key) {
+      'cash' => 'nakit',
+      'card' || 'credit' || 'creditCard' => 'kart',
+      'transfer' => 'havale',
+      _ => key,
+    };
+  }
 
   // ── Tables ─────────────────────────────────────────────────────────────
 

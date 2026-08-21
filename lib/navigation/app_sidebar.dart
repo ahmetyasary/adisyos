@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:orderix/navigation/app_sections.dart';
+import 'package:orderix/services/digital_menu_order_service.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _card = Colors.white;
@@ -67,19 +69,25 @@ class AppSidebar extends StatelessWidget {
             _buildHeader(),
             const Divider(height: 1, thickness: 0.5, color: _separator),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                children: [
-                  for (final s in sections)
-                    _SidebarRow(
-                      icon: s.icon,
-                      label: s.title(),
-                      active: s.id == selectedId,
-                      collapsed: collapsed,
-                      onTap: () => onSelect(s.id),
-                    ),
-                ],
-              ),
+              child: Obx(() {
+                // Touch pending list so title count rebuilds when QR orders arrive.
+                if (Get.isRegistered<DigitalMenuOrderService>()) {
+                  DigitalMenuOrderService.to.pending.length;
+                }
+                return ListView(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  children: [
+                    for (final s in sections)
+                      _SidebarRow(
+                        icon: s.icon,
+                        label: s.title(),
+                        active: s.id == selectedId,
+                        collapsed: collapsed,
+                        onTap: () => onSelect(s.id),
+                      ),
+                  ],
+                );
+              }),
             ),
             const Divider(height: 1, thickness: 0.5, color: _separator),
             _buildFooter(),

@@ -2,11 +2,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import 'package:orderix/features/ordi/domain/ordi_message.dart';
 import 'package:orderix/features/ordi/presentation/ordi_controller.dart';
+import 'package:orderix/utils/app_haptics.dart';
 
 // ── Apple-inspired design tokens (matched to the rest of the shell) ────────
 const _bg = Color(0xFFF2F2F7);
@@ -659,7 +659,7 @@ class _Composer extends StatelessWidget {
                   onTap: busy
                       ? null
                       : () {
-                          HapticFeedback.selectionClick();
+                          AppHaptics.selection();
                           onSubmit();
                         },
                   customBorder: const CircleBorder(),
