@@ -12,6 +12,7 @@ import 'package:orderix/services/digital_menu_service.dart';
 import 'package:orderix/services/menu_service.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/services/table_service.dart';
+import 'package:orderix/widgets/app_dialog.dart';
 import 'package:orderix/widgets/app_toast.dart';
 import 'package:orderix/widgets/responsive_content.dart';
 import 'package:orderix/widgets/shell_leading.dart';
@@ -89,6 +90,18 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
   }
 
   Future<void> _regenerate() async {
+    final confirmed = await AppDialog.confirm(
+      icon: CupertinoIcons.qrcode,
+      iconColor: _orange,
+      title: 'Bağlantıyı yenile',
+      message:
+          'QR bağlantıları yenilenecek. Emin misiniz?\nEski QR kodlar artık çalışmaz.',
+      confirmText: 'Yenile',
+      cancelText: 'Vazgeç',
+      destructive: true,
+    );
+    if (!confirmed) return;
+
     final ok = await DigitalMenuService.to.regenerateToken();
     if (!mounted) return;
     if (ok) {
@@ -272,6 +285,9 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
               }
               final url = _currentUrl;
               final table = _selectedTable;
+              final notice = dm.syncNotice.value;
+              // Rebuild QR whenever the shared token changes on any device.
+              dm.token.value;
 
               return SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
@@ -280,6 +296,36 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      if (notice.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF4E0),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                                color: _orange.withValues(alpha: 0.35)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(CupertinoIcons.arrow_2_circlepath,
+                                  size: 18, color: _orange),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  notice,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: _textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
                       _Card(
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),

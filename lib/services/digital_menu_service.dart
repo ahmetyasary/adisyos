@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -5,16 +6,27 @@ import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Admin-facing config for the public digital menu (QR → browser).
+///
+/// The share token is account-scoped: regenerating on iPad updates iPhone (and
+/// vice versa) via Realtime so every device shows the same link.
 class DigitalMenuService extends GetxService {
   static DigitalMenuService get to => Get.find();
 
   final _db = Supabase.instance.client;
+  RealtimeChannel? _channel;
+  Timer? _noticeTimer;
+
+  /// True while this device is writing — skip "remote update" UI for echoes.
+  bool _localWrite = false;
 
   final RxBool loading = false.obs;
   final RxBool saving = false.obs;
   final RxBool enabled = true.obs;
   final RxString token = ''.obs;
   final RxList<int> selectedMenuIds = <int>[].obs;
+
+  /// Brief banner text after another device changes the link / config.
+  final RxString syncNotice = ''.obs;
 
   /// Selected table for the QR currently shown in the admin UI (not persisted
   /// as a single global choice — each table gets its own link/QR).
@@ -49,15 +61,89 @@ class DigitalMenuService extends GetxService {
       if (data.event == AuthChangeEvent.signedIn ||
           data.event == AuthChangeEvent.initialSession) {
         load();
+        _resubscribeRealtime();
       }
       if (data.event == AuthChangeEvent.signedOut) {
+        _unsubscribeRealtime();
         token.value = '';
         selectedMenuIds.clear();
         selectedTableId.value = null;
         enabled.value = true;
+        syncNotice.value = '';
       }
     });
     load();
+    _subscribeRealtime();
+  }
+
+  @override
+  void onClose() {
+    _noticeTimer?.cancel();
+    _unsubscribeRealtime();
+    super.onClose();
+  }
+
+  void _subscribeRealtime() {
+    final tenantId = _tenantId;
+    if (tenantId == null) return;
+    _channel = _db
+        .channel('digital_menu_config_$tenantId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'digital_menu_config',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'tenant_id',
+            value: tenantId,
+          ),
+          callback: (payload) {
+            if (_localWrite) return;
+            final row = payload.newRecord;
+            if (row.isEmpty) return;
+            _applyRemoteRow(Map<String, dynamic>.from(row));
+          },
+        )
+        .subscribe();
+  }
+
+  void _unsubscribeRealtime() {
+    _channel?.unsubscribe();
+    _channel = null;
+  }
+
+  void _resubscribeRealtime() {
+    _unsubscribeRealtime();
+    _subscribeRealtime();
+  }
+
+  void _applyRemoteRow(Map<String, dynamic> row) {
+    final nextToken = (row['token'] as String?) ?? '';
+    final tokenChanged =
+        nextToken.isNotEmpty && nextToken != token.value.trim();
+    final nextEnabled = (row['enabled'] as bool?) ?? true;
+    final ids = row['menu_ids'];
+    final nextIds = ids is List
+        ? ids.map((e) => (e as num).toInt()).toList()
+        : <int>[];
+
+    if (nextToken.isNotEmpty) token.value = nextToken;
+    enabled.value = nextEnabled;
+    selectedMenuIds.assignAll(nextIds);
+
+    if (tokenChanged) {
+      _showSyncNotice('Link değiştirildi, güncelleniyor…');
+    } else {
+      _showSyncNotice('Dijital menü başka cihazda güncellendi');
+    }
+  }
+
+  void _showSyncNotice(String message) {
+    syncNotice.value = message;
+    _noticeTimer?.cancel();
+    _noticeTimer = Timer(const Duration(seconds: 3), () {
+      if (syncNotice.value == message) syncNotice.value = '';
+    });
   }
 
   Future<void> load() async {
@@ -102,16 +188,17 @@ class DigitalMenuService extends GetxService {
   Future<String> _ensureRow(String tenantId) async {
     final newToken = _randomToken();
     try {
-      await _db.from('digital_menu_config').upsert({
-        'tenant_id': tenantId,
-        'token': newToken,
-        'menu_ids': <int>[],
-        'enabled': true,
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      await _withLocalWrite(() async {
+        await _db.from('digital_menu_config').upsert({
+          'tenant_id': tenantId,
+          'token': newToken,
+          'menu_ids': <int>[],
+          'enabled': true,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        });
       });
       return newToken;
     } catch (e) {
-      // Race: another device may have inserted. Re-read.
       if (kDebugMode) print('[DigitalMenuService] ensure upsert: $e');
       final row = await _db
           .from('digital_menu_config')
@@ -119,6 +206,18 @@ class DigitalMenuService extends GetxService {
           .eq('tenant_id', tenantId)
           .maybeSingle();
       return (row?['token'] as String?) ?? newToken;
+    }
+  }
+
+  Future<T> _withLocalWrite<T>(Future<T> Function() action) async {
+    _localWrite = true;
+    try {
+      return await action();
+    } finally {
+      // Allow realtime echo to settle before accepting remote events again.
+      Future<void>.delayed(const Duration(milliseconds: 800), () {
+        _localWrite = false;
+      });
     }
   }
 
@@ -142,12 +241,14 @@ class DigitalMenuService extends GetxService {
     try {
       var t = token.value.trim();
       if (t.isEmpty) t = await _ensureRow(tenantId);
-      await _db.from('digital_menu_config').upsert({
-        'tenant_id': tenantId,
-        'token': t,
-        'menu_ids': selectedMenuIds.toList(),
-        'enabled': enabled.value,
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      await _withLocalWrite(() async {
+        await _db.from('digital_menu_config').upsert({
+          'tenant_id': tenantId,
+          'token': t,
+          'menu_ids': selectedMenuIds.toList(),
+          'enabled': enabled.value,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        });
       });
       token.value = t;
       return true;
@@ -159,21 +260,24 @@ class DigitalMenuService extends GetxService {
     }
   }
 
-  /// Rotates the public token (invalidates old QR links).
+  /// Rotates the public token (invalidates old QR links) on every device.
   Future<bool> regenerateToken() async {
     final tenantId = _tenantId;
     if (tenantId == null) return false;
     final newToken = _randomToken();
     saving.value = true;
     try {
-      await _db.from('digital_menu_config').upsert({
-        'tenant_id': tenantId,
-        'token': newToken,
-        'menu_ids': selectedMenuIds.toList(),
-        'enabled': enabled.value,
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      await _withLocalWrite(() async {
+        await _db.from('digital_menu_config').upsert({
+          'tenant_id': tenantId,
+          'token': newToken,
+          'menu_ids': selectedMenuIds.toList(),
+          'enabled': enabled.value,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        });
       });
       token.value = newToken;
+      _showSyncNotice('Yeni bağlantı oluşturuldu');
       return true;
     } catch (e) {
       if (kDebugMode) print('[DigitalMenuService] regenerate error: $e');
