@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import 'package:orderix/features/ordi/domain/ordi_message.dart';
 import 'package:orderix/features/ordi/presentation/ordi_controller.dart';
+import 'package:orderix/features/ordi/presentation/ordi_voice_service.dart';
 import 'package:orderix/utils/app_haptics.dart';
 
 // ── Apple-inspired design tokens (matched to the rest of the shell) ────────
@@ -52,6 +53,8 @@ class _OrdiChatSheet extends StatefulWidget {
 class _OrdiChatSheetState extends State<_OrdiChatSheet> {
   final _input = TextEditingController();
   final _inputFocus = FocusNode();
+  /// True from mic tap until user confirms with X (even if STT pauses).
+  bool _voiceSession = false;
 
   @override
   void initState() {
@@ -66,6 +69,12 @@ class _OrdiChatSheetState extends State<_OrdiChatSheet> {
 
   @override
   void dispose() {
+    _voiceSession = false;
+    if (Get.isRegistered<OrdiVoiceService>()) {
+      final voice = OrdiVoiceService.to;
+      voice.cancelListening();
+      voice.stopSpeaking();
+    }
     _input.dispose();
     _inputFocus.dispose();
     super.dispose();
@@ -75,7 +84,74 @@ class _OrdiChatSheetState extends State<_OrdiChatSheet> {
     final value = (text ?? _input.text).trim();
     if (value.isEmpty) return;
     _input.clear();
+    if (Get.isRegistered<OrdiVoiceService>()) {
+      OrdiVoiceService.to.stopSpeaking();
+    }
     OrdiController.to.send(value);
+  }
+
+  Future<void> _onMicTap() async {
+    if (!Get.isRegistered<OrdiVoiceService>()) return;
+    if (OrdiController.to.isThinking.value) return;
+
+    // Second tap (X): confirm transcript and send.
+    if (_voiceSession) {
+      await _confirmVoice();
+      return;
+    }
+
+    AppHaptics.selection();
+    setState(() => _voiceSession = true);
+    final voice = OrdiVoiceService.to;
+    final ok = await voice.startListening(
+      onPartial: (partial) {
+        if (!mounted || !_voiceSession) return;
+        _input.value = TextEditingValue(
+          text: partial,
+          selection: TextSelection.collapsed(offset: partial.length),
+        );
+      },
+      onLocaleMissing: () {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Cihazda Türkçe konuşma tanıma yok. '
+              'Ayarlar → Genel → Klavye → Dikte / Dil’den Türkçe ekleyin.',
+            ),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      },
+    );
+    if (!mounted) return;
+    if (!ok) {
+      setState(() => _voiceSession = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mikrofon veya konuşma tanıma izni gerekli.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _confirmVoice() async {
+    if (!_voiceSession) return;
+    AppHaptics.selection();
+    setState(() => _voiceSession = false);
+    if (!Get.isRegistered<OrdiVoiceService>()) return;
+
+    final fromStt = await OrdiVoiceService.to.stopListening();
+    final text = (fromStt.isNotEmpty ? fromStt : _input.text).trim();
+    if (!mounted) return;
+    if (text.isEmpty) {
+      _input.clear();
+      return;
+    }
+    _input.clear();
+    await OrdiController.to.send(text, speakReply: true);
   }
 
   Future<void> _confirmClear() async {
@@ -170,7 +246,9 @@ class _OrdiChatSheetState extends State<_OrdiChatSheet> {
             _Composer(
               controller: _input,
               focusNode: _inputFocus,
+              voiceSession: _voiceSession,
               onSubmit: _submit,
+              onMicTap: _onMicTap,
             ),
           ],
         ),
@@ -600,12 +678,16 @@ class _Composer extends StatelessWidget {
   const _Composer({
     required this.controller,
     required this.focusNode,
+    required this.voiceSession,
     required this.onSubmit,
+    required this.onMicTap,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
+  final bool voiceSession;
   final VoidCallback onSubmit;
+  final Future<void> Function() onMicTap;
 
   @override
   Widget build(BuildContext context) {
@@ -623,32 +705,69 @@ class _Composer extends StatelessWidget {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: _bg,
+                  color: voiceSession
+                      ? _orange.withValues(alpha: 0.08)
+                      : _bg,
                   borderRadius: BorderRadius.circular(22),
+                  border: voiceSession
+                      ? Border.all(
+                          color: _orange.withValues(alpha: 0.35),
+                        )
+                      : null,
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  maxLines: 4,
-                  minLines: 1,
-                  maxLength: OrdiController.maxQuestionLength,
-                  textInputAction: TextInputAction.send,
-                  textCapitalization: TextCapitalization.sentences,
-                  onSubmitted: (_) => onSubmit(),
-                  style: const TextStyle(fontSize: 15, color: _labelPrimary),
-                  decoration: const InputDecoration(
-                    counterText: '',
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 12),
-                    hintText: 'Ordi\'ye bir soru sorun…',
-                    hintStyle:
-                        TextStyle(fontSize: 15, color: _labelSecondary),
-                  ),
+                child: Row(
+                  children: [
+                    if (voiceSession) ...[
+                      const _ListeningDots(),
+                      const SizedBox(width: 10),
+                    ],
+                    Expanded(
+                      child: TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        maxLines: 4,
+                        minLines: 1,
+                        maxLength: OrdiController.maxQuestionLength,
+                        textInputAction: TextInputAction.send,
+                        textCapitalization: TextCapitalization.sentences,
+                        onSubmitted: (_) => onSubmit(),
+                        style: const TextStyle(
+                            fontSize: 15, color: _labelPrimary),
+                        decoration: InputDecoration(
+                          counterText: '',
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 12),
+                          hintText: voiceSession
+                              ? 'Dinleniyor… bitince X’e dokunun'
+                              : 'Ordi\'ye bir soru sorun…',
+                          hintStyle: const TextStyle(
+                              fontSize: 15, color: _labelSecondary),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
+            const SizedBox(width: 8),
+            Obx(() {
+              final busy = OrdiController.to.isThinking.value;
+              final speaking = Get.isRegistered<OrdiVoiceService>() &&
+                  OrdiVoiceService.to.isSpeaking.value;
+              return _VoiceButton(
+                active: voiceSession,
+                busy: busy,
+                speaking: speaking,
+                onTap: busy
+                    ? null
+                    : () {
+                        onMicTap();
+                      },
+              );
+            }),
             const SizedBox(width: 8),
             Obx(() {
               final busy = OrdiController.to.isThinking.value;
@@ -656,7 +775,7 @@ class _Composer extends StatelessWidget {
                 color: busy ? _separator : _orange,
                 shape: const CircleBorder(),
                 child: InkWell(
-                  onTap: busy
+                  onTap: busy || voiceSession
                       ? null
                       : () {
                           AppHaptics.selection();
@@ -669,7 +788,9 @@ class _Composer extends StatelessWidget {
                     child: Icon(
                       CupertinoIcons.arrow_up,
                       size: 20,
-                      color: busy ? _labelSecondary : Colors.white,
+                      color: busy || voiceSession
+                          ? _labelSecondary
+                          : Colors.white,
                     ),
                   ),
                 ),
@@ -677,6 +798,173 @@ class _Composer extends StatelessWidget {
             }),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Pulsing mic / confirm (X) control for the voice session.
+class _VoiceButton extends StatefulWidget {
+  const _VoiceButton({
+    required this.active,
+    required this.busy,
+    required this.speaking,
+    required this.onTap,
+  });
+
+  final bool active;
+  final bool busy;
+  final bool speaking;
+  final VoidCallback? onTap;
+
+  @override
+  State<_VoiceButton> createState() => _VoiceButtonState();
+}
+
+class _VoiceButtonState extends State<_VoiceButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+    if (widget.active) _pulse.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant _VoiceButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !_pulse.isAnimating) {
+      _pulse.repeat();
+    } else if (!widget.active && _pulse.isAnimating) {
+      _pulse
+        ..stop()
+        ..reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.active
+        ? const Color(0xFFFF3B30)
+        : widget.speaking
+            ? _amber
+            : widget.busy
+                ? _separator
+                : _bg;
+
+    return SizedBox(
+      width: 52,
+      height: 52,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (widget.active)
+            AnimatedBuilder(
+              animation: _pulse,
+              builder: (context, _) {
+                final t = Curves.easeOut.transform(_pulse.value);
+                return Container(
+                  width: 44 + 16 * t,
+                  height: 44 + 16 * t,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFFFF3B30)
+                          .withValues(alpha: 0.45 * (1 - t)),
+                      width: 2,
+                    ),
+                  ),
+                );
+              },
+            ),
+          Material(
+            color: color,
+            shape: const CircleBorder(),
+            child: InkWell(
+              onTap: widget.onTap,
+              customBorder: const CircleBorder(),
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: Icon(
+                  widget.active
+                      ? CupertinoIcons.xmark
+                      : CupertinoIcons.mic,
+                  size: widget.active ? 18 : 20,
+                  color: widget.active || widget.speaking
+                      ? Colors.white
+                      : widget.busy
+                          ? _labelSecondary
+                          : _labelPrimary,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ListeningDots extends StatefulWidget {
+  const _ListeningDots();
+
+  @override
+  State<_ListeningDots> createState() => _ListeningDotsState();
+}
+
+class _ListeningDotsState extends State<_ListeningDots>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _anim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (context, _) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < 3; i++) ...[
+            if (i != 0) const SizedBox(width: 3),
+            Opacity(
+              opacity: _dotOpacity((_anim.value + i / 3) % 1.0),
+              child: Container(
+                width: 5,
+                height: 5,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _orange,
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

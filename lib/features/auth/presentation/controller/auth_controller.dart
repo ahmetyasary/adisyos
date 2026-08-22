@@ -54,14 +54,13 @@ class AuthController extends GetxService {
 
   /// The role that governs what the current session may access.
   ///
-  /// A PIN-based staff session takes precedence over the account's own role:
-  /// even when the signed-in account is an admin, once someone works "as" a
-  /// staff member their access is limited to the staff feature set (tables +
-  /// orders). Reading [StaffService.hasActiveStaff] here also makes any `Obx`
-  /// that watches the role rebuild when a staff session starts or ends.
+  /// A PIN-based staff session takes precedence over the account's own role.
+  /// Staff profile roles map to [AppRole]: yetkili→admin, garson→staff,
+  /// mutfak→kitchen. Reading [StaffService.hasActiveStaff] here also makes any
+  /// `Obx` that watches the role rebuild when a staff session starts or ends.
   AppRole? get currentRole {
     if (Get.isRegistered<StaffService>() && StaffService.to.hasActiveStaff) {
-      return AppRole.staff;
+      return StaffService.to.currentStaffAppRole;
     }
     return user.value?.role;
   }

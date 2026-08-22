@@ -9,6 +9,9 @@ import 'package:orderix/services/table_service.dart';
 import 'package:orderix/services/section_service.dart';
 import 'package:orderix/themes/app_theme.dart';
 import 'package:orderix/services/settings_service.dart';
+import 'package:orderix/services/report_excel_exporter.dart';
+import 'package:orderix/views/report_breakdowns.dart';
+import 'package:orderix/utils/app_haptics.dart';
 
 /// Returns "Section · tableName" when a live table with that name has a section.
 String _resolveTableLabel(String rawName) {
@@ -26,7 +29,6 @@ String _resolveTableLabel(String rawName) {
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _bg = Colors.white;
-const _chip = Color(0xFFF2F2F7);
 const _card = Colors.white;
 const _textPrimary = Color(0xFF1C1C1E);
 const _textSec = Color(0xFF8E8E93);
@@ -35,35 +37,66 @@ const _border = Color(0xFFE5E5EA);
 class DailyReportView extends StatelessWidget {
   /// [inline] renders the report body only (no own Scaffold/header), for
   /// embedding as the detail pane of a tablet master-detail split view.
-  const DailyReportView({super.key, this.inline = false});
+  /// [date] defaults to today — monthly drill-down passes a specific day.
+  const DailyReportView({super.key, this.inline = false, this.date});
 
   final bool inline;
+  final DateTime? date;
+
+  DateTime get _day {
+    final d = date ?? DateTime.now();
+    return DateTime(d.year, d.month, d.day);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final today = DateTime.now();
+    final day = _day;
 
     final body = Obx(() {
       final cs = SettingsService.cs;
-      final sales = SalesHistoryService.to.getSalesForDate(today);
+      final sales = SalesHistoryService.to.getSalesForDate(day);
       final total = SalesHistoryService.to.getTotalForSales(sales);
-      final hourlyTotals = SalesHistoryService.to.getHourlyTotals(today);
+      final hourlyTotals = SalesHistoryService.to.getHourlyTotals(day);
       final topItems = SalesHistoryService.to.getTopItems(sales, top: 5);
+      final staffTotals = SalesHistoryService.to.getStaffTotals(sales, top: 8);
+      final tableTotals = SalesHistoryService.to.getTableTotals(sales, top: 8);
 
       return SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Date label
-            Text(
-              DateFormat('dd MMMM yyyy, EEEE', Get.locale?.languageCode ?? 'tr')
-                  .format(today),
-              style: const TextStyle(
-                color: _textSec,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    DateFormat(
+                            'dd MMMM yyyy, EEEE',
+                            Get.locale?.languageCode ?? 'tr')
+                        .format(day),
+                    style: const TextStyle(
+                      color: _textSec,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Builder(
+                  builder: (btnCtx) => IconButton(
+                    tooltip: 'Excel\'e aktar',
+                    onPressed: () {
+                      AppHaptics.selection();
+                      ReportExcelExporter.exportDaily(
+                        day,
+                        shareOrigin:
+                            ReportExcelExporter.shareOriginFrom(btnCtx),
+                      );
+                    },
+                    icon: const Icon(CupertinoIcons.table,
+                        size: 20, color: AppTheme.accentColor),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
 
@@ -91,7 +124,7 @@ class DailyReportView extends StatelessWidget {
                 Expanded(
                   child: _StatCard(
                     icon: CupertinoIcons.arrow_up_right_circle_fill,
-                    label: 'Ort. Sipariş',
+                    label: 'Ort. Adisyon',
                     value: sales.isEmpty
                         ? '${cs}0.00'
                         : '$cs${(total / sales.length).toStringAsFixed(2)}',
@@ -133,12 +166,43 @@ class DailyReportView extends StatelessWidget {
                 const SizedBox(height: 24),
               ],
 
-              // Son Aktivite — table-grouped
-              _SectionTitle(
-                  title: 'recent_activity'.tr,
-                  icon: CupertinoIcons.list_bullet),
+              if (staffTotals.isNotEmpty) ...[
+                const _SectionTitle(
+                    title: 'Personel satışları',
+                    icon: CupertinoIcons.person_2_fill),
+                const SizedBox(height: 12),
+                _ContentCard(
+                  child: ReportMoneyRankList(
+                    entries: staffTotals,
+                    cs: cs,
+                    accent: const Color(0xFF007AFF),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              if (tableTotals.isNotEmpty) ...[
+                const _SectionTitle(
+                    title: 'Masa satışları',
+                    icon: Icons.table_bar_rounded),
+                const SizedBox(height: 12),
+                _ContentCard(
+                  child: ReportMoneyRankList(
+                    entries: tableTotals
+                        .map((e) => MapEntry(_resolveTableLabel(e.key), e.value))
+                        .toList(),
+                    cs: cs,
+                    accent: const Color(0xFFAF52DE),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              // Sale list — tap for line items
+              const _SectionTitle(
+                  title: 'Satışlar', icon: CupertinoIcons.list_bullet),
               const SizedBox(height: 12),
-              _buildTableGroupedActivity(sales, cs),
+              _buildSalesList(sales, cs),
             ],
           ],
         ),
@@ -157,6 +221,30 @@ class DailyReportView extends StatelessWidget {
             Expanded(child: body),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSalesList(List<Map<String, dynamic>> sales, String cs) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          for (var i = 0; i < sales.length; i++) ...[
+            if (i > 0) const Divider(height: 1, color: _border),
+            ReportSaleTile(
+              sale: sales[i],
+              cs: cs,
+              tableLabel:
+                  _resolveTableLabel(sales[i]['tableName'] as String? ?? ''),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -391,225 +479,6 @@ class DailyReportView extends StatelessWidget {
     );
   }
 
-  // ── Son Aktivite: table-grouped ───────────────────────────────
-  Widget _buildTableGroupedActivity(
-      List<Map<String, dynamic>> sales, String cs) {
-    // Group by tableName, preserve order (newest first already)
-    final grouped = <String, List<Map<String, dynamic>>>{};
-    for (final sale in sales) {
-      final name = sale['tableName'] as String;
-      grouped.putIfAbsent(name, () => []).add(sale);
-    }
-
-    // Sort tables by their most recent sale (already newest-first in each group)
-    final tableNames = grouped.keys.toList()
-      ..sort((a, b) {
-        final aDate = DateTime.parse(grouped[a]!.first['date'] as String);
-        final bDate = DateTime.parse(grouped[b]!.first['date'] as String);
-        return bDate.compareTo(aDate);
-      });
-
-    return Column(
-      children: tableNames.map((tableName) {
-        final tableSales = grouped[tableName]!;
-        final tableTotal =
-            tableSales.fold(0.0, (sum, s) => sum + (s['total'] as double));
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(
-            color: _card,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
-            boxShadow: const [
-              BoxShadow(
-                  color: Color(0x0A000000),
-                  blurRadius: 20,
-                  offset: Offset(0, 4)),
-              BoxShadow(
-                  color: Color(0x05000000),
-                  blurRadius: 5,
-                  offset: Offset(0, 1)),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Table header
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppTheme.accentColor.withValues(alpha: 0.10),
-                      AppTheme.accentColor.withValues(alpha: 0.04),
-                    ],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ),
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(18)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.table_restaurant_rounded,
-                          color: AppTheme.accentColor, size: 16),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      _resolveTableLabel(tableName),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: _textPrimary,
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppTheme.successColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '$cs${tableTotal.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                          color: AppTheme.successColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Individual sales for this table
-              ...tableSales.asMap().entries.map((entry) {
-                final idx = entry.key;
-                final sale = entry.value;
-                final date = DateTime.parse(sale['date'] as String);
-                final items =
-                    (sale['items'] as List).cast<Map<String, dynamic>>();
-                final method = (sale['paymentMethod'] as String?) ?? 'cash';
-                final isLast = idx == tableSales.length - 1;
-
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Time + payment method row
-                          Row(
-                            children: [
-                              Icon(CupertinoIcons.clock_fill,
-                                  size: 13, color: _textSec),
-                              const SizedBox(width: 4),
-                              Text(
-                                DateFormat('HH:mm').format(date),
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    color: _textSec,
-                                    fontWeight: FontWeight.w500),
-                              ),
-                              const SizedBox(width: 10),
-                              _PayMethodBadge(method: method),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-
-                          // Item list
-                          ...items.map((item) {
-                            final qty = (item['quantity'] as num).toInt();
-                            final price = (item['price'] as num).toDouble();
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 22,
-                                    height: 22,
-                                    decoration: BoxDecoration(
-                                      color: _chip,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      '$qty',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: _textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      item['name'] as String,
-                                      style: const TextStyle(
-                                          fontSize: 13, color: _textPrimary),
-                                    ),
-                                  ),
-                                  Text(
-                                    '$cs${(qty * price).toStringAsFixed(2)}',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: _textPrimary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-
-                          // Sale total row
-                          const SizedBox(height: 4),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text(
-                                '${items.length} ürün · ',
-                                style: const TextStyle(
-                                    fontSize: 12, color: _textSec),
-                              ),
-                              Text(
-                                '$cs${(sale['total'] as double).toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.successColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (!isLast)
-                      const Divider(
-                          height: 1, indent: 16, endIndent: 16, color: _border),
-                  ],
-                );
-              }),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
   Widget _buildEmptyState() {
     return SizedBox(
       height: 300,
@@ -633,37 +502,6 @@ class DailyReportView extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ── Payment method badge ──────────────────────────────────────
-class _PayMethodBadge extends StatelessWidget {
-  const _PayMethodBadge({required this.method});
-  final String method;
-
-  @override
-  Widget build(BuildContext context) {
-    final (icon, color) = paymentTypeVisual(method);
-    final label = SettingsService.to.paymentMethodLabel(method);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 11, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-                fontSize: 11, fontWeight: FontWeight.w600, color: color),
-          ),
-        ],
       ),
     );
   }

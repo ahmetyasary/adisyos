@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:orderix/navigation/app_sections.dart';
+import 'package:orderix/services/digital_menu_order_service.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _card = Colors.white;
@@ -12,6 +14,11 @@ const _separator = Color(0xFFE5E5EA);
 const _red = Color(0xFFFF3B30);
 const _iconChipBg = Color(0xFFF2F2F7); // neutral badge background
 const _iconChipFg = Color(0xFF3A3A3C); // neutral badge icon
+
+int _pendingOrdersCount() {
+  if (!Get.isRegistered<DigitalMenuOrderService>()) return 0;
+  return DigitalMenuOrderService.to.pendingCount;
+}
 
 /// The mobile shell's bottom tab bar. Shows the most-used, role-permitted
 /// sections plus a trailing "Daha Fazla" tab that opens [showMoreSheet].
@@ -32,46 +39,56 @@ class AppBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // "Daha Fazla" is active whenever the current section isn't a bar tab.
-    final moreActive = !sections.any((s) => s.id == selectedId);
+    return Obx(() {
+      final pending = _pendingOrdersCount();
+      final pendingOnBar = sections.any((s) => s.id == 'pending_orders');
+      // "Daha Fazla" is active whenever the current section isn't a bar tab.
+      final moreActive = !sections.any((s) => s.id == selectedId);
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: _card,
-        border: Border(top: BorderSide(color: _separator, width: 0.5)),
-        boxShadow: [
-          BoxShadow(
-              color: Color(0x0A000000), blurRadius: 16, offset: Offset(0, -2)),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 60,
-          child: Row(
-            children: [
-              for (final s in sections)
+      return Container(
+        decoration: const BoxDecoration(
+          color: _card,
+          border: Border(top: BorderSide(color: _separator, width: 0.5)),
+          boxShadow: [
+            BoxShadow(
+                color: Color(0x0A000000),
+                blurRadius: 16,
+                offset: Offset(0, -2)),
+          ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: SizedBox(
+            height: 60,
+            child: Row(
+              children: [
+                for (final s in sections)
+                  Expanded(
+                    child: _BarItem(
+                      icon: s.icon,
+                      label: s.title(),
+                      active: s.id == selectedId,
+                      badgeCount:
+                          s.id == 'pending_orders' && pending > 0 ? pending : 0,
+                      onTap: () => onSelect(s.id),
+                    ),
+                  ),
                 Expanded(
                   child: _BarItem(
-                    icon: s.icon,
-                    label: s.title(),
-                    active: s.id == selectedId,
-                    onTap: () => onSelect(s.id),
+                    icon: CupertinoIcons.ellipsis,
+                    label: 'Daha Fazla',
+                    active: moreActive,
+                    badgeCount:
+                        !pendingOnBar && pending > 0 ? pending : 0,
+                    onTap: onMore,
                   ),
                 ),
-              Expanded(
-                child: _BarItem(
-                  icon: CupertinoIcons.ellipsis,
-                  label: 'Daha Fazla',
-                  active: moreActive,
-                  onTap: onMore,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 }
 
@@ -81,12 +98,14 @@ class _BarItem extends StatelessWidget {
     required this.label,
     required this.active,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   final IconData icon;
   final String label;
   final bool active;
   final VoidCallback onTap;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
@@ -96,8 +115,24 @@ class _BarItem extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 24, color: color),
-          const SizedBox(height: 4),
+          SizedBox(
+            width: 32,
+            height: 26,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                Icon(icon, size: 24, color: color),
+                if (badgeCount > 0)
+                  Positioned(
+                    top: -2,
+                    right: -6,
+                    child: _TabBadge(count: badgeCount),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 2),
           Text(
             label,
             maxLines: 1,
@@ -110,6 +145,34 @@ class _BarItem extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TabBadge extends StatelessWidget {
+  const _TabBadge({required this.count});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: _red,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: Colors.white, width: 1.5),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        count > 99 ? '99+' : '$count',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          height: 1.1,
+        ),
       ),
     );
   }
@@ -221,6 +284,9 @@ class _MoreSheet extends StatelessWidget {
                               icon: s.icon,
                               label: s.title(),
                               active: s.id == selectedId,
+                              badgeCount: s.id == 'pending_orders'
+                                  ? _pendingOrdersCount()
+                                  : 0,
                               onTap: () => onSelect(s.id),
                             ),
                         ]),

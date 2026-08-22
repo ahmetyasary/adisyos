@@ -83,6 +83,9 @@ class AppSidebar extends StatelessWidget {
                         label: s.title(),
                         active: s.id == selectedId,
                         collapsed: collapsed,
+                        badgeCount: s.id == 'pending_orders'
+                            ? DigitalMenuOrderService.to.pendingCount
+                            : 0,
                         onTap: () => onSelect(s.id),
                       ),
                   ],
@@ -165,6 +168,7 @@ class _SidebarRow extends StatelessWidget {
     required this.collapsed,
     required this.onTap,
     this.foreground,
+    this.badgeCount = 0,
   });
 
   final IconData icon;
@@ -173,14 +177,54 @@ class _SidebarRow extends StatelessWidget {
   final bool collapsed;
   final VoidCallback onTap;
   final Color? foreground;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
     final fg = foreground ?? (active ? _orange : _labelSecondary);
     final textColor = foreground ?? (active ? _orange : _labelPrimary);
 
+    Widget iconWidget = Icon(icon, size: collapsed ? 22 : 20, color: fg);
+    if (badgeCount > 0 && collapsed) {
+      iconWidget = SizedBox(
+        width: 28,
+        height: 28,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Icon(icon, size: 22, color: fg),
+            Positioned(
+              top: -2,
+              right: -4,
+              child: Container(
+                constraints:
+                    const BoxConstraints(minWidth: 16, minHeight: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: _red,
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  badgeCount > 99 ? '99+' : '$badgeCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final row = collapsed
-        ? Center(child: Icon(icon, size: 22, color: fg))
+        ? Center(child: iconWidget)
         : _PinnedExpandedRow(
             width: _expandedRowContentWidth,
             child: Row(
@@ -200,6 +244,26 @@ class _SidebarRow extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (badgeCount > 0)
+                  Container(
+                    height: 20,
+                    constraints: const BoxConstraints(minWidth: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    decoration: BoxDecoration(
+                      color: _red,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      badgeCount > 99 ? '99+' : '$badgeCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        height: 1,
+                      ),
+                    ),
+                  ),
               ],
             ),
           );

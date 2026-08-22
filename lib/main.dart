@@ -16,6 +16,7 @@ import 'package:orderix/services/day_service.dart';
 import 'package:orderix/services/menu_service.dart';
 import 'package:orderix/services/digital_menu_service.dart';
 import 'package:orderix/services/digital_menu_order_service.dart';
+import 'package:orderix/services/local_notify_service.dart';
 import 'package:orderix/services/table_service.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/services/staff_service.dart';
@@ -33,6 +34,7 @@ import 'package:orderix/features/auth/domain/usecases/get_user_role_usecase.dart
 import 'package:orderix/features/auth/domain/usecases/signup_usecase.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/features/ordi/presentation/ordi_controller.dart';
+import 'package:orderix/features/ordi/presentation/ordi_voice_service.dart';
 import 'package:orderix/views/signup_screen.dart';
 import 'package:orderix/utils/app_info.dart';
 
@@ -82,11 +84,13 @@ Future<void> main() async {
   Get.put(MenuService());
   Get.put(DigitalMenuService());
   Get.put(TableService());
+  await Get.putAsync(() => LocalNotifyService().init());
   Get.put(DigitalMenuOrderService());
 
   // Ordi reads the services above to build its context snapshot, so it must be
   // registered after them.
   Get.put(OrdiController());
+  await Get.putAsync(() => OrdiVoiceService().init());
 
   runApp(const MyApp());
 }
@@ -155,6 +159,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       DayService.to.refresh();
       MenuService.to.refresh();
       TableService.to.refresh();
+      if (Get.isRegistered<DigitalMenuOrderService>()) {
+        DigitalMenuOrderService.to.onAppResumed();
+      }
     }
   }
 

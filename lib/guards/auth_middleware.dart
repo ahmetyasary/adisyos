@@ -26,7 +26,7 @@ const _routePermissions = <String, List<AppRole>>{
   AppRoutes.employees: [AppRole.admin],
   AppRoutes.settings:  [AppRole.admin],
   AppRoutes.menu:      [AppRole.admin],
-  // Both roles:
+  // Waiter + yetkili:
   AppRoutes.tables:    [AppRole.admin, AppRole.staff],
   AppRoutes.orders:    [AppRole.admin, AppRole.staff],
 };

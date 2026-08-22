@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:orderix/models/app_role.dart';
 
 class StaffService extends GetxService {
   static StaffService get to => Get.find();
@@ -17,6 +18,12 @@ class StaffService extends GetxService {
   bool get hasActiveStaff => currentStaff.value != null;
   String get currentStaffIdentifier =>
       currentStaff.value?['name'] as String? ?? '';
+
+  /// App role for the active PIN session (defaults to garson).
+  AppRole get currentStaffAppRole {
+    final raw = currentStaff.value?['role'] as String? ?? 'garson';
+    return AppRoleX.fromString(raw);
+  }
 
   @override
   void onInit() {
@@ -54,6 +61,7 @@ class StaffService extends GetxService {
           .eq('is_active', true)
           .order('created_at');
       staffList.assignAll(rows.map(_rowToStaff).toList());
+      _refreshCurrentStaffFromList();
     } catch (e) {
       if (kDebugMode) print('[StaffService] load error: $e');
     } finally {
@@ -61,12 +69,25 @@ class StaffService extends GetxService {
     }
   }
 
-  Map<String, dynamic> _rowToStaff(Map<String, dynamic> row) => {
-        'id': row['id'] as String,
-        'name': row['name'] as String,
-        'pin': row['pin'] as String,
-        'isActive': row['is_active'] as bool? ?? true,
-      };
+  void _refreshCurrentStaffFromList() {
+    final id = currentStaff.value?['id'] as String?;
+    if (id == null) return;
+    final fresh = staffList.firstWhereOrNull((s) => s['id'] == id);
+    if (fresh != null) {
+      currentStaff.value = fresh;
+    }
+  }
+
+  Map<String, dynamic> _rowToStaff(Map<String, dynamic> row) {
+    final role = AppRoleX.fromString(row['role'] as String? ?? 'garson');
+    return {
+      'id': row['id'] as String,
+      'name': row['name'] as String,
+      'pin': row['pin'] as String,
+      'role': role.staffDbValue,
+      'isActive': row['is_active'] as bool? ?? true,
+    };
+  }
 
   void _err(String tag, Object e) {
     if (kDebugMode) print('[StaffService] $tag error: $e');
@@ -87,11 +108,21 @@ class StaffService extends GetxService {
   }
 
   // addStaff must await: caller needs the real DB id immediately.
-  Future<void> addStaff(String name, String pin) async {
+  Future<void> addStaff(
+    String name,
+    String pin, {
+    AppRole role = AppRole.staff,
+  }) async {
     try {
       final row = await _db
           .from('staff_profiles')
-          .insert({'name': name.trim(), 'pin': pin, 'is_active': true, 'tenant_id': _tenantId})
+          .insert({
+            'name': name.trim(),
+            'pin': pin,
+            'is_active': true,
+            'tenant_id': _tenantId,
+            'role': role.staffDbValue,
+          })
           .select()
           .single();
       staffList.add(_rowToStaff(row));
@@ -101,15 +132,31 @@ class StaffService extends GetxService {
     }
   }
 
-  Future<void> updateStaff(String id, {required String name, required String pin}) async {
+  Future<void> updateStaff(
+    String id, {
+    required String name,
+    required String pin,
+    AppRole? role,
+  }) async {
     final idx = staffList.indexWhere((s) => s['id'] == id);
+    final roleValue = role?.staffDbValue ??
+        (idx >= 0
+            ? staffList[idx]['role'] as String? ?? 'garson'
+            : 'garson');
     if (idx >= 0) {
-      staffList[idx] = {...staffList[idx], 'name': name.trim(), 'pin': pin};
+      staffList[idx] = {
+        ...staffList[idx],
+        'name': name.trim(),
+        'pin': pin,
+        'role': roleValue,
+      };
     }
     try {
-      await _db.from('staff_profiles')
-          .update({'name': name.trim(), 'pin': pin})
-          .eq('id', id);
+      await _db.from('staff_profiles').update({
+        'name': name.trim(),
+        'pin': pin,
+        'role': roleValue,
+      }).eq('id', id);
     } catch (e) {
       _err('updateStaff', e);
     }
@@ -119,9 +166,7 @@ class StaffService extends GetxService {
     staffList.removeWhere((s) => s['id'] == id);
     if (currentStaff.value?['id'] == id) clearCurrentStaff();
     try {
-      await _db.from('staff_profiles')
-          .delete()
-          .eq('id', id);
+      await _db.from('staff_profiles').delete().eq('id', id);
     } catch (e) {
       _err('deleteStaff', e);
     }

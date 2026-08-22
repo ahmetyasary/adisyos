@@ -3,8 +3,11 @@ import 'package:flutter/material.dart' show Color;
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:orderix/services/local_notify_service.dart';
 import 'package:orderix/services/table_service.dart';
+import 'package:orderix/utils/app_haptics.dart';
 import 'package:orderix/widgets/app_dialog.dart';
+import 'package:orderix/widgets/app_toast.dart';
 
 /// Pending customer orders from the public digital menu (QR).
 class DigitalMenuOrderService extends GetxService {
@@ -15,6 +18,10 @@ class DigitalMenuOrderService extends GetxService {
 
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
+
+  /// Ids already seen — used to detect newly arrived pending orders.
+  final Set<String> _knownIds = <String>{};
+  bool _hydrated = false;
 
   String? get _tenantId => _db.auth.currentUser?.id;
 
@@ -31,6 +38,8 @@ class DigitalMenuOrderService extends GetxService {
       }
       if (data.event == AuthChangeEvent.signedOut) {
         pending.clear();
+        _knownIds.clear();
+        _hydrated = false;
         _unsubscribe();
       }
     });
@@ -58,7 +67,7 @@ class DigitalMenuOrderService extends GetxService {
             column: 'tenant_id',
             value: tenantId,
           ),
-          callback: (_) => refresh(),
+          callback: (_) => refresh(notifyNew: true),
         )
         .subscribe();
   }
@@ -73,7 +82,13 @@ class DigitalMenuOrderService extends GetxService {
     _subscribe();
   }
 
-  Future<void> refresh() async {
+  /// Call when the app returns from background / sleep.
+  Future<void> onAppResumed() async {
+    _resubscribe();
+    await refresh(notifyNew: true);
+  }
+
+  Future<void> refresh({bool notifyNew = false}) async {
     final tenantId = _tenantId;
     if (tenantId == null) return;
     loading.value = true;
@@ -84,13 +99,50 @@ class DigitalMenuOrderService extends GetxService {
           .eq('tenant_id', tenantId)
           .eq('status', 'pending')
           .order('created_at', ascending: false);
-      pending.assignAll(
-        (rows as List).map((e) => _mapRow(Map<String, dynamic>.from(e))),
-      );
+      final mapped = (rows as List)
+          .map((e) => _mapRow(Map<String, dynamic>.from(e)))
+          .toList();
+
+      final arrived = <Map<String, dynamic>>[];
+      if (_hydrated && notifyNew) {
+        for (final o in mapped) {
+          final id = o['id'] as String;
+          if (!_knownIds.contains(id)) arrived.add(o);
+        }
+      }
+
+      pending.assignAll(mapped);
+      _knownIds
+        ..clear()
+        ..addAll(mapped.map((o) => o['id'] as String));
+
+      if (arrived.isNotEmpty) {
+        await _alertNewOrders(arrived);
+      }
+      _hydrated = true;
     } catch (e) {
       if (kDebugMode) print('[DigitalMenuOrderService] refresh: $e');
     } finally {
       loading.value = false;
+    }
+  }
+
+  Future<void> _alertNewOrders(List<Map<String, dynamic>> orders) async {
+    final n = orders.length;
+    final first = orders.first;
+    final table = (first['tableName'] as String?)?.trim();
+    final title = 'new_order'.tr;
+    final body = n == 1
+        ? (table != null && table.isNotEmpty
+            ? '$table · ${'new_order_message'.tr}'
+            : 'new_order_message'.tr)
+        : '$n ${'new_orders_plural'.tr}';
+
+    AppToast.warning(body, title: title);
+    await AppHaptics.medium();
+
+    if (Get.isRegistered<LocalNotifyService>()) {
+      await LocalNotifyService.to.showOrderAlert(title: title, body: body);
     }
   }
 
@@ -190,6 +242,7 @@ class DigitalMenuOrderService extends GetxService {
 
   Future<void> _delete(String orderId) async {
     pending.removeWhere((o) => o['id'] == orderId);
+    _knownIds.remove(orderId);
     try {
       await _db.from('digital_menu_orders').delete().eq('id', orderId);
     } catch (e) {

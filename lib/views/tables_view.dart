@@ -792,7 +792,7 @@ class _TablesViewState extends State<TablesView> {
                 right: 8,
               ),
               child: SizedBox(
-                height: 52,
+                height: 44,
                 child: Row(
                   children: [
                     ShellLeading(
@@ -836,8 +836,8 @@ class _TablesViewState extends State<TablesView> {
             ResponsiveContent(
               width: ContentWidth.wide,
               child: const Padding(
-                padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: DayToggleCard(),
+                padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: DayToggleCard(dense: true),
               ),
             ),
 
@@ -856,7 +856,7 @@ class _TablesViewState extends State<TablesView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                       child: Row(
                         children: [
                           Expanded(
@@ -864,13 +864,13 @@ class _TablesViewState extends State<TablesView> {
                                   label: 'TOPLAM',
                                   value: '$total',
                                   valueColor: _textPrimary)),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Expanded(
                               child: _StatBox(
                                   label: 'DOLU',
                                   value: '$occupied',
                                   valueColor: _occupied)),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Expanded(
                               child: _StatBox(
                                   label: 'BOŞ',
@@ -880,7 +880,7 @@ class _TablesViewState extends State<TablesView> {
                       ),
                     ),
                     if (sections.isNotEmpty || AuthController.to.isAdmin) ...[
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -926,7 +926,7 @@ class _TablesViewState extends State<TablesView> {
               );
             }),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
 
             // ── Table grid ─────────────────────────────────
             Expanded(
@@ -1075,32 +1075,33 @@ class _StatBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: _card,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
-        boxShadow: const [
-          BoxShadow(
-              color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
-          BoxShadow(
-              color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 1)),
-        ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: _textSecondary)),
-          const SizedBox(height: 2),
-          Text(value,
-              style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: valueColor)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: valueColor,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: _textSecondary,
+              letterSpacing: 0.2,
+            ),
+          ),
         ],
       ),
     );
@@ -1130,7 +1131,7 @@ class _SectionPill extends StatelessWidget {
           onLongPress == null ? null : (d) => onLongPress!(d.globalPosition),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: selected ? _orange : _card,
           borderRadius: BorderRadius.circular(20),

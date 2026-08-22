@@ -1,6 +1,9 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/models/app_role.dart';
+import 'package:orderix/services/day_service.dart';
 import 'package:orderix/services/kitchen_service.dart';
 import 'package:orderix/services/table_service.dart';
 import 'package:orderix/services/section_service.dart';
@@ -57,6 +60,12 @@ class _KitchenDisplayViewState extends State<KitchenDisplayView>
                 _buildHeader(context, isMobile),
                 Expanded(
                   child: Obx(() {
+                    final isKitchenStaff =
+                        AuthController.to.currentRole?.isKitchen == true;
+                    final dayOpen = DayService.to.activeDays.isNotEmpty;
+                    if (isKitchenStaff && !dayOpen) {
+                      return const _KitchenDayClosedPanel();
+                    }
                     final svc = KitchenService.to;
                     return isMobile
                         ? _buildMobileLayout(svc)
@@ -585,6 +594,59 @@ class _TicketCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Shown to kitchen staff when no business day is open yet.
+class _KitchenDayClosedPanel extends StatelessWidget {
+  const _KitchenDayClosedPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: _colPending.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(
+                CupertinoIcons.moon_zzz_fill,
+                size: 34,
+                color: _colPending,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Gün başlamadı',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: _textPrimary,
+                letterSpacing: -0.3,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Gün başlamadığı için bilgi ekranı aktif değildir.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: _textSec,
+                height: 1.45,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -4,8 +4,10 @@ import 'package:get/get.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/day_service.dart';
+import 'package:orderix/models/app_role.dart';
 import 'package:orderix/views/auth_screen.dart';
 import 'package:orderix/navigation/app_shell.dart';
+import 'package:orderix/navigation/app_sections.dart';
 
 const _bg = Color(0xFFF2F2F7);
 const _card = Colors.white;
@@ -57,7 +59,9 @@ class _PinScreenState extends State<PinScreen> {
     if (staff == null) return;
     if (StaffService.to.verifyPin(staff['id'] as String, _enteredPin)) {
       StaffService.to.setCurrentStaff(staff);
-      Get.offAll(() => const AppShell(initialSectionId: 'tables'));
+      final role = StaffService.to.currentStaffAppRole;
+      final landing = landingSectionFor(role) ?? 'tables';
+      Get.offAll(() => AppShell(initialSectionId: landing));
     } else {
       setState(() {
         _hasError = true;
@@ -366,6 +370,17 @@ class _StaffCardState extends State<_StaffCard> {
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                AppRoleX.fromString(
+                        widget.staff['role'] as String? ?? 'garson')
+                    .labelTr,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: _textSec,
                 ),
               ),
             ],

@@ -134,7 +134,7 @@ class _ReportsViewState extends State<ReportsView> {
           _ReportTile(
             icon: CupertinoIcons.today_fill,
             title: 'daily_report'.tr,
-            subtitle: 'Bugünkü satışlar, saatlik dağılım ve en çok satanlar',
+            subtitle: 'Özet, satış listesi, ödeme / ürün / personel / masa',
             accent: AppTheme.successColor,
             selected: isSplit && _selected == _ReportType.daily,
             onTap: () => _open(_ReportType.daily, isSplit),
@@ -143,7 +143,7 @@ class _ReportsViewState extends State<ReportsView> {
           _ReportTile(
             icon: CupertinoIcons.calendar_circle_fill,
             title: 'monthly_report'.tr,
-            subtitle: 'Bu aylık günlük satış grafiği ve özeti',
+            subtitle: 'Ay özeti ve gün gün detay',
             accent: _orange,
             selected: isSplit && _selected == _ReportType.monthly,
             onTap: () => _open(_ReportType.monthly, isSplit),
@@ -152,7 +152,7 @@ class _ReportsViewState extends State<ReportsView> {
           _ReportTile(
             icon: CupertinoIcons.chart_bar_alt_fill,
             title: 'yearly_report'.tr,
-            subtitle: 'Yıllık trend grafiği ve kategori dağılımı',
+            subtitle: 'Yıllık özet; aya dokununca aylık rapor',
             accent: AppTheme.warningColor,
             selected: isSplit && _selected == _ReportType.yearly,
             onTap: () => _open(_ReportType.yearly, isSplit),

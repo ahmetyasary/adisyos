@@ -10,6 +10,7 @@ import 'package:orderix/features/ordi/data/ordi_local_brain.dart';
 import 'package:orderix/features/ordi/data/ordi_repository.dart';
 import 'package:orderix/features/ordi/data/ordi_snapshot.dart';
 import 'package:orderix/features/ordi/domain/ordi_message.dart';
+import 'package:orderix/features/ordi/presentation/ordi_voice_service.dart';
 import 'package:orderix/services/inventory_service.dart';
 import 'package:orderix/services/table_service.dart';
 
@@ -197,13 +198,17 @@ class OrdiController extends GetxController {
     ));
   }
 
-  Future<void> send(String rawText) async {
+  Future<void> send(String rawText, {bool speakReply = false}) async {
     final text = rawText.trim();
     if (text.isEmpty || isThinking.value || !isAvailable) return;
 
     final question = text.length > maxQuestionLength
         ? text.substring(0, maxQuestionLength)
         : text;
+
+    if (speakReply && Get.isRegistered<OrdiVoiceService>()) {
+      await OrdiVoiceService.to.stopSpeaking();
+    }
 
     final userMessage = OrdiMessage.user(question);
     messages.add(userMessage);
@@ -212,64 +217,73 @@ class OrdiController extends GetxController {
     // Persisted in the background — the UI already shows the message.
     _repo.persist(userMessage);
 
+    String spokenBody = '';
     try {
       if (_pendingChanges != null && ordiIsAffirmative(question)) {
         final result = await OrdiActionRunner.run(_pendingChanges!);
         _pendingChanges = null;
+        spokenBody =
+            result.trim().isEmpty ? 'Onaylanan işlem uygulandı.' : result.trim();
         final reply = OrdiMessage.assistant(
-          result.trim().isEmpty ? 'Onaylanan işlem uygulandı.' : result.trim(),
+          spokenBody,
           source: OrdiSource.local,
         );
         messages.add(reply);
         _repo.persist(reply);
-        return;
-      }
-      if (_pendingChanges != null && ordiIsNegative(question)) {
+      } else if (_pendingChanges != null && ordiIsNegative(question)) {
         _pendingChanges = null;
+        spokenBody = 'İşlemi iptal ettim. Başka bir şey yapmamı ister misiniz?';
         final reply = OrdiMessage.assistant(
-          'İşlemi iptal ettim. Başka bir şey yapmamı ister misiniz?',
+          spokenBody,
           source: OrdiSource.local,
         );
         messages.add(reply);
         _repo.persist(reply);
-        return;
-      }
-      _pendingChanges = null;
+      } else {
+        _pendingChanges = null;
 
-      // Exclude the just-added question; it is sent separately.
-      final priorTurns = messages.sublist(0, messages.length - 1);
-      final answer = await _repo.ask(question, priorTurns);
-      var body = answer.text.trim();
-      final split = OrdiActionRunner.split(answer.actions);
-      if (split.adds.isNotEmpty) {
-        final result = await OrdiActionRunner.run(split.adds);
-        body = [
-          if (body.isNotEmpty) body,
-          if (result.trim().isNotEmpty) result.trim(),
-        ].join('\n\n');
-      }
-      if (split.blocked.isNotEmpty) {
-        body = [
-          if (body.isNotEmpty) body,
-          'Silme işlemi yapamam. Desteklenmeyen istekler atlandı.',
-        ].join('\n\n');
-      }
-      if (split.changes.isNotEmpty) {
-        _pendingChanges = split.changes;
-        body = [
-          if (body.isNotEmpty) body,
-          OrdiActionRunner.confirmPrompt(split.changes),
-        ].join('\n\n');
-      }
-      if (body.isEmpty) {
-        body = 'İsteğinizi aldım ama uygulanacak bir işlem çıkmadı.';
-      }
+        // Exclude the just-added question; it is sent separately.
+        final priorTurns = messages.sublist(0, messages.length - 1);
+        final answer = await _repo.ask(question, priorTurns);
+        var body = answer.text.trim();
+        final split = OrdiActionRunner.split(answer.actions);
+        if (split.adds.isNotEmpty) {
+          final result = await OrdiActionRunner.run(split.adds);
+          body = [
+            if (body.isNotEmpty) body,
+            if (result.trim().isNotEmpty) result.trim(),
+          ].join('\n\n');
+        }
+        if (split.blocked.isNotEmpty) {
+          body = [
+            if (body.isNotEmpty) body,
+            'Silme işlemi yapamam. Desteklenmeyen istekler atlandı.',
+          ].join('\n\n');
+        }
+        if (split.changes.isNotEmpty) {
+          _pendingChanges = split.changes;
+          body = [
+            if (body.isNotEmpty) body,
+            OrdiActionRunner.confirmPrompt(split.changes),
+          ].join('\n\n');
+        }
+        if (body.isEmpty) {
+          body = 'İsteğinizi aldım ama uygulanacak bir işlem çıkmadı.';
+        }
 
-      final reply = OrdiMessage.assistant(body, source: answer.source);
-      messages.add(reply);
-      _repo.persist(reply);
+        spokenBody = body;
+        final reply = OrdiMessage.assistant(body, source: answer.source);
+        messages.add(reply);
+        _repo.persist(reply);
+      }
     } finally {
       isThinking.value = false;
+    }
+
+    if (speakReply &&
+        spokenBody.isNotEmpty &&
+        Get.isRegistered<OrdiVoiceService>()) {
+      await OrdiVoiceService.to.speak(spokenBody);
     }
   }
 

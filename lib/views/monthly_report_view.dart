@@ -6,6 +6,10 @@ import 'package:intl/intl.dart';
 import 'package:orderix/services/sales_history_service.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/themes/app_theme.dart';
+import 'package:orderix/services/report_excel_exporter.dart';
+import 'package:orderix/views/daily_report_view.dart';
+import 'package:orderix/views/report_breakdowns.dart';
+import 'package:orderix/utils/app_haptics.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _bg = Colors.white;
@@ -18,42 +22,83 @@ const _border = Color(0xFFE5E5EA);
 class MonthlyReportView extends StatelessWidget {
   /// [inline] renders the report body only (no own Scaffold/header), for
   /// embedding as the detail pane of a tablet master-detail split view.
-  const MonthlyReportView({super.key, this.inline = false});
+  /// [year]/[month] default to the current month (yearly drill-down overrides).
+  const MonthlyReportView({
+    super.key,
+    this.inline = false,
+    this.year,
+    this.month,
+  });
 
   final bool inline;
+  final int? year;
+  final int? month;
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
+    final y = year ?? now.year;
+    final m = month ?? now.month;
+    final focus = DateTime(y, m);
 
     final body = Obx(() {
       final cs = SettingsService.cs;
-      final sales =
-          SalesHistoryService.to.getSalesForMonth(now.year, now.month);
+      final sales = SalesHistoryService.to.getSalesForMonth(y, m);
       final total = SalesHistoryService.to.getTotalForSales(sales);
-      final dailyTotals =
-          SalesHistoryService.to.getDailyTotals(now.year, now.month);
+      final dailyTotals = SalesHistoryService.to.getDailyTotals(y, m);
+      final daySummaries = SalesHistoryService.to.getDailySummaries(y, m);
       final topItems = SalesHistoryService.to.getTopItems(sales, top: 5);
+      final staffTotals = SalesHistoryService.to.getStaffTotals(sales, top: 8);
+      final tableTotals = SalesHistoryService.to.getTableTotals(sales, top: 8);
+      final payTotals = SalesHistoryService.to.getPaymentMethodTotals(sales);
+      final payEntries = payTotals.entries
+          .map((e) => MapEntry(
+                SettingsService.to.paymentMethodLabel(e.key),
+                e.value,
+              ))
+          .toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
       final monthName =
-          DateFormat('MMMM yyyy', Get.locale?.languageCode ?? 'tr').format(now);
+          DateFormat('MMMM yyyy', Get.locale?.languageCode ?? 'tr')
+              .format(focus);
 
       return SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Month label
-            Text(
-              monthName,
-              style: const TextStyle(
-                color: _textSec,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    monthName,
+                    style: const TextStyle(
+                      color: _textSec,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Builder(
+                  builder: (btnCtx) => IconButton(
+                    tooltip: 'Excel\'e aktar',
+                    onPressed: () {
+                      AppHaptics.selection();
+                      ReportExcelExporter.exportMonthly(
+                        y,
+                        m,
+                        shareOrigin:
+                            ReportExcelExporter.shareOriginFrom(btnCtx),
+                      );
+                    },
+                    icon: const Icon(CupertinoIcons.table,
+                        size: 20, color: _orange),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
 
-            // Summary cards
             Row(
               children: [
                 Expanded(
@@ -76,9 +121,11 @@ class MonthlyReportView extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _StatCard(
-                    icon: CupertinoIcons.calendar_circle_fill,
-                    label: 'Aktif Gün',
-                    value: '${dailyTotals.length}',
+                    icon: CupertinoIcons.arrow_up_right_circle_fill,
+                    label: 'Ort. Adisyon',
+                    value: sales.isEmpty
+                        ? '${cs}0.00'
+                        : '$cs${(total / sales.length).toStringAsFixed(2)}',
                     accent: _orange,
                   ),
                 ),
@@ -89,24 +136,111 @@ class MonthlyReportView extends StatelessWidget {
             if (sales.isEmpty)
               _buildEmptyState()
             else ...[
-              // Daily bar chart
               _SectionTitle(
                   title: 'monthly_sales_title'.tr,
                   icon: CupertinoIcons.chart_bar_alt_fill,
                   accent: _orange),
               const SizedBox(height: 12),
-              _ChartCard(child: _buildDailyChart(dailyTotals, now, cs)),
+              _ChartCard(child: _buildDailyChart(dailyTotals, focus, cs)),
               const SizedBox(height: 24),
 
-              // Top items
+              if (payEntries.isNotEmpty) ...[
+                _SectionTitle(
+                    title: 'pay_breakdown'.tr,
+                    icon: CupertinoIcons.chart_pie_fill,
+                    accent: _orange),
+                const SizedBox(height: 12),
+                _ContentCard(
+                  child: ReportMoneyRankList(
+                    entries: payEntries,
+                    cs: cs,
+                    accent: _orange,
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+
               if (topItems.isNotEmpty) ...[
                 _SectionTitle(
                     title: 'top_items'.tr,
                     icon: CupertinoIcons.star_fill,
                     accent: _orange),
                 const SizedBox(height: 12),
-                _ContentCard(child: _buildTopItemsList(topItems)),
+                _ContentCard(
+                  child: ReportMoneyRankList(
+                    entries: topItems,
+                    cs: cs,
+                    accent: _orange,
+                    valueSuffix: 'adet',
+                  ),
+                ),
+                const SizedBox(height: 24),
               ],
+
+              if (staffTotals.isNotEmpty) ...[
+                const _SectionTitle(
+                    title: 'Personel satışları',
+                    icon: CupertinoIcons.person_2_fill,
+                    accent: _orange),
+                const SizedBox(height: 12),
+                _ContentCard(
+                  child: ReportMoneyRankList(
+                    entries: staffTotals,
+                    cs: cs,
+                    accent: const Color(0xFF007AFF),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              if (tableTotals.isNotEmpty) ...[
+                const _SectionTitle(
+                    title: 'Masa satışları',
+                    icon: Icons.table_bar_rounded,
+                    accent: _orange),
+                const SizedBox(height: 12),
+                _ContentCard(
+                  child: ReportMoneyRankList(
+                    entries: tableTotals,
+                    cs: cs,
+                    accent: const Color(0xFFAF52DE),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              const _SectionTitle(
+                  title: 'Günlük özet',
+                  icon: CupertinoIcons.calendar,
+                  accent: _orange),
+              const SizedBox(height: 12),
+              Container(
+                decoration: BoxDecoration(
+                  color: _card,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.fromBorderSide(
+                      BorderSide(color: _border, width: 1)),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    for (var i = 0; i < daySummaries.length; i++) ...[
+                      if (i > 0) const Divider(height: 1, color: _border),
+                      ReportDaySummaryTile(
+                        date: daySummaries[i]['date'] as DateTime,
+                        total: daySummaries[i]['total'] as double,
+                        count: daySummaries[i]['count'] as int,
+                        cs: cs,
+                        onTap: () => Get.to(
+                          () => DailyReportView(
+                            date: daySummaries[i]['date'] as DateTime,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ],
           ],
         ),
@@ -221,70 +355,6 @@ class MonthlyReportView extends StatelessWidget {
           barGroups: barGroups,
         ),
       ),
-    );
-  }
-
-  Widget _buildTopItemsList(List<MapEntry<String, double>> topItems) {
-    final maxQty = topItems.first.value;
-    return Column(
-      children: topItems.asMap().entries.map((entry) {
-        final rank = entry.key + 1;
-        final item = entry.value;
-        final fraction = maxQty > 0 ? item.value / maxQty : 0.0;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Row(
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: _orange.withValues(alpha: rank == 1 ? 0.15 : 0.08),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  '$rank',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: _orange,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(item.key,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                                color: _textPrimary)),
-                        Text('${item.value.toInt()} adet',
-                            style:
-                                const TextStyle(color: _textSec, fontSize: 12)),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    LinearProgressIndicator(
-                      value: fraction,
-                      backgroundColor: _border,
-                      color: AppTheme.successColor,
-                      minHeight: 6,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
     );
   }
 

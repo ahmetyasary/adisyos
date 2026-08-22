@@ -25,10 +25,12 @@ const _labelSecondary = Color(0xFF8E8E93);
 ///
 /// [hero] renders the large dark "Güne Başlayın" hero used on the dashboard;
 /// the default compact pill is used elsewhere (e.g. the staff tables screen).
+/// [dense] further shrinks padding for screens that need more workspace below.
 class DayToggleCard extends StatelessWidget {
-  const DayToggleCard({super.key, this.hero = false});
+  const DayToggleCard({super.key, this.hero = false, this.dense = false});
 
   final bool hero;
+  final bool dense;
 
   /// Unique identifier for the current session's day tracking.
   /// Staff → their profile name (set via PIN).
@@ -171,121 +173,29 @@ class DayToggleCard extends StatelessWidget {
       }
 
       if (!dayStarted) {
-        // ── Day NOT started — calm white card with orange accents ──
-        return GestureDetector(
-          onTap: isLoading ? null : _startDay,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            decoration: BoxDecoration(
-              color: _card,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: _orange.withValues(alpha: 0.3),
-                width: 1,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x0A000000),
-                  blurRadius: 20,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: _orange.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(
-                    CupertinoIcons.sun_max_fill,
-                    color: _orange,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Günü Başlat',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: _labelPrimary,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Sipariş almak için günü başlatın',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: _labelSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                if (isLoading)
-                  const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(_orange),
-                    ),
-                  )
-                else
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                    decoration: BoxDecoration(
-                      color: _orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(CupertinoIcons.play_arrow_solid,
-                            size: 16, color: _orange),
-                        SizedBox(width: 6),
-                        Text(
-                          'Başlat',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: _orange,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
+        return _buildCompactStart(isLoading);
       }
 
-      // ── Day IS started — green active card with end button ──
       final elapsed = _activeElapsed(day);
-      final hours = elapsed.inHours;
-      final minutes = elapsed.inMinutes % 60;
+      return _buildCompactActive(
+        hours: elapsed.inHours,
+        minutes: elapsed.inMinutes % 60,
+      );
+    });
+  }
 
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+  Widget _buildCompactStart(bool isLoading) {
+    final padV = dense ? 10.0 : 16.0;
+    final padH = dense ? 14.0 : 20.0;
+    final iconBox = dense ? 36.0 : 46.0;
+    return GestureDetector(
+      onTap: isLoading ? null : _startDay,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: padH, vertical: padV),
         decoration: BoxDecoration(
           color: _card,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: const Color(0xFF34C759).withValues(alpha: 0.3),
-            width: 1,
-          ),
+          borderRadius: BorderRadius.circular(dense ? 14 : 18),
+          border: Border.all(color: _orange.withValues(alpha: 0.3), width: 1),
           boxShadow: const [
             BoxShadow(
               color: Color(0x0A000000),
@@ -296,76 +206,172 @@ class DayToggleCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Green pulse dot
             Container(
-              width: 10,
-              height: 10,
-              decoration: const BoxDecoration(
-                color: Color(0xFF34C759),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(color: Color(0x4034C759), blurRadius: 8),
-                ],
+              width: iconBox,
+              height: iconBox,
+              decoration: BoxDecoration(
+                color: _orange.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(dense ? 10 : 14),
+              ),
+              child: Icon(
+                CupertinoIcons.sun_max_fill,
+                color: _orange,
+                size: dense ? 18 : 24,
               ),
             ),
-            const SizedBox(width: 14),
-
+            SizedBox(width: dense ? 12 : 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Gün Aktif',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF34C759),
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
                   Text(
-                    '${hours}sa ${minutes}dk aktif',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: _labelSecondary,
+                    'Günü Başlat',
+                    style: TextStyle(
+                      fontSize: dense ? 14 : 16,
+                      fontWeight: FontWeight.w700,
+                      color: _labelPrimary,
+                      letterSpacing: -0.2,
                     ),
                   ),
+                  if (!dense) ...[
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Sipariş almak için günü başlatın',
+                      style: TextStyle(fontSize: 12, color: _labelSecondary),
+                    ),
+                  ],
                 ],
               ),
             ),
-
-            GestureDetector(
-              onTap: _endDay,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+            const SizedBox(width: 12),
+            if (isLoading)
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(_orange),
+                ),
+              )
+            else
+              Container(
+                padding: EdgeInsets.symmetric(
+                    horizontal: dense ? 12 : 14, vertical: dense ? 7 : 9),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFF3B30).withValues(alpha: 0.1),
+                  color: _orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(CupertinoIcons.stop_fill,
-                        size: 16, color: Color(0xFFFF3B30)),
-                    SizedBox(width: 6),
+                  children: [
+                    const Icon(CupertinoIcons.play_arrow_solid,
+                        size: 16, color: _orange),
+                    const SizedBox(width: 6),
                     Text(
-                      'Günü Bitir',
+                      'Başlat',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: dense ? 12 : 13,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFFFF3B30),
+                        color: _orange,
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
           ],
         ),
-      );
-    });
+      ),
+    );
+  }
+
+  Widget _buildCompactActive({required int hours, required int minutes}) {
+    final padV = dense ? 10.0 : 16.0;
+    final padH = dense ? 14.0 : 20.0;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: padH, vertical: padV),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(dense ? 14 : 18),
+        border: Border.all(
+          color: const Color(0xFF34C759).withValues(alpha: 0.3),
+          width: 1,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 20,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: dense ? 8 : 10,
+            height: dense ? 8 : 10,
+            decoration: const BoxDecoration(
+              color: Color(0xFF34C759),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: Color(0x4034C759), blurRadius: 8),
+              ],
+            ),
+          ),
+          SizedBox(width: dense ? 10 : 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Gün Aktif',
+                  style: TextStyle(
+                    fontSize: dense ? 13 : 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF34C759),
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  '${hours}sa ${minutes}dk aktif',
+                  style: TextStyle(
+                    fontSize: dense ? 11 : 12,
+                    color: _labelSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: _endDay,
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                  horizontal: dense ? 12 : 16, vertical: dense ? 7 : 9),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF3B30).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(CupertinoIcons.stop_fill,
+                      size: 14, color: Color(0xFFFF3B30)),
+                  const SizedBox(width: 5),
+                  Text(
+                    dense ? 'Bitir' : 'Günü Bitir',
+                    style: TextStyle(
+                      fontSize: dense ? 12 : 13,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFFFF3B30),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // ── Hero variant (dashboard) ─────────────────────────────────

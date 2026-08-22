@@ -10,6 +10,7 @@ import 'package:orderix/navigation/app_sections.dart';
 import 'package:orderix/navigation/app_sidebar.dart';
 import 'package:orderix/services/day_service.dart';
 import 'package:orderix/services/sales_history_service.dart';
+import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/subscription_service.dart';
 import 'package:orderix/services/table_service.dart';
@@ -316,6 +317,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         MediaQuery.sizeOf(context).width >= _kPermanentSidebarBreakpoint;
 
     return Obx(() {
+      // Explicit deps so tablet sidebar + phone bottom bar both rebuild when
+      // the admin reorders navigation (local or realtime).
+      SettingsService.to.navOrder.length;
       final AppRole? role = AuthController.to.currentRole;
       final mainSections = sectionsFor(role);
       final footerSections = footerSectionsFor(role);

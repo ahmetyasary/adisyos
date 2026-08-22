@@ -149,7 +149,7 @@ class AppTranslations extends Translations {
           'language': 'Dil',
           'save_settings': 'Kaydet',
           'nav_order': 'Menü sırası',
-          'nav_order_hint': 'Sol menüyü sürükleyerek sırala',
+          'nav_order_hint': 'Sürükleyerek sırala (tablet menü + telefon alt bar)',
           'nav_order_reset': 'Varsayılan',
 
           // Danger zone / Account deletion (App Store 5.1.1(v))
@@ -219,8 +219,9 @@ class AppTranslations extends Translations {
           'auth_back_to_login': 'Giriş Sayfasına Dön',
 
           // Notifications
-          'new_order': 'Ödeme Alındı',
-          'new_order_message': 'Yeni bir sipariş geldi. Lütfen kontrol edin.',
+          'new_order': 'Yeni sipariş',
+          'new_order_message': 'Masadan sipariş geldi. Lütfen kontrol edin.',
+          'new_orders_plural': 'yeni sipariş bekliyor',
           'payment_notification': 'Ödeme Alındı',
           'recent_activity': 'Son Aktivite',
           'no_notifications': 'Henüz bildirim yok',
@@ -414,7 +415,7 @@ class AppTranslations extends Translations {
           'language': 'Language',
           'save_settings': 'Save',
           'nav_order': 'Menu order',
-          'nav_order_hint': 'Drag to reorder the side menu',
+          'nav_order_hint': 'Drag to reorder (tablet sidebar + phone tab bar)',
           'nav_order_reset': 'Default',
 
           // Danger zone / Account deletion (App Store 5.1.1(v))
@@ -484,8 +485,9 @@ class AppTranslations extends Translations {
           'auth_back_to_login': 'Back to Sign In',
 
           // Notifications
-          'new_order': 'Payment Received',
-          'new_order_message': 'A new order has arrived. Please check.',
+          'new_order': 'New order',
+          'new_order_message': 'A table order arrived. Please check.',
+          'new_orders_plural': 'new orders waiting',
           'payment_notification': 'Payment Received',
           'recent_activity': 'Recent Activity',
           'no_notifications': 'No notifications yet',

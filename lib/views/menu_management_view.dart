@@ -1023,10 +1023,7 @@ class _MenuCardState extends State<_MenuCard> {
     try {
       await MenuService.to.addMenuItem(widget.menuIndex, name, price);
       if (!mounted) return;
-      _nameCtrl.clear();
-      _priceCtrl.clear();
-      setState(() => _saving = false);
-      _nameFocus.requestFocus();
+      _closeQuickAdd();
       AppToast.success('Ürün eklendi', title: 'success'.tr);
     } catch (e) {
       if (!mounted) return;

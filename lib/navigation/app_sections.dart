@@ -9,7 +9,6 @@ import 'package:orderix/views/kitchen_display_view.dart';
 import 'package:orderix/views/menu_management_view.dart';
 import 'package:orderix/views/digital_menu_view.dart';
 import 'package:orderix/views/pending_menu_orders_view.dart';
-import 'package:orderix/services/digital_menu_order_service.dart';
 import 'package:orderix/views/inventory_management_view.dart';
 import 'package:orderix/views/day_management_view.dart';
 import 'package:orderix/views/reports_view.dart';
@@ -70,7 +69,7 @@ final List<AppSection> appSections = [
     id: 'kitchen',
     title: () => 'Mutfak',
     icon: CupertinoIcons.flame_fill,
-    roles: const [AppRole.admin],
+    roles: const [AppRole.admin, AppRole.kitchen],
     builder: () => const KitchenDisplayView(embedded: true),
   ),
   AppSection(
@@ -82,14 +81,7 @@ final List<AppSection> appSections = [
   ),
   AppSection(
     id: 'pending_orders',
-    title: () {
-      try {
-        final n = DigitalMenuOrderService.to.pendingCount;
-        return n > 0 ? 'Bekleyen siparişler ($n)' : 'Bekleyen siparişler';
-      } catch (_) {
-        return 'Bekleyen siparişler';
-      }
-    },
+    title: () => 'Bekleyen siparişler',
     icon: CupertinoIcons.bell_fill,
     roles: const [AppRole.admin, AppRole.staff],
     builder: () => const PendingMenuOrdersView(embedded: true),
@@ -191,33 +183,23 @@ List<AppSection> sectionsFor(AppRole? role) => _withNavOrder(
 List<AppSection> footerSectionsFor(AppRole? role) =>
     appSections.where((s) => s.allows(role) && s.footer).toList();
 
-/// The most-used sections, surfaced directly in the mobile bottom bar.
-/// Everything else lives behind the "Daha Fazla" sheet. Order follows
-/// [appSections]; only ids present here (and role-permitted) appear in the bar.
-const Set<String> _bottomBarIds = {'dashboard', 'tables', 'kitchen', 'reports'};
+/// The most-used sections for the mobile bottom bar = first N entries of the
+/// admin's custom [sectionsFor] order (not a fixed id set). Everything after
+/// that lives behind "Daha Fazla".
+const int _bottomBarSlotCount = 4;
 
-/// Up to four most-used, role-permitted sections for the mobile bottom bar.
-List<AppSection> bottomBarSectionsFor(AppRole? role) => _withNavOrder(
-      appSections
-          .where((s) =>
-              s.allows(role) &&
-              !s.hidden &&
-              !s.footer &&
-              _bottomBarIds.contains(s.id))
-          .toList(),
-    ).take(4).toList();
+/// Up to [_bottomBarSlotCount] role-permitted sections for the mobile bottom bar,
+/// in the tenant's saved nav order.
+List<AppSection> bottomBarSectionsFor(AppRole? role) =>
+    sectionsFor(role).take(_bottomBarSlotCount).toList();
 
 /// Role-permitted main sections that are NOT in the bottom bar — they populate
 /// the first group of the mobile "Daha Fazla" sheet.
-List<AppSection> moreSectionsFor(AppRole? role) => _withNavOrder(
-      appSections
-          .where((s) =>
-              s.allows(role) &&
-              !s.hidden &&
-              !s.footer &&
-              !_bottomBarIds.contains(s.id))
-          .toList(),
-    );
+List<AppSection> moreSectionsFor(AppRole? role) {
+  final all = sectionsFor(role);
+  if (all.length <= _bottomBarSlotCount) return const [];
+  return all.skip(_bottomBarSlotCount).toList();
+}
 
 /// The section a user of [role] should land on when entering the shell.
 /// Admin → Dashboard when permitted, otherwise the first ordered section.

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/models/app_role.dart';
 import 'package:orderix/services/sales_history_service.dart';
 import 'package:orderix/services/shift_service.dart';
 import 'package:orderix/services/staff_service.dart';
@@ -85,6 +86,7 @@ class StaffReportView extends StatelessWidget {
       final s = salesMap[name];
       result.add({
         'name': name,
+        'role': profile['role'] as String? ?? 'garson',
         'isAdmin': false,
         'total': s?['total'] as double? ?? 0.0,
         'count': s?['count'] as int? ?? 0,
@@ -98,6 +100,7 @@ class StaffReportView extends StatelessWidget {
       final s = salesMap[_adminKey]!;
       result.add({
         'name': _adminKey,
+        'role': 'yetkili',
         'isAdmin': true,
         'total': s['total'] as double,
         'count': s['count'] as int,
@@ -210,6 +213,7 @@ class StaffReportView extends StatelessWidget {
   void _showAddStaffDialog(BuildContext context) {
     final nameCtrl = TextEditingController();
     final pinCtrl = TextEditingController();
+    var selectedRole = AppRole.staff;
     AppDialog.form(
       title: 'Personel Ekle',
       confirmText: 'Ekle',
@@ -217,27 +221,34 @@ class StaffReportView extends StatelessWidget {
         final name = nameCtrl.text.trim();
         final pin = pinCtrl.text.trim();
         if (name.isEmpty || pin.length != 4) return;
-        await StaffService.to.addStaff(name, pin);
+        await StaffService.to.addStaff(name, pin, role: selectedRole);
         Get.back();
       },
-      body: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppDialogTextField(
-            controller: nameCtrl,
-            label: 'Ad Soyad',
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-          ),
-          const SizedBox(height: 14),
-          AppDialogTextField(
-            controller: pinCtrl,
-            label: '4 Haneli PIN',
-            keyboardType: TextInputType.number,
-            maxLength: 4,
-            obscureText: true,
-          ),
-        ],
+      body: StatefulBuilder(
+        builder: (context, setLocal) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppDialogTextField(
+              controller: nameCtrl,
+              label: 'Ad Soyad',
+              autofocus: true,
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 14),
+            AppDialogTextField(
+              controller: pinCtrl,
+              label: '4 Haneli PIN',
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              obscureText: true,
+            ),
+            const SizedBox(height: 14),
+            _StaffRolePicker(
+              value: selectedRole,
+              onChanged: (r) => setLocal(() => selectedRole = r),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -285,6 +296,8 @@ class StaffReportView extends StatelessWidget {
   void _showEditStaffDialog(Map<String, dynamic> staff) {
     final nameCtrl = TextEditingController(text: staff['name'] as String);
     final pinCtrl = TextEditingController();
+    var selectedRole =
+        AppRoleX.fromString(staff['role'] as String? ?? 'garson');
     AppDialog.form(
       title: 'Personeli Düzenle',
       confirmText: 'save'.tr,
@@ -298,28 +311,36 @@ class StaffReportView extends StatelessWidget {
           staff['id'] as String,
           name: name,
           pin: pin,
+          role: selectedRole,
         );
         Get.back();
       },
-      body: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppDialogTextField(
-            controller: nameCtrl,
-            label: 'Ad Soyad',
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-          ),
-          const SizedBox(height: 14),
-          AppDialogTextField(
-            controller: pinCtrl,
-            label: 'Yeni PIN',
-            hintText: 'Boş bırakın = değişmesin',
-            keyboardType: TextInputType.number,
-            maxLength: 4,
-            obscureText: true,
-          ),
-        ],
+      body: StatefulBuilder(
+        builder: (context, setLocal) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppDialogTextField(
+              controller: nameCtrl,
+              label: 'Ad Soyad',
+              autofocus: true,
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 14),
+            AppDialogTextField(
+              controller: pinCtrl,
+              label: 'Yeni PIN',
+              hintText: 'Boş bırakın = değişmesin',
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              obscureText: true,
+            ),
+            const SizedBox(height: 14),
+            _StaffRolePicker(
+              value: selectedRole,
+              onChanged: (r) => setLocal(() => selectedRole = r),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -354,6 +375,9 @@ class _StaffCard extends StatelessWidget {
     final lastSale = stats['lastSale'] as DateTime?;
     final todayMinutes = stats['todayMinutes'] as int;
     final isAdmin = stats['isAdmin'] as bool? ?? false;
+    final roleLabel = isAdmin
+        ? 'Yetkili'
+        : AppRoleX.fromString(stats['role'] as String? ?? 'garson').labelTr;
 
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
@@ -471,6 +495,23 @@ class _StaffCard extends StatelessWidget {
                                 fontSize: 10,
                                 color: _orange,
                                 fontWeight: FontWeight.w600)),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _blue.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Text(
+                          roleLabel,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: _blue,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -528,6 +569,61 @@ class _StaffCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _StaffRolePicker extends StatelessWidget {
+  const _StaffRolePicker({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final AppRole value;
+  final ValueChanged<AppRole> onChanged;
+
+  static const _options = [AppRole.admin, AppRole.staff, AppRole.kitchen];
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Rol',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: _textPrimary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final role in _options)
+              ChoiceChip(
+                label: Text(role.labelTr),
+                selected: value == role,
+                onSelected: (_) => onChanged(role),
+                selectedColor: _orange.withValues(alpha: 0.18),
+                labelStyle: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: value == role ? _orange : _textSec,
+                ),
+                side: BorderSide(
+                  color: value == role
+                      ? _orange.withValues(alpha: 0.45)
+                      : _border,
+                ),
+                backgroundColor: _bg,
+                showCheckmark: false,
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

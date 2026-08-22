@@ -232,6 +232,69 @@ class SalesHistoryService extends GetxService {
         .toList();
   }
 
+  /// Display label for a sale's staff field (emails → Yönetici).
+  static String staffLabel(String? raw) {
+    if (raw == null || raw.trim().isEmpty || raw.contains('@')) {
+      return 'Yönetici';
+    }
+    return raw.trim();
+  }
+
+  /// Revenue per staff member (label → total), highest first.
+  List<MapEntry<String, double>> getStaffTotals(
+    List<Map<String, dynamic>> salesList, {
+    int? top,
+  }) {
+    final result = <String, double>{};
+    for (final sale in salesList) {
+      final key = staffLabel(sale['staffEmail'] as String?);
+      result[key] = (result[key] ?? 0.0) + (sale['total'] as double);
+    }
+    final entries = result.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    if (top != null) return entries.take(top).toList();
+    return entries;
+  }
+
+  /// Revenue per table name, highest first.
+  List<MapEntry<String, double>> getTableTotals(
+    List<Map<String, dynamic>> salesList, {
+    int? top,
+  }) {
+    final result = <String, double>{};
+    for (final sale in salesList) {
+      final key = (sale['tableName'] as String?)?.trim();
+      if (key == null || key.isEmpty) continue;
+      result[key] = (result[key] ?? 0.0) + (sale['total'] as double);
+    }
+    final entries = result.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    if (top != null) return entries.take(top).toList();
+    return entries;
+  }
+
+  /// Per-day rollup for a month: `{day, date, total, count}`, newest day first.
+  List<Map<String, dynamic>> getDailySummaries(int year, int month) {
+    final byDay = <int, Map<String, dynamic>>{};
+    for (final sale in getSalesForMonth(year, month)) {
+      final d = DateTime.parse(sale['date'] as String);
+      final bucket = byDay.putIfAbsent(
+        d.day,
+        () => {
+          'day': d.day,
+          'date': DateTime(d.year, d.month, d.day),
+          'total': 0.0,
+          'count': 0,
+        },
+      );
+      bucket['total'] = (bucket['total'] as double) + (sale['total'] as double);
+      bucket['count'] = (bucket['count'] as int) + 1;
+    }
+    final list = byDay.values.toList()
+      ..sort((a, b) => (b['day'] as int).compareTo(a['day'] as int));
+    return list;
+  }
+
   List<Map<String, dynamic>> getRecentSales({int limit = 30}) =>
       sales.take(limit).toList(); // already sorted newest-first from _load
 }

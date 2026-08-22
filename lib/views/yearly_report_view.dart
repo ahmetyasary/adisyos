@@ -5,6 +5,10 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:orderix/services/sales_history_service.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/themes/app_theme.dart';
+import 'package:orderix/services/report_excel_exporter.dart';
+import 'package:orderix/views/monthly_report_view.dart';
+import 'package:orderix/views/report_breakdowns.dart';
+import 'package:orderix/utils/app_haptics.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
 const _bg = Colors.white;
@@ -12,13 +16,15 @@ const _card = Colors.white;
 const _textPrimary = Color(0xFF1C1C1E);
 const _textSec = Color(0xFF8E8E93);
 const _border = Color(0xFFE5E5EA);
+const _orange = Color(0xFFFF9500);
 
 class YearlyReportView extends StatelessWidget {
   /// [inline] renders the report body only (no own Scaffold/header), for
   /// embedding as the detail pane of a tablet master-detail split view.
-  const YearlyReportView({super.key, this.inline = false});
+  const YearlyReportView({super.key, this.inline = false, this.year});
 
   final bool inline;
+  final int? year;
 
   static const List<String> _monthNamesTr = [
     'Oca',
@@ -57,32 +63,63 @@ class YearlyReportView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final year = DateTime.now().year;
+    final y = year ?? DateTime.now().year;
 
     final body = Obx(() {
       final cs = SettingsService.cs;
-      final sales = SalesHistoryService.to.getSalesForYear(year);
+      final sales = SalesHistoryService.to.getSalesForYear(y);
       final total = SalesHistoryService.to.getTotalForSales(sales);
-      final monthlyTotals = SalesHistoryService.to.getMonthlyTotals(year);
+      final monthlyTotals = SalesHistoryService.to.getMonthlyTotals(y);
       final topItems = SalesHistoryService.to.getTopItems(sales, top: 5);
+      final staffTotals = SalesHistoryService.to.getStaffTotals(sales, top: 8);
+      final tableTotals = SalesHistoryService.to.getTableTotals(sales, top: 8);
+      final payTotals = SalesHistoryService.to.getPaymentMethodTotals(sales);
+      final payEntries = payTotals.entries
+          .map((e) => MapEntry(
+                SettingsService.to.paymentMethodLabel(e.key),
+                e.value,
+              ))
+          .toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      final activeMonths =
+          monthlyTotals.values.where((v) => v > 0).length.clamp(1, 12);
 
       return SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Year label
-            Text(
-              '$year',
-              style: const TextStyle(
-                color: _textSec,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '$y',
+                    style: const TextStyle(
+                      color: _textSec,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Builder(
+                  builder: (btnCtx) => IconButton(
+                    tooltip: 'Excel\'e aktar',
+                    onPressed: () {
+                      AppHaptics.selection();
+                      ReportExcelExporter.exportYearly(
+                        y,
+                        shareOrigin:
+                            ReportExcelExporter.shareOriginFrom(btnCtx),
+                      );
+                    },
+                    icon: const Icon(CupertinoIcons.table,
+                        size: 20, color: AppTheme.warningColor),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
 
-            // Summary cards
             Row(
               children: [
                 Expanded(
@@ -106,10 +143,10 @@ class YearlyReportView extends StatelessWidget {
                 Expanded(
                   child: _StatCard(
                     icon: CupertinoIcons.arrow_up_right_circle_fill,
-                    label: 'Aylık Ort.',
+                    label: 'Ort. Adisyon',
                     value: sales.isEmpty
                         ? '${cs}0.00'
-                        : '$cs${(total / 12).toStringAsFixed(2)}',
+                        : '$cs${(total / sales.length).toStringAsFixed(2)}',
                     accent: AppTheme.warningColor,
                   ),
                 ),
@@ -120,31 +157,88 @@ class YearlyReportView extends StatelessWidget {
             if (sales.isEmpty)
               _buildEmptyState()
             else ...[
-              // Monthly line chart
               _SectionTitle(
                   title: 'yearly_sales_title'.tr,
                   icon: CupertinoIcons.graph_circle_fill,
                   accent: AppTheme.warningColor),
               const SizedBox(height: 12),
               _ChartCard(child: _buildMonthlyChart(monthlyTotals, cs)),
+              const SizedBox(height: 8),
+              Text(
+                'Aylık ort. ciro: $cs${(total / activeMonths).toStringAsFixed(2)}',
+                style: const TextStyle(fontSize: 12, color: _textSec),
+              ),
               const SizedBox(height: 24),
 
-              // Category pie chart + list
-              if (topItems.isNotEmpty) ...[
+              // Tappable month list (months with sales)
+              const _SectionTitle(
+                  title: 'Aylar',
+                  icon: CupertinoIcons.calendar,
+                  accent: AppTheme.warningColor),
+              const SizedBox(height: 12),
+              _buildMonthList(y, monthlyTotals, cs),
+              const SizedBox(height: 24),
+
+              if (payEntries.isNotEmpty) ...[
                 _SectionTitle(
-                    title: 'top_items'.tr,
+                    title: 'pay_breakdown'.tr,
                     icon: CupertinoIcons.chart_pie_fill,
                     accent: AppTheme.warningColor),
                 const SizedBox(height: 12),
                 _ContentCard(
-                  child: Column(
-                    children: [
-                      _buildCategoryChart(topItems),
-                      const SizedBox(height: 16),
-                      const Divider(color: _border, height: 1),
-                      const SizedBox(height: 16),
-                      _buildTopItemsList(topItems),
-                    ],
+                  child: ReportMoneyRankList(
+                    entries: payEntries,
+                    cs: cs,
+                    accent: _orange,
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              if (topItems.isNotEmpty) ...[
+                _SectionTitle(
+                    title: 'top_items'.tr,
+                    icon: CupertinoIcons.star_fill,
+                    accent: AppTheme.warningColor),
+                const SizedBox(height: 12),
+                _ContentCard(
+                  child: ReportMoneyRankList(
+                    entries: topItems,
+                    cs: cs,
+                    accent: AppTheme.warningColor,
+                    valueSuffix: 'adet',
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              if (staffTotals.isNotEmpty) ...[
+                const _SectionTitle(
+                    title: 'Personel satışları',
+                    icon: CupertinoIcons.person_2_fill,
+                    accent: AppTheme.warningColor),
+                const SizedBox(height: 12),
+                _ContentCard(
+                  child: ReportMoneyRankList(
+                    entries: staffTotals,
+                    cs: cs,
+                    accent: const Color(0xFF007AFF),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              if (tableTotals.isNotEmpty) ...[
+                const _SectionTitle(
+                    title: 'Masa satışları',
+                    icon: Icons.table_bar_rounded,
+                    accent: AppTheme.warningColor),
+                const SizedBox(height: 12),
+                _ContentCard(
+                  child: ReportMoneyRankList(
+                    entries: tableTotals,
+                    cs: cs,
+                    accent: const Color(0xFFAF52DE),
                   ),
                 ),
               ],
@@ -167,6 +261,83 @@ class YearlyReportView extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMonthList(
+      int year, Map<int, double> monthlyTotals, String cs) {
+    final rows = <Widget>[];
+    for (var m = 12; m >= 1; m--) {
+      final total = monthlyTotals[m] ?? 0.0;
+      if (total <= 0) continue;
+      final monthSales =
+          SalesHistoryService.to.getSalesForMonth(year, m);
+      final count = monthSales.length;
+      final name = _monthNames[m - 1];
+      if (rows.isNotEmpty) {
+        rows.add(const Divider(height: 1, color: _border));
+      }
+      rows.add(
+        Material(
+          color: _card,
+          child: InkWell(
+            onTap: () => Get.to(
+              () => MonthlyReportView(year: year, month: m),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$name $year',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: _textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$count adisyon',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: _textSec,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '$cs${total.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.successColor,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(CupertinoIcons.chevron_right,
+                      size: 14, color: _textSec),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(children: rows),
     );
   }
 
@@ -280,150 +451,6 @@ class YearlyReportView extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildCategoryChart(List<MapEntry<String, double>> topItems) {
-    final total = topItems.fold(0.0, (sum, e) => sum + e.value);
-    final colors = [
-      AppTheme.accentColor,
-      AppTheme.successColor,
-      AppTheme.warningColor,
-      AppTheme.errorColor,
-      AppTheme.infoColor,
-    ];
-
-    return Row(
-      children: [
-        SizedBox(
-          height: 180,
-          width: 180,
-          child: PieChart(
-            PieChartData(
-              sections: topItems.asMap().entries.map((entry) {
-                final pct = total > 0 ? entry.value.value / total * 100 : 0.0;
-                return PieChartSectionData(
-                  value: entry.value.value,
-                  color: colors[entry.key % colors.length],
-                  title: '${pct.toStringAsFixed(0)}%',
-                  radius: 60,
-                  titleStyle: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 11,
-                  ),
-                );
-              }).toList(),
-              sectionsSpace: 2,
-              centerSpaceRadius: 30,
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: topItems.asMap().entries.map((entry) {
-              final color = colors[entry.key % colors.length];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration:
-                          BoxDecoration(color: color, shape: BoxShape.circle),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        entry.value.key,
-                        style:
-                            const TextStyle(fontSize: 13, color: _textPrimary),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Text(
-                      '${entry.value.value.toInt()}',
-                      style: const TextStyle(
-                          fontSize: 12,
-                          color: _textSec,
-                          fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTopItemsList(List<MapEntry<String, double>> topItems) {
-    final maxQty = topItems.first.value;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: topItems.asMap().entries.map((entry) {
-        final rank = entry.key + 1;
-        final item = entry.value;
-        final fraction = maxQty > 0 ? item.value / maxQty : 0.0;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Row(
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: AppTheme.warningColor
-                      .withValues(alpha: rank == 1 ? 0.15 : 0.08),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  '$rank',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: AppTheme.warningColor,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(item.key,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                                color: _textPrimary)),
-                        Text('${item.value.toInt()} adet',
-                            style:
-                                const TextStyle(color: _textSec, fontSize: 12)),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    LinearProgressIndicator(
-                      value: fraction,
-                      backgroundColor: _border,
-                      color: AppTheme.accentColor,
-                      minHeight: 6,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
     );
   }
 
