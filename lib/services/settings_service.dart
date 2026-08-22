@@ -39,10 +39,22 @@ class SettingsService extends GetxService {
   final RxBool ordiVisible = true.obs;
   /// Ordi FAB size: `sm` | `md` | `lg`.
   final RxString ordiSize = 'md'.obs;
+  /// Whether Ordi speaks replies aloud (TTS).
+  final RxBool ordiTtsEnabled = true.obs;
+  /// Ordi TTS volume: `low` | `medium` | `high` (default high).
+  final RxString ordiTtsVolume = 'high'.obs;
   /// App-wide haptic / vibration feedback.
   final RxBool hapticsEnabled = true.obs;
+  /// Haptic strength: `low` | `medium` | `high` (default high).
+  final RxString hapticIntensity = 'high'.obs;
   /// App-wide UI sounds paired with haptic moments.
   final RxBool soundsEnabled = true.obs;
+  /// UI click-sound strength: `low` | `medium` | `high` (default high).
+  final RxString soundIntensity = 'high'.obs;
+  /// Local notification alert sounds (digital menu orders, etc.).
+  final RxBool notifySoundsEnabled = true.obs;
+  /// Notification sound strength: `low` | `medium` | `high` (default high).
+  final RxString notifySoundIntensity = 'high'.obs;
   /// Account UI language: `tr` | `en`.
   final RxString language = 'tr'.obs;
   /// Account payment methods (nakit/kart/havale + custom, e.g. yemek kartı).
@@ -70,8 +82,14 @@ class SettingsService extends GetxService {
   static const _kOrdiCorner     = 'ordi_corner';
   static const _kOrdiVisible    = 'ordi_visible';
   static const _kOrdiSize       = 'ordi_size';
+  static const _kOrdiTtsEnabled = 'ordi_tts_enabled';
+  static const _kOrdiTtsVolume  = 'ordi_tts_volume';
   static const _kHapticsEnabled = 'haptics_enabled';
+  static const _kHapticIntensity = 'haptic_intensity';
   static const _kSoundsEnabled  = 'sounds_enabled';
+  static const _kSoundIntensity = 'sound_intensity';
+  static const _kNotifySoundsEnabled = 'notify_sounds_enabled';
+  static const _kNotifySoundIntensity = 'notify_sound_intensity';
   static const _kLanguage       = 'language';
   static const _kPaymentTypes   = 'payment_types';
   static const _kReceiptLayout  = 'receipt_layout';
@@ -138,8 +156,14 @@ class SettingsService extends GetxService {
         ordiCorner.value = 'br';
         ordiVisible.value = true;
         ordiSize.value = 'md';
+        ordiTtsEnabled.value = true;
+        ordiTtsVolume.value = 'high';
         hapticsEnabled.value = true;
+        hapticIntensity.value = 'high';
         soundsEnabled.value = true;
+        soundIntensity.value = 'high';
+        notifySoundsEnabled.value = true;
+        notifySoundIntensity.value = 'high';
         language.value = 'tr';
         _applyLocale('tr');
         paymentTypes.assignAll(kDefaultPaymentTypes);
@@ -222,6 +246,34 @@ class SettingsService extends GetxService {
       case _kOrdiSize:
         final next = _sanitizeOrdiSize(rawVal);
         if (ordiSize.value != next) ordiSize.value = next;
+      case _kOrdiTtsEnabled:
+        final next = rawVal != '0' && rawVal != 'false';
+        if (ordiTtsEnabled.value != next) ordiTtsEnabled.value = next;
+      case _kOrdiTtsVolume:
+        final next = _sanitizeIntensity(rawVal);
+        if (ordiTtsVolume.value != next) ordiTtsVolume.value = next;
+      case _kHapticsEnabled:
+        final next = rawVal != '0' && rawVal != 'false';
+        if (hapticsEnabled.value != next) hapticsEnabled.value = next;
+      case _kHapticIntensity:
+        final next = _sanitizeIntensity(rawVal);
+        if (hapticIntensity.value != next) hapticIntensity.value = next;
+      case _kSoundsEnabled:
+        final next = rawVal != '0' && rawVal != 'false';
+        if (soundsEnabled.value != next) soundsEnabled.value = next;
+      case _kSoundIntensity:
+        final next = _sanitizeIntensity(rawVal);
+        if (soundIntensity.value != next) soundIntensity.value = next;
+      case _kNotifySoundsEnabled:
+        final next = rawVal != '0' && rawVal != 'false';
+        if (notifySoundsEnabled.value != next) {
+          notifySoundsEnabled.value = next;
+        }
+      case _kNotifySoundIntensity:
+        final next = _sanitizeIntensity(rawVal);
+        if (notifySoundIntensity.value != next) {
+          notifySoundIntensity.value = next;
+        }
       case _kLanguage:
         final next = _sanitizeLanguage(rawVal);
         if (language.value != next) {
@@ -320,6 +372,40 @@ class SettingsService extends GetxService {
     }
   }
 
+  Future<void> setOrdiTtsEnabled(bool enabled) async {
+    ordiTtsEnabled.value = enabled;
+    final value = enabled ? '1' : '0';
+    await _writePref(_kOrdiTtsEnabled, value);
+    try {
+      await _writeValue(_kOrdiTtsEnabled, value);
+    } catch (e) {
+      if (kDebugMode) print('[SettingsService] setOrdiTtsEnabled DB error: $e');
+    }
+  }
+
+  Future<void> setOrdiTtsVolume(String volume) async {
+    final next = _sanitizeIntensity(volume);
+    ordiTtsVolume.value = next;
+    await _writePref(_kOrdiTtsVolume, next);
+    try {
+      await _writeValue(_kOrdiTtsVolume, next);
+    } catch (e) {
+      if (kDebugMode) print('[SettingsService] setOrdiTtsVolume DB error: $e');
+    }
+  }
+
+  /// Maps [ordiTtsVolume] to a FlutterTts volume in `0.0`–`1.0`.
+  double get ordiTtsVolumeLevel {
+    switch (ordiTtsVolume.value) {
+      case 'low':
+        return 0.35;
+      case 'medium':
+        return 0.7;
+      default:
+        return 1.0;
+    }
+  }
+
   Future<void> setHapticsEnabled(bool enabled) async {
     hapticsEnabled.value = enabled;
     final value = enabled ? '1' : '0';
@@ -331,6 +417,17 @@ class SettingsService extends GetxService {
     }
   }
 
+  Future<void> setHapticIntensity(String intensity) async {
+    final next = _sanitizeIntensity(intensity);
+    hapticIntensity.value = next;
+    await _writePref(_kHapticIntensity, next);
+    try {
+      await _writeValue(_kHapticIntensity, next);
+    } catch (e) {
+      if (kDebugMode) print('[SettingsService] setHapticIntensity DB error: $e');
+    }
+  }
+
   Future<void> setSoundsEnabled(bool enabled) async {
     soundsEnabled.value = enabled;
     final value = enabled ? '1' : '0';
@@ -339,6 +436,43 @@ class SettingsService extends GetxService {
       await _writeValue(_kSoundsEnabled, value);
     } catch (e) {
       if (kDebugMode) print('[SettingsService] setSoundsEnabled DB error: $e');
+    }
+  }
+
+  Future<void> setSoundIntensity(String intensity) async {
+    final next = _sanitizeIntensity(intensity);
+    soundIntensity.value = next;
+    await _writePref(_kSoundIntensity, next);
+    try {
+      await _writeValue(_kSoundIntensity, next);
+    } catch (e) {
+      if (kDebugMode) print('[SettingsService] setSoundIntensity DB error: $e');
+    }
+  }
+
+  Future<void> setNotifySoundsEnabled(bool enabled) async {
+    notifySoundsEnabled.value = enabled;
+    final value = enabled ? '1' : '0';
+    await _writePref(_kNotifySoundsEnabled, value);
+    try {
+      await _writeValue(_kNotifySoundsEnabled, value);
+    } catch (e) {
+      if (kDebugMode) {
+        print('[SettingsService] setNotifySoundsEnabled DB error: $e');
+      }
+    }
+  }
+
+  Future<void> setNotifySoundIntensity(String intensity) async {
+    final next = _sanitizeIntensity(intensity);
+    notifySoundIntensity.value = next;
+    await _writePref(_kNotifySoundIntensity, next);
+    try {
+      await _writeValue(_kNotifySoundIntensity, next);
+    } catch (e) {
+      if (kDebugMode) {
+        print('[SettingsService] setNotifySoundIntensity DB error: $e');
+      }
     }
   }
 
@@ -433,6 +567,17 @@ class SettingsService extends GetxService {
         return raw;
       default:
         return 'md';
+    }
+  }
+
+  String _sanitizeIntensity(String raw) {
+    switch (raw) {
+      case 'low':
+      case 'medium':
+      case 'high':
+        return raw;
+      default:
+        return 'high';
     }
   }
 
@@ -549,8 +694,14 @@ class SettingsService extends GetxService {
       String? readCorner;
       String? readOrdiVisible;
       String? readOrdiSize;
+      String? readOrdiTts;
+      String? readOrdiTtsVolume;
       String? readHaptics;
+      String? readHapticIntensity;
       String? readSounds;
+      String? readSoundIntensity;
+      String? readNotifySounds;
+      String? readNotifySoundIntensity;
       String? readLanguage;
       String? readPayTypes;
       String? readReceipt;
@@ -565,10 +716,22 @@ class SettingsService extends GetxService {
             prefs.getString(_tenantPrefKey(tenantId, _kOrdiVisible));
         readOrdiSize =
             prefs.getString(_tenantPrefKey(tenantId, _kOrdiSize));
+        readOrdiTts =
+            prefs.getString(_tenantPrefKey(tenantId, _kOrdiTtsEnabled));
+        readOrdiTtsVolume =
+            prefs.getString(_tenantPrefKey(tenantId, _kOrdiTtsVolume));
         readHaptics =
             prefs.getString(_tenantPrefKey(tenantId, _kHapticsEnabled));
+        readHapticIntensity =
+            prefs.getString(_tenantPrefKey(tenantId, _kHapticIntensity));
         readSounds =
             prefs.getString(_tenantPrefKey(tenantId, _kSoundsEnabled));
+        readSoundIntensity =
+            prefs.getString(_tenantPrefKey(tenantId, _kSoundIntensity));
+        readNotifySounds =
+            prefs.getString(_tenantPrefKey(tenantId, _kNotifySoundsEnabled));
+        readNotifySoundIntensity =
+            prefs.getString(_tenantPrefKey(tenantId, _kNotifySoundIntensity));
         readLanguage =
             prefs.getString(_tenantPrefKey(tenantId, _kLanguage));
         readPayTypes =
@@ -586,8 +749,15 @@ class SettingsService extends GetxService {
       readCorner ??= prefs.getString('settings.$_kOrdiCorner');
       readOrdiVisible ??= prefs.getString('settings.$_kOrdiVisible');
       readOrdiSize ??= prefs.getString('settings.$_kOrdiSize');
+      readOrdiTts ??= prefs.getString('settings.$_kOrdiTtsEnabled');
+      readOrdiTtsVolume ??= prefs.getString('settings.$_kOrdiTtsVolume');
       readHaptics ??= prefs.getString('settings.$_kHapticsEnabled');
+      readHapticIntensity ??= prefs.getString('settings.$_kHapticIntensity');
       readSounds ??= prefs.getString('settings.$_kSoundsEnabled');
+      readSoundIntensity ??= prefs.getString('settings.$_kSoundIntensity');
+      readNotifySounds ??= prefs.getString('settings.$_kNotifySoundsEnabled');
+      readNotifySoundIntensity ??=
+          prefs.getString('settings.$_kNotifySoundIntensity');
       readLanguage ??= prefs.getString('settings.$_kLanguage');
       // Older builds stored language outside the settings.* namespace.
       readLanguage ??= prefs.getString('language');
@@ -613,12 +783,34 @@ class SettingsService extends GetxService {
       if (readOrdiSize != null && readOrdiSize.isNotEmpty) {
         ordiSize.value = _sanitizeOrdiSize(readOrdiSize);
       }
+      if (readOrdiTts != null && readOrdiTts.isNotEmpty) {
+        ordiTtsEnabled.value =
+            readOrdiTts != '0' && readOrdiTts != 'false';
+      }
+      if (readOrdiTtsVolume != null && readOrdiTtsVolume.isNotEmpty) {
+        ordiTtsVolume.value = _sanitizeIntensity(readOrdiTtsVolume);
+      }
       if (readHaptics != null && readHaptics.isNotEmpty) {
         hapticsEnabled.value =
             readHaptics != '0' && readHaptics != 'false';
       }
+      if (readHapticIntensity != null && readHapticIntensity.isNotEmpty) {
+        hapticIntensity.value = _sanitizeIntensity(readHapticIntensity);
+      }
       if (readSounds != null && readSounds.isNotEmpty) {
         soundsEnabled.value = readSounds != '0' && readSounds != 'false';
+      }
+      if (readSoundIntensity != null && readSoundIntensity.isNotEmpty) {
+        soundIntensity.value = _sanitizeIntensity(readSoundIntensity);
+      }
+      if (readNotifySounds != null && readNotifySounds.isNotEmpty) {
+        notifySoundsEnabled.value =
+            readNotifySounds != '0' && readNotifySounds != 'false';
+      }
+      if (readNotifySoundIntensity != null &&
+          readNotifySoundIntensity.isNotEmpty) {
+        notifySoundIntensity.value =
+            _sanitizeIntensity(readNotifySoundIntensity);
       }
       if (readLanguage != null && readLanguage.isNotEmpty) {
         language.value = _sanitizeLanguage(readLanguage);
@@ -707,17 +899,51 @@ class SettingsService extends GetxService {
               ordiSize.value = _sanitizeOrdiSize(rawVal);
               await _writePref(_kOrdiSize, ordiSize.value);
             }
+          case _kOrdiTtsEnabled:
+            if (rawVal.isNotEmpty) {
+              ordiTtsEnabled.value = rawVal != '0' && rawVal != 'false';
+              await _writePref(
+                  _kOrdiTtsEnabled, ordiTtsEnabled.value ? '1' : '0');
+            }
+          case _kOrdiTtsVolume:
+            if (rawVal.isNotEmpty) {
+              ordiTtsVolume.value = _sanitizeIntensity(rawVal);
+              await _writePref(_kOrdiTtsVolume, ordiTtsVolume.value);
+            }
           case _kHapticsEnabled:
             if (rawVal.isNotEmpty) {
               hapticsEnabled.value = rawVal != '0' && rawVal != 'false';
               await _writePref(
                   _kHapticsEnabled, hapticsEnabled.value ? '1' : '0');
             }
+          case _kHapticIntensity:
+            if (rawVal.isNotEmpty) {
+              hapticIntensity.value = _sanitizeIntensity(rawVal);
+              await _writePref(_kHapticIntensity, hapticIntensity.value);
+            }
           case _kSoundsEnabled:
             if (rawVal.isNotEmpty) {
               soundsEnabled.value = rawVal != '0' && rawVal != 'false';
               await _writePref(
                   _kSoundsEnabled, soundsEnabled.value ? '1' : '0');
+            }
+          case _kSoundIntensity:
+            if (rawVal.isNotEmpty) {
+              soundIntensity.value = _sanitizeIntensity(rawVal);
+              await _writePref(_kSoundIntensity, soundIntensity.value);
+            }
+          case _kNotifySoundsEnabled:
+            if (rawVal.isNotEmpty) {
+              notifySoundsEnabled.value =
+                  rawVal != '0' && rawVal != 'false';
+              await _writePref(_kNotifySoundsEnabled,
+                  notifySoundsEnabled.value ? '1' : '0');
+            }
+          case _kNotifySoundIntensity:
+            if (rawVal.isNotEmpty) {
+              notifySoundIntensity.value = _sanitizeIntensity(rawVal);
+              await _writePref(
+                  _kNotifySoundIntensity, notifySoundIntensity.value);
             }
           case _kLanguage:
             if (rawVal.isNotEmpty) {

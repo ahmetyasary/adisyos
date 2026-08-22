@@ -4,7 +4,8 @@
 -pos entegrasyonu
 -getir,trendyol,yemeksepeti entegrasyonu
 
-
+-titreşim hissini yükselt hatta ayarlara ekle kullanıcı düzenlesin. ✅ (Düşük/Orta/Yüksek, varsayılan Yüksek)
+-bildirim sesini yükselt hatta ayaralara ekle kullanıcı düzenlesin. ✅ (ayrı anahtar + şiddet)
 
 -raporlar kısmını detaylandır. (günlük, aylık, yıllık) ✅
   - günlük: özet + liste (tıkla ürünler) + ödeme/ürün/personel/masa

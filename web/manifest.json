@@ -1,12 +1,12 @@
 {
-    "name": "orderix",
-    "short_name": "orderix",
+    "name": "Orderix",
+    "short_name": "Orderix",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#FFFFFF",
+    "theme_color": "#F97316",
+    "description": "Orderix restoran yönetim paneli",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

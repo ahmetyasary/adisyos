@@ -1,10 +1,9 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' show Rect;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show BuildContext, RenderBox, Offset;
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' hide Column, Border, Row;
 import 'package:syncfusion_officechart/officechart.dart';
@@ -573,19 +572,18 @@ class ReportExcelExporter {
     String fileName, {
     Rect? shareOrigin,
   }) async {
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/$fileName');
-    await file.writeAsBytes(bytes, flush: true);
     // iPad requires a non-zero popover source rect inside the window.
     final origin = shareOrigin ?? const Rect.fromLTWH(120, 120, 40, 40);
-    // Only share the .xlsx — text/subject makes iOS also emit a "metin" .txt.
+    const mime =
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    // fromData works on web + mobile without dart:io.
     await SharePlus.instance.share(
       ShareParams(
         files: [
-          XFile(
-            file.path,
-            mimeType:
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          XFile.fromData(
+            Uint8List.fromList(bytes),
+            mimeType: mime,
+            name: fileName,
           ),
         ],
         sharePositionOrigin: origin,

@@ -149,7 +149,7 @@ class AppTranslations extends Translations {
           'language': 'Dil',
           'save_settings': 'Kaydet',
           'nav_order': 'Menü sırası',
-          'nav_order_hint': 'Sürükleyerek sırala (tablet menü + telefon alt bar)',
+          'nav_order_hint': 'Kenar menü ve alt çubuktaki bölüm sırasını düzenleyin',
           'nav_order_reset': 'Varsayılan',
 
           // Danger zone / Account deletion (App Store 5.1.1(v))
@@ -415,7 +415,7 @@ class AppTranslations extends Translations {
           'language': 'Language',
           'save_settings': 'Save',
           'nav_order': 'Menu order',
-          'nav_order_hint': 'Drag to reorder (tablet sidebar + phone tab bar)',
+          'nav_order_hint': 'Customize section order in the sidebar and tab bar',
           'nav_order_reset': 'Default',
 
           // Danger zone / Account deletion (App Store 5.1.1(v))

@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:orderix/core/errors/auth_exception.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/features/ordi/presentation/ordi_voice_service.dart';
 import 'package:orderix/models/app_role.dart';
 import 'package:orderix/models/payment_type.dart';
 import 'package:orderix/models/receipt_layout.dart';
@@ -1272,11 +1273,21 @@ class _NavOrderSheetState extends State<_NavOrderSheet> {
 class _FeedbackSettingsCard extends StatelessWidget {
   const _FeedbackSettingsCard();
 
+  static const _levels = [
+    ('low', 'Düşük'),
+    ('medium', 'Orta'),
+    ('high', 'Yüksek'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Obx(() {
       final hapticsOn = SettingsService.to.hapticsEnabled.value;
+      final hapticLevel = SettingsService.to.hapticIntensity.value;
       final soundsOn = SettingsService.to.soundsEnabled.value;
+      final soundLevel = SettingsService.to.soundIntensity.value;
+      final notifyOn = SettingsService.to.notifySoundsEnabled.value;
+      final notifyLevel = SettingsService.to.notifySoundIntensity.value;
       return Column(
         children: [
           Padding(
@@ -1308,7 +1319,7 @@ class _FeedbackSettingsCard extends StatelessWidget {
                       ),
                       SizedBox(height: 2),
                       Text(
-                        'Ödeme, gün ve Ordi haptic geri bildirimleri',
+                        'Ödeme, gün, sipariş ve Ordi haptic geri bildirimi',
                         style: TextStyle(fontSize: 12, color: _textSec),
                       ),
                     ],
@@ -1319,12 +1330,41 @@ class _FeedbackSettingsCard extends StatelessWidget {
                   activeColor: _orange,
                   onChanged: (v) {
                     SettingsService.to.setHapticsEnabled(v);
-                    if (v) AppHaptics.success();
+                    if (v) AppHaptics.previewHaptic();
                   },
                 ),
               ],
             ),
           ),
+          if (hapticsOn) ...[
+            const Divider(
+                height: 1, color: _border, indent: 16, endIndent: 16),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Titreşim şiddeti',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _textSec,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _IntensityChips(
+                    levels: _levels,
+                    selected: hapticLevel,
+                    onSelect: (id) async {
+                      await SettingsService.to.setHapticIntensity(id);
+                      await AppHaptics.previewHaptic();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
           const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -1372,9 +1412,163 @@ class _FeedbackSettingsCard extends StatelessWidget {
               ],
             ),
           ),
+          if (soundsOn) ...[
+            const Divider(
+                height: 1, color: _border, indent: 16, endIndent: 16),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Ses şiddeti',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _textSec,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _IntensityChips(
+                    levels: _levels,
+                    selected: soundLevel,
+                    onSelect: (id) async {
+                      await SettingsService.to.setSoundIntensity(id);
+                      await AppHaptics.previewSound();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: _orange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: const Icon(CupertinoIcons.bell_fill,
+                      size: 17, color: _orange),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Bildirim sesi',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: _textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Dijital menü sipariş uyarıları',
+                        style: TextStyle(fontSize: 12, color: _textSec),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch.adaptive(
+                  value: notifyOn,
+                  activeColor: _orange,
+                  onChanged: (v) {
+                    SettingsService.to.setNotifySoundsEnabled(v);
+                    if (v) AppHaptics.previewNotifySound();
+                  },
+                ),
+              ],
+            ),
+          ),
+          if (notifyOn) ...[
+            const Divider(
+                height: 1, color: _border, indent: 16, endIndent: 16),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Bildirim sesi şiddeti',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _textSec,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _IntensityChips(
+                    levels: _levels,
+                    selected: notifyLevel,
+                    onSelect: (id) async {
+                      await SettingsService.to.setNotifySoundIntensity(id);
+                      await AppHaptics.previewNotifySound();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       );
     });
+  }
+}
+
+class _IntensityChips extends StatelessWidget {
+  const _IntensityChips({
+    required this.levels,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final List<(String, String)> levels;
+  final String selected;
+  final Future<void> Function(String id) onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: levels.map((s) {
+        final id = s.$1;
+        final label = s.$2;
+        final isSelected = id == selected;
+        return Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: GestureDetector(
+            onTap: () => onSelect(id),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: isSelected ? _orange : _bg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected ? _orange : _border,
+                ),
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : _textPrimary,
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
   }
 }
 
@@ -1389,11 +1583,19 @@ class _OrdiSettingsCard extends StatelessWidget {
     ('lg', 'Büyük'),
   ];
 
+  static const _volumes = [
+    ('low', 'Düşük'),
+    ('medium', 'Orta'),
+    ('high', 'Yüksek'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Obx(() {
       final visible = SettingsService.to.ordiVisible.value;
       final size = SettingsService.to.ordiSize.value;
+      final ttsOn = SettingsService.to.ordiTtsEnabled.value;
+      final ttsVol = SettingsService.to.ordiTtsVolume.value;
       return Column(
         children: [
           Padding(
@@ -1443,7 +1645,7 @@ class _OrdiSettingsCard extends StatelessWidget {
             const Divider(
                 height: 1, color: _border, indent: 16, endIndent: 16),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1488,6 +1690,88 @@ class _OrdiSettingsCard extends StatelessWidget {
                         ),
                       );
                     }).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: _orange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: const Icon(CupertinoIcons.ear,
+                      size: 17, color: _orange),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Cevap sesi',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: _textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Ordi yanıtlarını sesli okusun',
+                        style: TextStyle(fontSize: 12, color: _textSec),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch.adaptive(
+                  value: ttsOn,
+                  activeColor: _orange,
+                  onChanged: (v) async {
+                    await SettingsService.to.setOrdiTtsEnabled(v);
+                    if (v && Get.isRegistered<OrdiVoiceService>()) {
+                      await OrdiVoiceService.to.previewVoice();
+                    } else if (!v && Get.isRegistered<OrdiVoiceService>()) {
+                      await OrdiVoiceService.to.stopSpeaking();
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          if (ttsOn) ...[
+            const Divider(
+                height: 1, color: _border, indent: 16, endIndent: 16),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Cevap sesi yüksekliği',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _textSec,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _IntensityChips(
+                    levels: _volumes,
+                    selected: ttsVol,
+                    onSelect: (id) async {
+                      await SettingsService.to.setOrdiTtsVolume(id);
+                      if (Get.isRegistered<OrdiVoiceService>()) {
+                        await OrdiVoiceService.to.previewVoice();
+                      }
+                    },
                   ),
                 ],
               ),

@@ -139,7 +139,7 @@ class DigitalMenuOrderService extends GetxService {
         : '$n ${'new_orders_plural'.tr}';
 
     AppToast.warning(body, title: title);
-    await AppHaptics.medium();
+    await AppHaptics.orderArrived();
 
     if (Get.isRegistered<LocalNotifyService>()) {
       await LocalNotifyService.to.showOrderAlert(title: title, body: body);

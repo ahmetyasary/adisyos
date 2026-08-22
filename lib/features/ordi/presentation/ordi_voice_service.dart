@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:get/get.dart';
+import 'package:orderix/services/settings_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
@@ -22,6 +23,11 @@ class OrdiVoiceService extends GetxService {
   String _finalText = '';
 
   Future<OrdiVoiceService> init() async {
+    if (kIsWeb) {
+      // Mic STT / TTS plugins are limited on web; keep service registered but off.
+      isAvailable.value = false;
+      return this;
+    }
     try {
       await _configureTts();
       _sttReady = await _stt.initialize(
@@ -162,14 +168,43 @@ class OrdiVoiceService extends GetxService {
   }
 
   /// Speaks [text] in Turkish. Strips light markdown for cleaner speech.
+  /// Respects Settings → Ordi cevap sesi / ses yüksekliği.
   Future<void> speak(String text) async {
+    if (Get.isRegistered<SettingsService>() &&
+        !SettingsService.to.ordiTtsEnabled.value) {
+      return;
+    }
     final cleaned = _forSpeech(text);
     if (cleaned.isEmpty) return;
     await stopSpeaking();
     try {
+      await _applyTtsVolume();
       await _tts.speak(cleaned);
     } catch (e) {
       if (kDebugMode) print('[OrdiVoice] speak: $e');
+      isSpeaking.value = false;
+    }
+  }
+
+  Future<void> _applyTtsVolume() async {
+    final level = Get.isRegistered<SettingsService>()
+        ? SettingsService.to.ordiTtsVolumeLevel
+        : 1.0;
+    await _tts.setVolume(level);
+  }
+
+  /// Short preview when changing volume in Settings.
+  Future<void> previewVoice() async {
+    if (Get.isRegistered<SettingsService>() &&
+        !SettingsService.to.ordiTtsEnabled.value) {
+      return;
+    }
+    await stopSpeaking();
+    try {
+      await _applyTtsVolume();
+      await _tts.speak('Merhaba, ben Ordi.');
+    } catch (e) {
+      if (kDebugMode) print('[OrdiVoice] preview: $e');
       isSpeaking.value = false;
     }
   }

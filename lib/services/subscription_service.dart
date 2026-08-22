@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -37,8 +36,16 @@ class SubscriptionService extends GetxService {
   // ── SDK init (call before runApp) ─────────────────────────────
 
   static Future<void> configure() async {
-    final key = Platform.isIOS ? _kAppleKey : _kGoogleKey;
-    debugPrint('[RC] configure() platform=${Platform.operatingSystem} '
+    // RevenueCat mobile SDKs are not available on web/desktop.
+    if (kIsWeb) {
+      debugPrint('[RC] configure() skipped on web');
+      return;
+    }
+    final key = defaultTargetPlatform == TargetPlatform.iOS
+        ? _kAppleKey
+        : _kGoogleKey;
+    debugPrint(
+        '[RC] configure() platform=$defaultTargetPlatform '
         'keyPresent=${key.trim().isNotEmpty} '
         'keyPrefix=${key.isEmpty ? "<empty>" : key.substring(0, key.length.clamp(0, 5))}');
     if (key.trim().isEmpty) {
@@ -76,7 +83,10 @@ class SubscriptionService extends GetxService {
   /// during local development. `kDebugMode` is a compile-time constant that is
   /// `false` in profile/release builds, so the production App Store build is
   /// completely unaffected.
-  bool get hasAccess => kDebugMode || isSubscribed;
+  ///
+  /// Web has no App Store / Play Billing — RevenueCat is skipped there, so
+  /// the lockout paywall must not block the browser panel.
+  bool get hasAccess => kDebugMode || kIsWeb || isSubscribed;
 
   bool get isSubscribed => _entitlement != null;
 
