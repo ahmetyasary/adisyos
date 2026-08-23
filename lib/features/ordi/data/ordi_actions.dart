@@ -118,6 +118,44 @@ class OrdiActionRunner {
     return OrdiRunSplit(adds: adds, changes: changes, blocked: blocked);
   }
 
+  /// Removes model-leaked tool call syntax from assistant prose so chat/TTS
+  /// never show raw `add_order(...)` / `` `add_order`(…) `` fragments.
+  static String stripLeakedToolText(String text) {
+    if (text.trim().isEmpty) return text;
+    final names = {...addOps, ...changeOps}.join('|');
+    var t = text;
+
+    // Fenced code blocks (often dump the whole call).
+    t = t.replaceAll(RegExp(r'```[\s\S]*?```'), '');
+
+    // `tool`(args)  or  tool(args)  — common Gemini prose leak.
+    t = t.replaceAll(
+      RegExp(
+        r'''[`'"]?(?:'''
+        '$names'
+        r''')[`'"]?\s*\([^)]*\)''',
+        caseSensitive: false,
+      ),
+      '',
+    );
+
+    // Orphan lines that are only a tool name.
+    t = t.replaceAll(
+      RegExp(
+        r'^\s*[`"]?(?:'
+        '$names'
+        r')[`"]?\s*$',
+        multiLine: true,
+        caseSensitive: false,
+      ),
+      '',
+    );
+
+    t = t.replaceAll(RegExp(r'[ \t]+\n'), '\n');
+    t = t.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    return t.trim();
+  }
+
   static Future<String> run(List<OrdiToolCall> calls) async {
     if (calls.isEmpty) return '';
     final lines = <String>[];

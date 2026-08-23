@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:get/get.dart';
+import 'package:orderix/features/ordi/data/ordi_actions.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart';
@@ -217,7 +218,8 @@ class OrdiVoiceService extends GetxService {
   }
 
   static String _forSpeech(String raw) {
-    var t = raw.replaceAll(RegExp(r'\*\*(.+?)\*\*', dotAll: true), r'$1');
+    var t = OrdiActionRunner.stripLeakedToolText(raw);
+    t = t.replaceAll(RegExp(r'\*\*(.+?)\*\*', dotAll: true), r'$1');
     t = t.replaceAll(RegExp(r'`([^`]*)`'), r'$1');
     t = t.replaceAll(RegExp(r'^\s*[-*•]\s+', multiLine: true), '');
     t = t.replaceAll(RegExp(r'\n{2,}'), '. ');

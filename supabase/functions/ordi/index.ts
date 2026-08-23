@@ -97,16 +97,37 @@ KURALLAR
 9. Alakasız konularda kibarca işletmeye ve uygulamaya çevir.
 10. Araç çağırırken kısa bir cümle yaz. Eksik zorunlu alan varsa aracı
     çağırma; neyin eksik olduğunu söyle (eklemede “emin misiniz” sorma).
+    ASLA araç sözdizimi yazma: add_order(...), \`add_order\`(...), kod
+    bloğu veya fonksiyon adı metinde olmasın. Araç yalnızca functionCall
+    ile çağrılır; metin sadece kullanıcıya Türkçe sonuç/özettir.
 `.trim()
 
 /** Extracts the concatenated text of the first candidate, or '' if none. */
 function extractText(payload: any): string {
   const parts = payload?.candidates?.[0]?.content?.parts
   if (!Array.isArray(parts)) return ''
-  return parts
-    .map((p: any) => (typeof p?.text === 'string' ? p.text : ''))
-    .join('')
-    .trim()
+  return stripLeakedToolText(
+    parts
+      .map((p: any) => (typeof p?.text === 'string' ? p.text : ''))
+      .join('')
+      .trim(),
+  )
+}
+
+/** Drops prose that mirrors functionCall syntax (Gemini sometimes echoes it). */
+function stripLeakedToolText(text: string): string {
+  if (!text) return text
+  const names =
+    'create_table|add_section|add_menu_category|add_menu_item|add_staff|add_order|' +
+    'set_stock_new|start_day|clock_in|start_break|rename_table|rename_section|' +
+    'rename_menu_category|update_menu_item|set_stock|apply_discount|take_payment|' +
+    'partial_payment|move_orders|end_day|clock_out|end_break|set_company_name|' +
+    'set_currency|update_staff|advance_kitchen'
+  let t = text.replace(/```[\s\S]*?```/g, '')
+  t = t.replace(new RegExp(`[\\\`'"]?(?:${names})[\\\`'"]?\\s*\\([^)]*\\)`, 'gi'), '')
+  t = t.replace(new RegExp(`^\\s*[\\\`'"]?(?:${names})[\\\`'"]?\\s*$`, 'gim'), '')
+  t = t.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n')
+  return t.trim()
 }
 
 function extractActions(payload: any): { name: string; args: Record<string, unknown> }[] {

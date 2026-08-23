@@ -245,7 +245,7 @@ class OrdiController extends GetxController {
         // Exclude the just-added question; it is sent separately.
         final priorTurns = messages.sublist(0, messages.length - 1);
         final answer = await _repo.ask(question, priorTurns);
-        var body = answer.text.trim();
+        var body = OrdiActionRunner.stripLeakedToolText(answer.text.trim());
         final split = OrdiActionRunner.split(answer.actions);
         if (split.adds.isNotEmpty) {
           final result = await OrdiActionRunner.run(split.adds);
