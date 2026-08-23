@@ -293,7 +293,32 @@ class _TableDetailViewState extends State<TableDetailView> {
                       child: GestureDetector(
                         onTap: () {
                           Get.back();
-                          TableService.to.removeOrder(widget.tableIndex, index);
+                          final orders = TableService
+                                  .to.tables[widget.tableIndex]['orders']
+                              as List<Map<String, dynamic>>;
+                          if (index < 0 || index >= orders.length) return;
+                          final snapshot = Map<String, dynamic>.from(
+                            orders[index],
+                          );
+                          final atIndex = index;
+                          TableService.to
+                              .removeOrder(widget.tableIndex, index);
+                          AppHaptics.selection();
+                          AppToast.undo(
+                            message: snapshot['name'] as String? ?? itemName,
+                            onUndo: () {
+                              TableService.to.restoreOrder(
+                                widget.tableIndex,
+                                snapshot,
+                                atIndex: atIndex,
+                              );
+                              AppHaptics.success();
+                              AppToast.success(
+                                'Listeye geri eklendi',
+                                title: 'Geri alındı',
+                              );
+                            },
+                          );
                         },
                         child: Container(
                           height: 46,

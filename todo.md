@@ -4,6 +4,13 @@
 -pos entegrasyonu
 -getir,trendyol,yemeksepeti entegrasyonu
 
+-web kısmından kayıt ol butonunu kaldır. ✅
+-web favicon yap. ✅
+
+-menü ekranında bir ürün silindiğinde silindikten sonra 5 sn içinde geri al butonuna basarsa listeye geri eklensin. geri sayım animasyonuda olsun. ✅
+
+-masa sipariş detayında bir ürün silindiğinde silindikten sonra 6 sn içinde geri al butonuna basarsa listeye geri eklensin. geri sayım animasyonuda olsun. ✅
+
 -titreşim hissini yükselt hatta ayarlara ekle kullanıcı düzenlesin. ✅ (Düşük/Orta/Yüksek, varsayılan Yüksek)
 -bildirim sesini yükselt hatta ayaralara ekle kullanıcı düzenlesin. ✅ (ayrı anahtar + şiddet)
 

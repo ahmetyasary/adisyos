@@ -532,6 +532,110 @@ class TableService extends GetxService {
     });
   }
 
+  /// Re-adds a previously removed line (undo within the toast window).
+  /// [snapshot] must include `name`, `quantity`, `price`.
+  void restoreOrder(
+    int tableIndex,
+    Map<String, dynamic> snapshot, {
+    int? atIndex,
+  }) {
+    if (tableIndex < 0 || tableIndex >= tables.length) return;
+    final tableId = _id(tableIndex);
+    final orders = tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
+    final name = snapshot['name'] as String;
+    final qty = (snapshot['quantity'] as num).toInt().clamp(1, 9999);
+    final price = (snapshot['price'] as num).toDouble();
+    _assignStaff(tableIndex);
+
+    final existingIdx = orders.indexWhere((o) => o['name'] == name);
+    if (existingIdx != -1) {
+      final order = orders[existingIdx];
+      order['quantity'] = (order['quantity'] as int) + qty;
+      // Keep the restored unit price if the line was empty before; otherwise
+      // leave the current line price (user may have re-added meanwhile).
+      tables[tableIndex]['total'] =
+          (tables[tableIndex]['total'] as double) + price * qty;
+      _setOccupied(tableIndex);
+      KitchenService.to.addOrUpdateTicket(
+        tableId: tableId,
+        tableName: tables[tableIndex]['name'] as String,
+        itemName: name,
+        quantity: order['quantity'] as int,
+      );
+      InventoryService.to.decrementForSale([
+        {'name': name, 'quantity': qty, 'price': price}
+      ]);
+      tables.refresh();
+
+      _enqueue(tableIndex, () async {
+        final orderId = order['id'] as int;
+        if (orderId == -1) return;
+        await _db.from('orders').update({
+          'quantity': order['quantity'] as int,
+          'price': (order['price'] as num).toDouble(),
+        }).eq('id', orderId);
+        await _syncTableHeader(tableIndex);
+      });
+      return;
+    }
+
+    final newOrder = <String, dynamic>{
+      'id': -1,
+      'name': name,
+      'quantity': qty,
+      'price': price,
+    };
+    final insertAt = (atIndex != null && atIndex >= 0 && atIndex <= orders.length)
+        ? atIndex
+        : (() {
+            final i = orders
+                .indexWhere((o) => (o['name'] as String).compareTo(name) > 0);
+            return i == -1 ? orders.length : i;
+          })();
+    orders.insert(insertAt, newOrder);
+    tables[tableIndex]['total'] =
+        (tables[tableIndex]['total'] as double) + price * qty;
+    _setOccupied(tableIndex);
+    KitchenService.to.addOrUpdateTicket(
+      tableId: tableId,
+      tableName: tables[tableIndex]['name'] as String,
+      itemName: name,
+      quantity: qty,
+    );
+    InventoryService.to.decrementForSale([
+      {'name': name, 'quantity': qty, 'price': price}
+    ]);
+    tables.refresh();
+
+    _enqueue(tableIndex, () async {
+      if (!orders.contains(newOrder)) {
+        await _syncTableHeader(tableIndex);
+        return;
+      }
+      if ((newOrder['id'] as int) != -1) {
+        await _db.from('orders').update({
+          'quantity': newOrder['quantity'] as int,
+          'price': (newOrder['price'] as num).toDouble(),
+        }).eq('id', newOrder['id'] as int);
+        await _syncTableHeader(tableIndex);
+        return;
+      }
+      final row = await _db
+          .from('orders')
+          .insert({
+            'table_id': tableId,
+            'name': name,
+            'quantity': newOrder['quantity'] as int,
+            'price': (newOrder['price'] as num).toDouble(),
+            'tenant_id': _tenantId,
+          })
+          .select()
+          .single();
+      newOrder['id'] = row['id'] as int;
+      await _syncTableHeader(tableIndex);
+    });
+  }
+
   void decrementOrder(int tableIndex, int orderIndex) {
     final orders = tables[tableIndex]['orders'] as List<Map<String, dynamic>>;
     if (orderIndex >= orders.length) return;

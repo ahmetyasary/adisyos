@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -190,8 +191,10 @@ class _AuthScreenState extends State<AuthScreen>
                               onLoginPressed: _onLoginPressed,
                             ),
 
-                            const SizedBox(height: 20),
-                            _SignUpLink(),
+                            if (!kIsWeb) ...[
+                              const SizedBox(height: 20),
+                              _SignUpLink(),
+                            ],
 
                             const SizedBox(height: 28),
                             _BottomFooter(),

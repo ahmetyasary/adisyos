@@ -157,8 +157,28 @@ class _MenuManagementViewState extends State<MenuManagementView> {
           _showDeleteMenuConfirmation(menuIndex, menu['name'] as String),
       onEditItem: (itemIndex, name, price, imageUrl) =>
           _showEditItemDialog(menuIndex, itemIndex, name, price, imageUrl),
-      onDeleteItem: (itemIndex) =>
-          MenuService.to.removeMenuItem(menuIndex, itemIndex),
+      onDeleteItem: (itemIndex) {
+        final items =
+            MenuService.to.menus[menuIndex]['items'] as List;
+        if (itemIndex < 0 || itemIndex >= items.length) return;
+        final name =
+            (items[itemIndex] as Map<String, dynamic>)['name'] as String? ??
+                '';
+        MenuService.to.removeMenuItem(menuIndex, itemIndex);
+        AppToast.undo(
+          title: 'Ürün silindi',
+          message: name,
+          duration: const Duration(seconds: 5),
+          onUndo: () {
+            if (MenuService.to.undoRemoveMenuItem()) {
+              AppToast.success(
+                'Listeye geri eklendi',
+                title: 'Geri alındı',
+              );
+            }
+          },
+        );
+      },
     );
   }
 

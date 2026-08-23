@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -15,6 +17,10 @@ class MenuService extends GetxService {
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
 
+  /// Soft-deleted menu item waiting for undo window / final commit.
+  _PendingMenuItemDelete? _pendingItemDelete;
+  Timer? _pendingItemDeleteTimer;
+
   String get _tenantId => _db.auth.currentUser!.id;
 
   @override
@@ -29,6 +35,7 @@ class MenuService extends GetxService {
 
   @override
   void onClose() {
+    _commitPendingMenuItemDelete();
     _channel?.unsubscribe();
     super.onClose();
   }
@@ -321,18 +328,73 @@ class MenuService extends GetxService {
         .catchError((e) => _err('updateMenuItem', e));
   }
 
-  void removeMenuItem(int menuIndex, int itemIndex) {
+  /// Soft-removes a menu item from the UI and schedules permanent deletion
+  /// after [undoWindow] (orders + inventory + DB). Call [undoRemoveMenuItem]
+  /// to restore within the window.
+  void removeMenuItem(
+    int menuIndex,
+    int itemIndex, {
+    Duration undoWindow = const Duration(seconds: 5),
+  }) {
+    if (menuIndex < 0 || menuIndex >= menus.length) return;
     final items = menus[menuIndex]['items'] as List;
-    final item = items[itemIndex] as Map<String, dynamic>;
-    final itemId = item['id'] as int;
-    final itemName = item['name'] as String;
+    if (itemIndex < 0 || itemIndex >= items.length) return;
+
+    // A previous soft-delete still pending → commit it first.
+    _commitPendingMenuItemDelete();
+
+    final item = Map<String, dynamic>.from(
+      items[itemIndex] as Map<String, dynamic>,
+    );
     items.removeAt(itemIndex);
     menus.refresh();
-    _persistItemOrder(menuIndex);
-    // Remove active orders and inventory tracking for this item.
+
+    _pendingItemDelete = _PendingMenuItemDelete(
+      menuIndex: menuIndex,
+      atIndex: itemIndex,
+      item: item,
+    );
+    _pendingItemDeleteTimer?.cancel();
+    _pendingItemDeleteTimer = Timer(undoWindow, _commitPendingMenuItemDelete);
+  }
+
+  /// Restores the last soft-deleted menu item, if the undo window is open.
+  bool undoRemoveMenuItem() {
+    final pending = _pendingItemDelete;
+    if (pending == null) return false;
+    _pendingItemDeleteTimer?.cancel();
+    _pendingItemDeleteTimer = null;
+    _pendingItemDelete = null;
+
+    if (pending.menuIndex < 0 || pending.menuIndex >= menus.length) {
+      return false;
+    }
+    final items = menus[pending.menuIndex]['items'] as List;
+    final insertAt = pending.atIndex.clamp(0, items.length);
+    items.insert(insertAt, Map<String, dynamic>.from(pending.item));
+    menus.refresh();
+    return true;
+  }
+
+  void _commitPendingMenuItemDelete() {
+    final pending = _pendingItemDelete;
+    _pendingItemDeleteTimer?.cancel();
+    _pendingItemDeleteTimer = null;
+    _pendingItemDelete = null;
+    if (pending == null) return;
+
+    final item = pending.item;
+    final itemId = item['id'] as int;
+    final itemName = item['name'] as String;
+
+    if (pending.menuIndex >= 0 && pending.menuIndex < menus.length) {
+      _persistItemOrder(pending.menuIndex);
+    }
+
     TableService.to.removeOrdersByItemName(itemName);
     InventoryService.to.removeTracking(itemName);
-    _db.from('menu_items')
+    _db
+        .from('menu_items')
         .delete()
         .eq('id', itemId)
         .catchError((e) => _err('removeMenuItem', e));
@@ -380,4 +442,16 @@ class MenuService extends GetxService {
           .catchError((e) => _err('persistItemOrder', e));
     }
   }
+}
+
+class _PendingMenuItemDelete {
+  _PendingMenuItemDelete({
+    required this.menuIndex,
+    required this.atIndex,
+    required this.item,
+  });
+
+  final int menuIndex;
+  final int atIndex;
+  final Map<String, dynamic> item;
 }
