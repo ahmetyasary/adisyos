@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
 
   const { data: cfg, error: cfgErr } = await admin
     .from('digital_menu_config')
-    .select('tenant_id, menu_ids, enabled')
+    .select('tenant_id, menu_ids, enabled, theme_mode')
     .eq('token', token)
     .maybeSingle()
 
@@ -66,6 +66,10 @@ Deno.serve(async (req) => {
   if (!cfg.enabled) {
     return json({ error: 'Bu dijital menü şu an kapalı.' }, 403)
   }
+
+  const themeRaw = typeof cfg.theme_mode === 'string' ? cfg.theme_mode : 'system'
+  const themeMode =
+    themeRaw === 'light' || themeRaw === 'dark' ? themeRaw : 'system'
 
   const menuIds: number[] = Array.isArray(cfg.menu_ids) ? cfg.menu_ids : []
   if (menuIds.length === 0) {
@@ -108,6 +112,7 @@ Deno.serve(async (req) => {
   const payload = {
     companyName,
     currency,
+    themeMode,
     menus: sorted.map((m) => {
       const items = [...(m.menu_items ?? [])].sort(
         (a: { sort_order?: number }, b: { sort_order?: number }) =>

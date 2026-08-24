@@ -17,7 +17,9 @@ Color get _bg => AppColors.bg;
 Color get _chip => AppColors.chipBg;
 Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
-const _orangeLight = Color(0xFFFFF4E0);
+/// Soft orange wash for chips — readable in light and dark.
+Color get _orangeSoft =>
+    AppColors.isDark ? _orange.withValues(alpha: 0.22) : const Color(0xFFFFF4E0);
 Color get _textPrimary => AppColors.textPrimary;
 Color get _textSec => AppColors.textSec;
 Color get _border => AppColors.border;
@@ -225,7 +227,7 @@ class _MenuManagementViewState extends State<MenuManagementView> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 7),
                             decoration: BoxDecoration(
-                              color: _orangeLight,
+                              color: _orangeSoft,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
@@ -245,10 +247,12 @@ class _MenuManagementViewState extends State<MenuManagementView> {
                         tooltip: 'İşlemler',
                         padding: EdgeInsets.zero,
                         offset: const Offset(0, 8),
-                        color: Colors.white,
+                        color: _card,
+                        surfaceTintColor: Colors.transparent,
                         elevation: 8,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(color: _border),
                         ),
                         onSelected: (value) {
                           if (value == 'add') _showAddMenuDialog();
@@ -1319,7 +1323,7 @@ class _MenuCardState extends State<_MenuCard> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: _orangeLight,
+              color: _orangeSoft,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Obx(() => Text(

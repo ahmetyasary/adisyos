@@ -15,9 +15,9 @@ import 'package:orderix/widgets/brand_assets.dart';
 Color get _bg => AppColors.scaffold;
 Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
-const _labelPrimary = Color(0xFF1C1C1E);
-const _labelSecondary = Color(0xFF8E8E93);
-const _separator = Color(0xFFE5E5EA);
+Color get _labelPrimary => AppColors.textPrimary;
+Color get _labelSecondary => AppColors.textSec;
+Color get _separator => AppColors.border;
 const _amber = Color(0xFFFF9F0A);
 
 /// Opens the Ordi conversation. [initialPrompt] is sent as soon as the sheet
@@ -162,9 +162,13 @@ class _OrdiChatSheetState extends State<_OrdiChatSheet> {
       builder: (dialogCtx) => AlertDialog(
         backgroundColor: _card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
+        title: Text(
           'Sohbeti Temizle',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: _labelPrimary,
+          ),
         ),
         content: Text(
           'Ordi ile olan tüm yazışmanız kalıcı olarak silinecek.',

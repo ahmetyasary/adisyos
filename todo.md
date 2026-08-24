@@ -1,14 +1,14 @@
 #Yapılacaklar
 
--Dashboard ekranı güzelliştirilecek (widget mantığı olabilir.drag&drop) ✅ (Yetkili: uzun bas → sürükle, boyut S/M/L, ekle, sıfırla)
-
-
--pos entegrasyonu ✅ (Ayarlar > Entegrasyonlar > POS — ayar formu + kayıt; canlı API sonra)
--getir,trendyol,yemeksepeti entegrasyonu ✅ (Ayarlar > Entegrasyonlar > Pazaryeri — Getir / Trendyol Go / Yemeksepeti)
-
 -ordi'ye iş ile ilgili tahmin özelliği ekle. forecast gelecekte neler olabilir?
 
+-Dashboard ekranı güzelliştirilecek (widget mantığı olabilir.drag&drop) ✅ (Yetkili: uzun bas → sürükle, boyut S/M/L, ekle, sıfırla)
 
+-pos entegrasyonu ✅ (Ayarlar > Entegrasyonlar > POS — ayar formu + kayıt; canlı API sonra)
+
+-getir,trendyol,yemeksepeti entegrasyonu ✅ (Ayarlar > Entegrasyonlar > Pazaryeri — Getir / Trendyol Go / Yemeksepeti)
+
+-dijital menü açık/koyu/sistem teması ✅
 
 -koyu mod açık mod eklenecek. logolar görseller otomatik değişmeli. (sistem,açık,koyu) ✅
 

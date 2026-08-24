@@ -23,6 +23,8 @@ class DigitalMenuService extends GetxService {
   final RxBool saving = false.obs;
   final RxBool enabled = true.obs;
   final RxString token = ''.obs;
+  /// Public menu appearance: `system` | `light` | `dark`.
+  final RxString themeMode = 'system'.obs;
   final RxList<int> selectedMenuIds = <int>[].obs;
 
   /// Brief banner text after another device changes the link / config.
@@ -69,6 +71,7 @@ class DigitalMenuService extends GetxService {
         selectedMenuIds.clear();
         selectedTableId.value = null;
         enabled.value = true;
+        themeMode.value = 'system';
         syncNotice.value = '';
       }
     });
@@ -122,6 +125,7 @@ class DigitalMenuService extends GetxService {
     final tokenChanged =
         nextToken.isNotEmpty && nextToken != token.value.trim();
     final nextEnabled = (row['enabled'] as bool?) ?? true;
+    final nextTheme = _sanitizeThemeMode(row['theme_mode'] as String?);
     final ids = row['menu_ids'];
     final nextIds = ids is List
         ? ids.map((e) => (e as num).toInt()).toList()
@@ -129,6 +133,7 @@ class DigitalMenuService extends GetxService {
 
     if (nextToken.isNotEmpty) token.value = nextToken;
     enabled.value = nextEnabled;
+    themeMode.value = nextTheme;
     selectedMenuIds.assignAll(nextIds);
 
     if (tokenChanged) {
@@ -151,22 +156,33 @@ class DigitalMenuService extends GetxService {
     if (tenantId == null) return;
     loading.value = true;
     try {
-      final row = await _db
-          .from('digital_menu_config')
-          .select('token, menu_ids, enabled')
-          .eq('tenant_id', tenantId)
-          .maybeSingle();
+      Map<String, dynamic>? row;
+      try {
+        row = await _db
+            .from('digital_menu_config')
+            .select('token, menu_ids, enabled, theme_mode')
+            .eq('tenant_id', tenantId)
+            .maybeSingle();
+      } catch (_) {
+        row = await _db
+            .from('digital_menu_config')
+            .select('token, menu_ids, enabled')
+            .eq('tenant_id', tenantId)
+            .maybeSingle();
+      }
 
       if (row == null) {
         final created = await _ensureRow(tenantId);
         token.value = created;
         selectedMenuIds.clear();
         enabled.value = true;
+        themeMode.value = 'system';
         return;
       }
 
       token.value = (row['token'] as String?) ?? '';
       enabled.value = (row['enabled'] as bool?) ?? true;
+      themeMode.value = _sanitizeThemeMode(row['theme_mode'] as String?);
       final ids = row['menu_ids'];
       if (ids is List) {
         selectedMenuIds.assignAll(
@@ -194,6 +210,7 @@ class DigitalMenuService extends GetxService {
           'token': newToken,
           'menu_ids': <int>[],
           'enabled': true,
+          'theme_mode': 'system',
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         });
       });
@@ -234,6 +251,30 @@ class DigitalMenuService extends GetxService {
     await save();
   }
 
+  Future<void> setThemeMode(String mode) async {
+    themeMode.value = _sanitizeThemeMode(mode);
+    await save();
+  }
+
+  String _sanitizeThemeMode(String? raw) {
+    switch (raw) {
+      case 'light':
+      case 'dark':
+        return raw!;
+      default:
+        return 'system';
+    }
+  }
+
+  Map<String, dynamic> _configPayload(String tenantId, String t) => {
+        'tenant_id': tenantId,
+        'token': t,
+        'menu_ids': selectedMenuIds.toList(),
+        'enabled': enabled.value,
+        'theme_mode': themeMode.value,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      };
+
   Future<bool> save() async {
     final tenantId = _tenantId;
     if (tenantId == null) return false;
@@ -242,13 +283,7 @@ class DigitalMenuService extends GetxService {
       var t = token.value.trim();
       if (t.isEmpty) t = await _ensureRow(tenantId);
       await _withLocalWrite(() async {
-        await _db.from('digital_menu_config').upsert({
-          'tenant_id': tenantId,
-          'token': t,
-          'menu_ids': selectedMenuIds.toList(),
-          'enabled': enabled.value,
-          'updated_at': DateTime.now().toUtc().toIso8601String(),
-        });
+        await _db.from('digital_menu_config').upsert(_configPayload(tenantId, t));
       });
       token.value = t;
       return true;
@@ -268,13 +303,9 @@ class DigitalMenuService extends GetxService {
     saving.value = true;
     try {
       await _withLocalWrite(() async {
-        await _db.from('digital_menu_config').upsert({
-          'tenant_id': tenantId,
-          'token': newToken,
-          'menu_ids': selectedMenuIds.toList(),
-          'enabled': enabled.value,
-          'updated_at': DateTime.now().toUtc().toIso8601String(),
-        });
+        await _db
+            .from('digital_menu_config')
+            .upsert(_configPayload(tenantId, newToken));
       });
       token.value = newToken;
       _showSyncNotice('Yeni bağlantı oluşturuldu');

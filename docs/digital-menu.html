@@ -56,6 +56,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Robot
 .send:disabled{opacity:.55}
 .ok-banner{display:none;margin-bottom:12px;padding:12px;border-radius:12px;background:#E8F8EE;color:#1B7A3A;font-size:13px;font-weight:600}
 .warn{margin:0 0 10px;padding:10px 12px;border-radius:12px;background:var(--ol);color:#9A5B00;font-size:12px;line-height:1.4}
+html[data-theme="dark"]{--ol:#3A2A12;--bg:#000;--card:#1C1C1E;--t1:#F5F5F7;--t2:#98989D;--bd:#38383A}
+html[data-theme="dark"] .tab{background:#2C2C2E}
+html[data-theme="dark"] .cnt{background:rgba(255,255,255,.12)}
+html[data-theme="dark"] .card{box-shadow:0 2px 12px rgba(0,0,0,.45)}
+html[data-theme="dark"] .qty button{background:#2C2C2E;color:var(--t1);border-color:var(--bd)}
+html[data-theme="dark"] .note{background:#111;color:var(--t1)}
+html[data-theme="dark"] .ok-banner{background:#14301C;color:#6DDEA0}
+html[data-theme="dark"] .warn{background:#3A2A12;color:#FFD60A}
+html[data-theme="dark"] .cart-bar{background:linear-gradient(180deg,rgba(0,0,0,0),var(--bg) 28%)}
+html[data-theme="dark"] .footer{color:#636366}
 @media(min-width:600px){.header-inner{padding:18px 32px}.tabs{padding:12px 24px 14px}.content{padding:20px 32px 24px}}
 </style>
 </head>
@@ -101,6 +111,26 @@ let ai = 0;
 let currency = '₺';
 /** @type {Record<string, {id:any,name:string,price:number,qty:number}>} */
 const cart = {};
+
+let themeMode = 'system';
+let mediaDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+function resolvedTheme() {
+  if (themeMode === 'light' || themeMode === 'dark') return themeMode;
+  return mediaDark.matches ? 'dark' : 'light';
+}
+
+function applyTheme(mode) {
+  themeMode = (mode === 'light' || mode === 'dark') ? mode : 'system';
+  const resolved = resolvedTheme();
+  document.documentElement.setAttribute('data-theme', resolved);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', resolved === 'dark' ? '#1C1C1E' : '#FF9500');
+}
+
+mediaDark.addEventListener('change', () => {
+  if (themeMode === 'system') applyTheme('system');
+});
 
 function state(icon, t, s) {
   $('tabsWrap').hidden = true;
@@ -210,6 +240,7 @@ async function sendOrder() {
 }
 
 function render(d) {
+  applyTheme(d.themeMode || 'system');
   currency = d.currency || '₺';
   $('companyName').textContent = d.companyName || 'Dijital Menü';
   document.title = (d.companyName || 'Menü') + ' · Orderix';
@@ -269,6 +300,7 @@ $('cartBtn').onclick = openSheet;
 $('sheet').onclick = (e) => { if (e.target === $('sheet')) closeSheet(); };
 $('sendBtn').onclick = sendOrder;
 
+applyTheme('system');
 (async () => {
   if (!token) {
     state('⚠️', 'Menü bağlantısı eksik', 'QR kodunu yeniden oluşturun.');

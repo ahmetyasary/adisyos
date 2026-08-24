@@ -25,6 +25,7 @@ import 'package:orderix/widgets/app_dialog.dart';
 import 'package:orderix/widgets/responsive_content.dart';
 import 'package:orderix/widgets/shell_leading.dart';
 import 'package:orderix/themes/app_colors.dart';
+import 'package:orderix/themes/app_theme.dart';
 
 const _privacyUrl = 'https://orderix.tr/privacy';
 const _termsUrl = 'https://orderix.tr/terms';
@@ -1306,7 +1307,10 @@ void _showNavOrderSheet(BuildContext context) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => const _NavOrderSheet(),
+    builder: (_) => Theme(
+      data: AppColors.isDark ? AppTheme.darkTheme : AppTheme.lightTheme,
+      child: const _NavOrderSheet(),
+    ),
   );
 }
 
@@ -1419,7 +1423,7 @@ class _NavOrderSheetState extends State<_NavOrderSheet> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF9F9F9),
+                    color: AppColors.chipBg,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: _border),
                   ),
@@ -2119,7 +2123,10 @@ void _showPaymentTypesSheet(BuildContext context) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => const _PaymentTypesSheet(),
+    builder: (_) => Theme(
+      data: AppColors.isDark ? AppTheme.darkTheme : AppTheme.lightTheme,
+      child: const _PaymentTypesSheet(),
+    ),
   );
 }
 
@@ -2268,7 +2275,7 @@ class _PaymentTypesSheet extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF9F9F9),
+                      color: AppColors.chipBg,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: _border),
                     ),
@@ -2397,7 +2404,10 @@ void _showReceiptLayoutSheet(BuildContext context) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => const _ReceiptLayoutSheet(),
+    builder: (_) => Theme(
+      data: AppColors.isDark ? AppTheme.darkTheme : AppTheme.lightTheme,
+      child: const _ReceiptLayoutSheet(),
+    ),
   );
 }
 
@@ -2517,7 +2527,7 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
                   Container(
                     padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF9F9F9),
+                      color: AppColors.chipBg,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: _border),
                     ),
@@ -2598,7 +2608,7 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 10),
                             decoration: BoxDecoration(
-                              color: selected ? _orange : _bg,
+                              color: selected ? _orange : AppColors.chipBg,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: selected ? _orange : _border,
@@ -2642,7 +2652,7 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 10),
                             decoration: BoxDecoration(
-                              color: selected ? _orange : _bg,
+                              color: selected ? _orange : AppColors.chipBg,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: selected ? _orange : _border,
@@ -2679,7 +2689,7 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
                       hintText: 'Örn. Tel: 0212…',
                       hintStyle: TextStyle(color: _textSec, fontSize: 14),
                       filled: true,
-                      fillColor: const Color(0xFFF9F9F9),
+                      fillColor: AppColors.chipBg,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(color: _border),
@@ -2714,7 +2724,7 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
                       hintText: 'Teşekkür ederiz!',
                       hintStyle: TextStyle(color: _textSec, fontSize: 14),
                       filled: true,
-                      fillColor: const Color(0xFFF9F9F9),
+                      fillColor: AppColors.chipBg,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(color: _border),

@@ -367,6 +367,58 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                         ),
                       ),
                       const SizedBox(height: 22),
+                      const _SectionLabel('Menü görünümü'),
+                      const SizedBox(height: 10),
+                      _Card(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'QR menü teması',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: _textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Müşterinin tarayıcısında görünen açık / koyu görünüm.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: _textSec,
+                                  height: 1.35,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  for (final opt in const [
+                                    ('system', 'Sistem'),
+                                    ('light', 'Açık'),
+                                    ('dark', 'Koyu'),
+                                  ]) ...[
+                                    if (opt.$1 != 'system')
+                                      const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _ThemeChip(
+                                        label: opt.$2,
+                                        selected:
+                                            dm.themeMode.value == opt.$1,
+                                        onTap: () =>
+                                            dm.setThemeMode(opt.$1),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 22),
                       const _SectionLabel('Menüde gösterilecekler'),
                       const SizedBox(height: 10),
                       if (menus.isEmpty)
@@ -723,6 +775,43 @@ class _Card extends StatelessWidget {
         ],
       ),
       child: child,
+    );
+  }
+}
+
+class _ThemeChip extends StatelessWidget {
+  const _ThemeChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? _orange : _chip,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: selected ? _orange : _border),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: selected ? Colors.white : _textPrimary,
+          ),
+        ),
+      ),
     );
   }
 }

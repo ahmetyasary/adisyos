@@ -9,10 +9,10 @@ import 'package:orderix/themes/app_theme.dart';
 import 'package:orderix/themes/app_colors.dart';
 
 Color get _reportCard => AppColors.card;
-const _reportTextPrimary = Color(0xFF1C1C1E);
-const _reportTextSec = Color(0xFF8E8E93);
-const _reportBorder = Color(0xFFE5E5EA);
-const _reportChip = Color(0xFFF2F2F7);
+Color get _reportTextPrimary => AppColors.textPrimary;
+Color get _reportTextSec => AppColors.textSec;
+Color get _reportBorder => AppColors.border;
+Color get _reportChip => AppColors.chipBg;
 
 /// Ranked money rows (staff / table / etc.).
 class ReportMoneyRankList extends StatelessWidget {
@@ -32,8 +32,8 @@ class ReportMoneyRankList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 8),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
         child: Text('Veri yok', style: TextStyle(color: _reportTextSec)),
       );
     }
@@ -78,7 +78,7 @@ class ReportMoneyRankList extends StatelessWidget {
                         Expanded(
                           child: Text(
                             item.key,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 13,
                               color: _reportTextPrimary,
@@ -153,7 +153,7 @@ class ReportSaleTile extends StatelessWidget {
                 width: 44,
                 child: Text(
                   DateFormat('HH:mm').format(date),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: _reportTextPrimary,
@@ -166,7 +166,7 @@ class ReportSaleTile extends StatelessWidget {
                   children: [
                     Text(
                       table,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: _reportTextPrimary,
@@ -176,7 +176,7 @@ class ReportSaleTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       '$staff · $payLabel',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: _reportTextSec,
                       ),
@@ -197,7 +197,7 @@ class ReportSaleTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              const Icon(CupertinoIcons.chevron_right,
+              Icon(CupertinoIcons.chevron_right,
                   size: 14, color: _reportTextSec),
             ],
           ),
@@ -239,7 +239,7 @@ void showReportSaleItemsSheet(Map<String, dynamic> sale, String cs) {
             const SizedBox(height: 16),
             Text(
               '$table · ${DateFormat('HH:mm').format(date)}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: _reportTextPrimary,
@@ -248,11 +248,11 @@ void showReportSaleItemsSheet(Map<String, dynamic> sale, String cs) {
             const SizedBox(height: 4),
             Text(
               SalesHistoryService.staffLabel(sale['staffEmail'] as String?),
-              style: const TextStyle(fontSize: 13, color: _reportTextSec),
+              style: TextStyle(fontSize: 13, color: _reportTextSec),
             ),
             const SizedBox(height: 16),
             if (items.isEmpty)
-              const Text('Ürün yok', style: TextStyle(color: _reportTextSec))
+              Text('Ürün yok', style: TextStyle(color: _reportTextSec))
             else
               ...items.map((item) {
                 final qty = (item['quantity'] as num).toInt();
@@ -271,7 +271,7 @@ void showReportSaleItemsSheet(Map<String, dynamic> sale, String cs) {
                         ),
                         child: Text(
                           '$qty×',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 12,
                             color: _reportTextPrimary,
@@ -282,7 +282,7 @@ void showReportSaleItemsSheet(Map<String, dynamic> sale, String cs) {
                       Expanded(
                         child: Text(
                           name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                             color: _reportTextPrimary,
@@ -291,7 +291,7 @@ void showReportSaleItemsSheet(Map<String, dynamic> sale, String cs) {
                       ),
                       Text(
                         '$cs${(price * qty).toStringAsFixed(2)}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: _reportTextSec,
@@ -301,11 +301,11 @@ void showReportSaleItemsSheet(Map<String, dynamic> sale, String cs) {
                   ),
                 );
               }),
-            const Divider(height: 24, color: _reportBorder),
+            Divider(height: 24, color: _reportBorder),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Toplam',
                   style: TextStyle(
                     fontSize: 15,
@@ -370,7 +370,7 @@ class ReportDaySummaryTile extends StatelessWidget {
                   children: [
                     Text(
                       label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: _reportTextPrimary,
@@ -379,7 +379,7 @@ class ReportDaySummaryTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       '$count adisyon · ort. $cs${avg.toStringAsFixed(2)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: _reportTextSec,
                       ),
@@ -396,7 +396,7 @@ class ReportDaySummaryTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              const Icon(CupertinoIcons.chevron_right,
+              Icon(CupertinoIcons.chevron_right,
                   size: 14, color: _reportTextSec),
             ],
           ),
