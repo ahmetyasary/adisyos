@@ -16,14 +16,15 @@ import 'package:orderix/widgets/app_dialog.dart';
 import 'package:orderix/widgets/app_toast.dart';
 import 'package:orderix/widgets/responsive_content.dart';
 import 'package:orderix/widgets/shell_leading.dart';
+import 'package:orderix/themes/app_colors.dart';
 
-const _bg = Colors.white;
-const _card = Colors.white;
+Color get _bg => AppColors.bg;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
-const _border = Color(0xFFE5E5EA);
-const _chip = Color(0xFFF2F2F7);
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
+Color get _border => AppColors.border;
+Color get _chip => AppColors.chipBg;
 
 class DigitalMenuView extends StatefulWidget {
   const DigitalMenuView({super.key, this.embedded = false});
@@ -248,7 +249,7 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
         children: [
           Container(
             padding: EdgeInsets.only(top: topPad, left: 8, right: 8),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: _card,
               border: Border(bottom: BorderSide(color: _border, width: 1)),
             ),
@@ -258,7 +259,7 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                 children: [
                   ShellLeading(
                       embedded: widget.embedded, color: _textPrimary),
-                  const Text(
+                  Text(
                     'Dijital Menü',
                     style: TextStyle(
                       fontSize: 17,
@@ -314,7 +315,7 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                               Expanded(
                                 child: Text(
                                   notice,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: _textPrimary,
@@ -335,7 +336,7 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
+                                    Text(
                                       'Yayında',
                                       style: TextStyle(
                                         fontSize: 15,
@@ -348,7 +349,7 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                                       dm.enabled.value
                                           ? 'QR ile menü görüntülenebilir'
                                           : 'Menü bağlantısı kapalı',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 12,
                                         color: _textSec,
                                       ),
@@ -369,9 +370,9 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                       const _SectionLabel('Menüde gösterilecekler'),
                       const SizedBox(height: 10),
                       if (menus.isEmpty)
-                        const _Card(
+                        _Card(
                           child: Padding(
-                            padding: EdgeInsets.all(20),
+                            padding: const EdgeInsets.all(20),
                             child: Text(
                               'Önce Menüler ekranından kategori ekleyin.',
                               style: TextStyle(color: _textSec, fontSize: 14),
@@ -385,7 +386,7 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                             children: [
                               for (var i = 0; i < menus.length; i++) ...[
                                 if (i > 0)
-                                  const Divider(
+                                  Divider(
                                     height: 1,
                                     color: _border,
                                     indent: 16,
@@ -445,7 +446,7 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const Text(
+                              Text(
                                 'Masa seçin',
                                 style: TextStyle(
                                   fontSize: 13,
@@ -454,13 +455,13 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              const Text(
+                              Text(
                                 'Her masa kendi QR’ına sahip olur. Müşteri bu masadan sipariş gönderebilir.',
                                 style: TextStyle(fontSize: 12, color: _textSec),
                               ),
                               const SizedBox(height: 12),
                               if (tables.isEmpty)
-                                const Text(
+                                Text(
                                   'Henüz masa yok. Masalar ekranından ekleyin.',
                                   style: TextStyle(color: _textSec, fontSize: 13),
                                 )
@@ -528,12 +529,12 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                                           data: url,
                                           version: QrVersions.auto,
                                           size: 200,
-                                          eyeStyle: const QrEyeStyle(
+                                          eyeStyle: QrEyeStyle(
                                             eyeShape: QrEyeShape.square,
                                             color: _textPrimary,
                                           ),
                                           dataModuleStyle:
-                                              const QrDataModuleStyle(
+                                              QrDataModuleStyle(
                                             dataModuleShape:
                                                 QrDataModuleShape.square,
                                             color: _textPrimary,
@@ -547,7 +548,7 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                                 Text(
                                   url,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 11,
                                     color: _textSec,
                                   ),
@@ -614,7 +615,7 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                                   ),
                                 ),
                               ] else if (url.isNotEmpty)
-                                const Padding(
+                                Padding(
                                   padding: EdgeInsets.only(top: 14),
                                   child: Text(
                                     'QR ve barkod için yukarıdan masa seçin.',
@@ -640,7 +641,7 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                               TextButton(
                                 onPressed:
                                     dm.saving.value ? null : _regenerate,
-                                child: const Text(
+                                child: Text(
                                   'Bağlantıyı yenile',
                                   style: TextStyle(
                                     color: _textSec,
@@ -654,7 +655,7 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Text(
+                      Text(
                         'Müşteri masa QR’ından ürün seçip sipariş gönderir. Onay bekleyenler sol menüde görünür.',
                         style: TextStyle(
                           fontSize: 12,
@@ -690,7 +691,7 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w700,
         color: _textSec,
@@ -711,7 +712,7 @@ class _Card extends StatelessWidget {
         color: _card,
         borderRadius: BorderRadius.circular(16),
         border:
-            const Border.fromBorderSide(BorderSide(color: _border, width: 1)),
+            Border.fromBorderSide(BorderSide(color: _border, width: 1)),
         boxShadow: const [
           BoxShadow(
               color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
@@ -765,7 +766,7 @@ class _MenuToggleRow extends StatelessWidget {
                   children: [
                     Text(
                       name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: _textPrimary,
@@ -773,7 +774,7 @@ class _MenuToggleRow extends StatelessWidget {
                     ),
                     Text(
                       '$itemCount ürün',
-                      style: const TextStyle(fontSize: 12, color: _textSec),
+                      style: TextStyle(fontSize: 12, color: _textSec),
                     ),
                   ],
                 ),

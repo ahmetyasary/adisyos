@@ -11,18 +11,19 @@ import 'package:orderix/services/kitchen_service.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/widgets/shell_leading.dart';
 import 'package:orderix/widgets/day_toggle_card.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _bg = Colors.white;
-const _card = Colors.white;
+Color get _bg => AppColors.bg;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
 const _green = Color(0xFF34C759);
 const _blue = Color(0xFF007AFF);
 const _purple = Color(0xFFAF52DE);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
-const _border = Color(0xFFECECEF);
-const _chipBg = Color(0xFFF2F2F7);
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
+Color get _border => AppColors.borderSoft;
+Color get _chipBg => AppColors.chipBg;
 
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key, this.embedded = false});
@@ -148,7 +149,7 @@ class _DashboardViewState extends State<DashboardView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Günlük Satış Grafiği',
                     style: TextStyle(
                         fontSize: 16,
@@ -171,7 +172,7 @@ class _DashboardViewState extends State<DashboardView> {
                       const SizedBox(width: 7),
                       Text('Satış Tutarı ($cs)',
                           style:
-                              const TextStyle(fontSize: 12, color: _textSec)),
+                              TextStyle(fontSize: 12, color: _textSec)),
                     ],
                   ),
                 ],
@@ -182,7 +183,7 @@ class _DashboardViewState extends State<DashboardView> {
             // Recent transactions
             Row(
               children: [
-                const Text(
+                Text(
                   'Son İşlemler',
                   style: TextStyle(
                       fontSize: 18,
@@ -279,7 +280,7 @@ class _BellButton extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            const Icon(CupertinoIcons.bell, size: 26, color: _textPrimary),
+            Icon(CupertinoIcons.bell, size: 26, color: _textPrimary),
             if (unread)
               Positioned(
                 top: 8,
@@ -413,7 +414,7 @@ class _DailyLineChart extends StatelessWidget {
                 interval: interval,
                 getTitlesWidget: (v, _) => Text(
                   hasData ? '$cs${v.toInt()}' : v.toStringAsFixed(2),
-                  style: const TextStyle(fontSize: 10, color: _textSec),
+                  style: TextStyle(fontSize: 10, color: _textSec),
                 ),
               ),
             ),
@@ -436,7 +437,7 @@ class _DailyLineChart extends StatelessWidget {
                   return Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(label,
-                        style: const TextStyle(fontSize: 10, color: _textSec)),
+                        style: TextStyle(fontSize: 10, color: _textSec)),
                   );
                 },
               ),
@@ -501,9 +502,9 @@ class _RecentRow extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: _cardDeco,
         child: Row(
-          children: const [
-            _NeutralChip(icon: CupertinoIcons.doc_text_fill),
-            SizedBox(width: 12),
+          children: [
+            const _NeutralChip(icon: CupertinoIcons.doc_text_fill),
+            const SizedBox(width: 12),
             Expanded(
               child: Text('Henüz işlem bulunmuyor.',
                   style: TextStyle(fontSize: 14, color: _textSec)),
@@ -535,24 +536,24 @@ class _RecentRow extends StatelessWidget {
                 Text(tableName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: _textPrimary)),
                 const SizedBox(height: 2),
                 Text('$itemCount ürün${time.isNotEmpty ? ' · $time' : ''}',
-                    style: const TextStyle(fontSize: 12, color: _textSec)),
+                    style: TextStyle(fontSize: 12, color: _textSec)),
               ],
             ),
           ),
           const SizedBox(width: 8),
           Text('$cs${total.toStringAsFixed(2)}',
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: _textPrimary)),
           const SizedBox(width: 4),
-          const Icon(CupertinoIcons.chevron_right, size: 20, color: _textSec),
+          Icon(CupertinoIcons.chevron_right, size: 20, color: _textSec),
         ],
       ),
     );
@@ -579,11 +580,11 @@ class _NeutralChip extends StatelessWidget {
 
 // ── Shared ───────────────────────────────────────────────────
 
-const BoxDecoration _cardDeco = BoxDecoration(
+BoxDecoration get _cardDeco => BoxDecoration(
   color: _card,
-  borderRadius: BorderRadius.all(Radius.circular(18)),
+  borderRadius: const BorderRadius.all(Radius.circular(18)),
   border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
-  boxShadow: [
+  boxShadow: const [
     BoxShadow(color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
     BoxShadow(color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 1)),
   ],

@@ -15,23 +15,25 @@ import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/subscription_service.dart';
 import 'package:orderix/utils/app_haptics.dart';
+import 'package:orderix/utils/app_info.dart';
 import 'package:orderix/views/paywall_sheet.dart';
 import 'package:orderix/views/auth_screen.dart';
 import 'package:orderix/widgets/app_toast.dart';
 import 'package:orderix/widgets/app_dialog.dart';
 import 'package:orderix/widgets/responsive_content.dart';
 import 'package:orderix/widgets/shell_leading.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 const _privacyUrl = 'https://orderix.tr/privacy';
 const _termsUrl = 'https://orderix.tr/terms';
 
 // ── Design tokens ─────────────────────────────────────────────
-const _bg = Colors.white;
-const _card = Colors.white;
+Color get _bg => AppColors.bg;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
-const _border = Color(0xFFE5E5EA);
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
+Color get _border => AppColors.border;
 
 // ──────────────────────────────────────────────────────────────
 // SettingsView
@@ -143,13 +145,13 @@ class _SettingsViewState extends State<SettingsView> {
                                 if (!focused) _persistCompany();
                               },
                             ),
-                            const Divider(
+                            Divider(
                                 height: 1,
                                 color: _border,
                                 indent: 16,
                                 endIndent: 16),
                             const _CurrencyRow(),
-                            const Divider(
+                            Divider(
                                 height: 1,
                                 color: _border,
                                 indent: 16,
@@ -157,7 +159,7 @@ class _SettingsViewState extends State<SettingsView> {
                             _PaymentTypesRow(
                               onTap: () => _showPaymentTypesSheet(context),
                             ),
-                            const Divider(
+                            Divider(
                                 height: 1,
                                 color: _border,
                                 indent: 16,
@@ -192,7 +194,7 @@ class _SettingsViewState extends State<SettingsView> {
                       ],
 
                       // Language section
-                      _SectionLabel('Dil'),
+                      _SectionLabel('language'.tr),
                       const SizedBox(height: 10),
                       _Card(
                         child: Obx(() {
@@ -202,6 +204,22 @@ class _SettingsViewState extends State<SettingsView> {
                             onChanged: (val) {
                               if (val == null) return;
                               SettingsService.to.setLanguage(val);
+                            },
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 28),
+
+                      _SectionLabel('appearance'.tr),
+                      const SizedBox(height: 10),
+                      _Card(
+                        child: Obx(() {
+                          final mode = SettingsService.to.themeMode.value;
+                          return _ThemeModeRow(
+                            value: mode,
+                            onChanged: (val) {
+                              if (val == null) return;
+                              SettingsService.to.setThemeMode(val);
                             },
                           );
                         }),
@@ -218,6 +236,8 @@ class _SettingsViewState extends State<SettingsView> {
                       _SectionLabel('danger_zone'.tr),
                       const SizedBox(height: 10),
                       const _DeleteAccountCard(),
+                      const SizedBox(height: 36),
+                      const _AboutFooter(),
                     ],
                   ),
                 ),
@@ -225,6 +245,46 @@ class _SettingsViewState extends State<SettingsView> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Faded Smartlogy + version at the bottom of Settings.
+class _AboutFooter extends StatelessWidget {
+  const _AboutFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    final version = AppInfo.versionLabel;
+    return Opacity(
+      opacity: 0.45,
+      child: Column(
+        children: [
+          Text(
+            AppInfo.company,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: _textSec,
+              letterSpacing: -0.1,
+            ),
+          ),
+          if (version.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              '${AppInfo.brand} $version',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w400,
+                color: _textSec,
+                letterSpacing: -0.1,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -243,7 +303,7 @@ class _Header extends StatelessWidget {
     final topPad = MediaQuery.of(context).padding.top;
     return Container(
       padding: EdgeInsets.only(top: topPad, left: 8, right: 8),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         border: Border(bottom: BorderSide(color: _border, width: 1)),
       ),
@@ -254,7 +314,7 @@ class _Header extends StatelessWidget {
             ShellLeading(embedded: embedded, color: _textPrimary),
             Text(
               'settings'.tr,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: _textPrimary,
@@ -333,7 +393,7 @@ class _AccountCard extends StatelessWidget {
                 children: [
                   Text(
                     email.split('@').first,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: _textPrimary,
@@ -343,7 +403,7 @@ class _AccountCard extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     email,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       color: _textSec,
                     ),
@@ -388,7 +448,7 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w700,
         color: _textSec,
@@ -464,7 +524,7 @@ class _InlineField extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: _textSec,
@@ -479,14 +539,14 @@ class _InlineField extends StatelessWidget {
                     onChanged: onChanged,
                     onEditingComplete: () =>
                         onFocusChange?.call(false),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                       color: _textPrimary,
                     ),
                     decoration: InputDecoration(
                       hintText: hint,
-                      hintStyle: const TextStyle(color: _textSec, fontSize: 14),
+                      hintStyle: TextStyle(color: _textSec, fontSize: 14),
                       isDense: true,
                       contentPadding: EdgeInsets.zero,
                       border: InputBorder.none,
@@ -539,7 +599,7 @@ class _CurrencyRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Para Birimi',
                     style: TextStyle(
                       fontSize: 12,
@@ -646,7 +706,7 @@ class _LanguageRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Dil',
                   style: TextStyle(
                     fontSize: 12,
@@ -660,16 +720,103 @@ class _LanguageRow extends StatelessWidget {
                     value: value,
                     isDense: true,
                     isExpanded: true,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                       color: _textPrimary,
                     ),
-                    icon: const Icon(CupertinoIcons.chevron_down,
+                    icon: Icon(CupertinoIcons.chevron_down,
                         size: 18, color: _textSec),
                     items: const [
                       DropdownMenuItem(value: 'tr', child: Text('Türkçe')),
                       DropdownMenuItem(value: 'en', child: Text('English')),
+                    ],
+                    onChanged: onChanged,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Theme mode row ─────────────────────────────────────────────
+
+class _ThemeModeRow extends StatelessWidget {
+  const _ThemeModeRow({required this.value, required this.onChanged});
+
+  final String value;
+  final void Function(String?) onChanged;
+
+  IconData get _icon {
+    switch (value) {
+      case 'light':
+        return CupertinoIcons.sun_max_fill;
+      case 'dark':
+        return CupertinoIcons.moon_fill;
+      default:
+        return CupertinoIcons.circle_lefthalf_fill;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: _orange.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(_icon, size: 17, color: _orange),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'theme'.tr,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: _textSec,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: value,
+                    isDense: true,
+                    isExpanded: true,
+                    dropdownColor: _card,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: _textPrimary,
+                    ),
+                    icon: Icon(CupertinoIcons.chevron_down,
+                        size: 18, color: _textSec),
+                    items: [
+                      DropdownMenuItem(
+                        value: 'system',
+                        child: Text('theme_system'.tr),
+                      ),
+                      DropdownMenuItem(
+                        value: 'light',
+                        child: Text('theme_light'.tr),
+                      ),
+                      DropdownMenuItem(
+                        value: 'dark',
+                        child: Text('theme_dark'.tr),
+                      ),
                     ],
                     onChanged: onChanged,
                   ),
@@ -700,7 +847,7 @@ class _LegalCard extends StatelessWidget {
             label: 'privacy_policy'.tr,
             url: _privacyUrl,
           ),
-          const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
+          Divider(height: 1, color: _border, indent: 16, endIndent: 16),
           _LegalRow(
             icon: CupertinoIcons.doc_text,
             label: 'terms_of_use'.tr,
@@ -757,14 +904,14 @@ class _LegalRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                     color: _textPrimary,
                   ),
                 ),
               ),
-              const Icon(CupertinoIcons.arrow_up_right_square,
+              Icon(CupertinoIcons.arrow_up_right_square,
                   size: 16, color: _textSec),
             ],
           ),
@@ -853,7 +1000,7 @@ class _SubscriptionCard extends StatelessWidget {
                               : trial
                                   ? 'Ücretsiz deneme · $days gün kaldı'
                                   : 'Devam etmek için abone olun',
-                          style: const TextStyle(fontSize: 12, color: _textSec),
+                          style: TextStyle(fontSize: 12, color: _textSec),
                         ),
                       ],
                     ),
@@ -885,7 +1032,7 @@ class _SubscriptionCard extends StatelessWidget {
             ),
 
             // Restore purchases row
-            const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
+            Divider(height: 1, color: _border, indent: 16, endIndent: 16),
             _RestoreRow(),
           ],
         ),
@@ -924,7 +1071,7 @@ class _RestoreRow extends StatelessWidget {
                     size: 17, color: _orange),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Satın Alımları Geri Yükle',
                   style: TextStyle(
@@ -933,7 +1080,7 @@ class _RestoreRow extends StatelessWidget {
                       color: _textPrimary),
                 ),
               ),
-              const Icon(CupertinoIcons.chevron_forward,
+              Icon(CupertinoIcons.chevron_forward,
                   size: 18, color: _textSec),
             ],
           ),
@@ -990,7 +1137,7 @@ class _DeleteAccountCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         'delete_account_subtitle'.tr,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           color: _textSec,
                         ),
@@ -998,7 +1145,7 @@ class _DeleteAccountCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Icon(CupertinoIcons.chevron_forward, color: _textSec),
+                Icon(CupertinoIcons.chevron_forward, color: _textSec),
               ],
             ),
           ),
@@ -1082,7 +1229,7 @@ class _NavOrderRow extends StatelessWidget {
                   children: [
                     Text(
                       'nav_order'.tr,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
                         color: _textPrimary,
@@ -1091,12 +1238,12 @@ class _NavOrderRow extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       'nav_order_hint'.tr,
-                      style: const TextStyle(fontSize: 12, color: _textSec),
+                      style: TextStyle(fontSize: 12, color: _textSec),
                     ),
                   ],
                 ),
               ),
-              const Icon(CupertinoIcons.chevron_right,
+              Icon(CupertinoIcons.chevron_right,
                   size: 16, color: _textSec),
             ],
           ),
@@ -1164,7 +1311,7 @@ class _NavOrderSheetState extends State<_NavOrderSheet> {
                 Expanded(
                   child: Text(
                     'nav_order'.tr,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
                       color: _textPrimary,
@@ -1179,7 +1326,7 @@ class _NavOrderSheetState extends State<_NavOrderSheet> {
                   },
                   child: Text(
                     'nav_order_reset'.tr,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: _textSec,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1198,7 +1345,7 @@ class _NavOrderSheetState extends State<_NavOrderSheet> {
               ],
             ),
           ),
-          const Divider(height: 1, color: _border),
+          Divider(height: 1, color: _border),
           Expanded(
             child: ReorderableListView.builder(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
@@ -1235,7 +1382,7 @@ class _NavOrderSheetState extends State<_NavOrderSheet> {
                     children: [
                       ReorderableDragStartListener(
                         index: index,
-                        child: const Padding(
+                        child: Padding(
                           padding: EdgeInsets.only(right: 12),
                           child: Icon(
                             CupertinoIcons.line_horizontal_3,
@@ -1249,7 +1396,7 @@ class _NavOrderSheetState extends State<_NavOrderSheet> {
                       Expanded(
                         child: Text(
                           s.title(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                             color: _textPrimary,
@@ -1305,7 +1452,7 @@ class _FeedbackSettingsCard extends StatelessWidget {
                       size: 17, color: _orange),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1337,14 +1484,14 @@ class _FeedbackSettingsCard extends StatelessWidget {
             ),
           ),
           if (hapticsOn) ...[
-            const Divider(
+            Divider(
                 height: 1, color: _border, indent: 16, endIndent: 16),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Titreşim şiddeti',
                     style: TextStyle(
                       fontSize: 12,
@@ -1365,7 +1512,7 @@ class _FeedbackSettingsCard extends StatelessWidget {
               ),
             ),
           ],
-          const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
+          Divider(height: 1, color: _border, indent: 16, endIndent: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
@@ -1381,7 +1528,7 @@ class _FeedbackSettingsCard extends StatelessWidget {
                       size: 17, color: _orange),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1413,14 +1560,14 @@ class _FeedbackSettingsCard extends StatelessWidget {
             ),
           ),
           if (soundsOn) ...[
-            const Divider(
+            Divider(
                 height: 1, color: _border, indent: 16, endIndent: 16),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Ses şiddeti',
                     style: TextStyle(
                       fontSize: 12,
@@ -1441,7 +1588,7 @@ class _FeedbackSettingsCard extends StatelessWidget {
               ),
             ),
           ],
-          const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
+          Divider(height: 1, color: _border, indent: 16, endIndent: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
@@ -1457,7 +1604,7 @@ class _FeedbackSettingsCard extends StatelessWidget {
                       size: 17, color: _orange),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1489,14 +1636,14 @@ class _FeedbackSettingsCard extends StatelessWidget {
             ),
           ),
           if (notifyOn) ...[
-            const Divider(
+            Divider(
                 height: 1, color: _border, indent: 16, endIndent: 16),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Bildirim sesi şiddeti',
                     style: TextStyle(
                       fontSize: 12,
@@ -1613,7 +1760,7 @@ class _OrdiSettingsCard extends StatelessWidget {
                       size: 17, color: _orange),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1642,14 +1789,14 @@ class _OrdiSettingsCard extends StatelessWidget {
             ),
           ),
           if (visible) ...[
-            const Divider(
+            Divider(
                 height: 1, color: _border, indent: 16, endIndent: 16),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Buton boyutu',
                     style: TextStyle(
                       fontSize: 12,
@@ -1695,7 +1842,7 @@ class _OrdiSettingsCard extends StatelessWidget {
               ),
             ),
           ],
-          const Divider(height: 1, color: _border, indent: 16, endIndent: 16),
+          Divider(height: 1, color: _border, indent: 16, endIndent: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
@@ -1711,7 +1858,7 @@ class _OrdiSettingsCard extends StatelessWidget {
                       size: 17, color: _orange),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1747,14 +1894,14 @@ class _OrdiSettingsCard extends StatelessWidget {
             ),
           ),
           if (ttsOn) ...[
-            const Divider(
+            Divider(
                 height: 1, color: _border, indent: 16, endIndent: 16),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Cevap sesi yüksekliği',
                     style: TextStyle(
                       fontSize: 12,
@@ -1815,7 +1962,7 @@ class _PaymentTypesRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Ödeme tipleri',
                       style: TextStyle(
                         fontSize: 15,
@@ -1832,13 +1979,13 @@ class _PaymentTypesRow extends StatelessWidget {
                         names,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12, color: _textSec),
+                        style: TextStyle(fontSize: 12, color: _textSec),
                       );
                     }),
                   ],
                 ),
               ),
-              const Icon(CupertinoIcons.chevron_right,
+              Icon(CupertinoIcons.chevron_right,
                   size: 16, color: _textSec),
             ],
           ),
@@ -1965,7 +2112,7 @@ class _PaymentTypesSheet extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 14, 8, 8),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Ödeme tipleri',
                     style: TextStyle(
@@ -1984,7 +2131,7 @@ class _PaymentTypesSheet extends StatelessWidget {
               ],
             ),
           ),
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Text(
               'Nakit, kart ve havale sabittir. Yemek kartı gibi ek tipler ekleyebilirsiniz; raporlarda ayrı görünür.',
@@ -2027,14 +2174,14 @@ class _PaymentTypesSheet extends StatelessWidget {
                             children: [
                               Text(
                                 t.name,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                   color: _textPrimary,
                                 ),
                               ),
                               if (t.builtin)
-                                const Text(
+                                Text(
                                   'Varsayılan',
                                   style:
                                       TextStyle(fontSize: 11, color: _textSec),
@@ -2045,7 +2192,7 @@ class _PaymentTypesSheet extends StatelessWidget {
                         IconButton(
                           tooltip: 'Yeniden adlandır',
                           onPressed: () => _rename(t),
-                          icon: const Icon(CupertinoIcons.pencil,
+                          icon: Icon(CupertinoIcons.pencil,
                               size: 18, color: _textSec),
                         ),
                         if (!t.builtin)
@@ -2096,7 +2243,7 @@ class _ReceiptLayoutRow extends StatelessWidget {
                     size: 17, color: _orange),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -2116,7 +2263,7 @@ class _ReceiptLayoutRow extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(CupertinoIcons.chevron_right,
+              Icon(CupertinoIcons.chevron_right,
                   size: 16, color: _textSec),
             ],
           ),
@@ -2191,7 +2338,7 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
                 color: _textPrimary,
@@ -2224,7 +2371,7 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(20, 14, 20, 4),
             child: Align(
               alignment: Alignment.centerLeft,
@@ -2238,7 +2385,7 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
               ),
             ),
           ),
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Text(
               'Yazıcıya giden fişte hangi bilgilerin görüneceğini ve metinleri buradan ayarlayın.',
@@ -2306,7 +2453,7 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Kağıt ölçüsü',
                     style: TextStyle(
                       fontSize: 12,
@@ -2315,7 +2462,7 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
+                  Text(
                     'Yazıcıya gönderirken sistem yazdırma ekranına bu ölçü aktarılır.',
                     style: TextStyle(fontSize: 12, color: _textSec, height: 1.35),
                   ),
@@ -2355,7 +2502,7 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
                     }).toList(),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Yazı boyutu',
                     style: TextStyle(
                       fontSize: 12,
@@ -2399,7 +2546,7 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
                     }).toList(),
                   ),
                   const SizedBox(height: 18),
-                  const Text(
+                  Text(
                     'Üst not (adres, telefon…)',
                     style: TextStyle(
                       fontSize: 12,
@@ -2414,16 +2561,16 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
                     textCapitalization: TextCapitalization.sentences,
                     decoration: InputDecoration(
                       hintText: 'Örn. Tel: 0212…',
-                      hintStyle: const TextStyle(color: _textSec, fontSize: 14),
+                      hintStyle: TextStyle(color: _textSec, fontSize: 14),
                       filled: true,
                       fillColor: const Color(0xFFF9F9F9),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: _border),
+                        borderSide: BorderSide(color: _border),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: _border),
+                        borderSide: BorderSide(color: _border),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -2434,7 +2581,7 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
                         _patch((l) => l.copyWith(headerNote: v)),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Alt mesaj',
                     style: TextStyle(
                       fontSize: 12,
@@ -2449,16 +2596,16 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
                     textCapitalization: TextCapitalization.sentences,
                     decoration: InputDecoration(
                       hintText: 'Teşekkür ederiz!',
-                      hintStyle: const TextStyle(color: _textSec, fontSize: 14),
+                      hintStyle: TextStyle(color: _textSec, fontSize: 14),
                       filled: true,
                       fillColor: const Color(0xFFF9F9F9),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: _border),
+                        borderSide: BorderSide(color: _border),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: _border),
+                        borderSide: BorderSide(color: _border),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),

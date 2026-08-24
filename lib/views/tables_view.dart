@@ -15,17 +15,22 @@ import 'package:orderix/widgets/shell_leading.dart';
 import 'package:orderix/widgets/day_toggle_card.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 // ── Design tokens ─────────────────────────────────────────────
-const _bg = Colors.white;
-const _chip = Color(0xFFF2F2F7);
-const _card = Colors.white;
+Color get _bg => AppColors.bg;
+Color get _chip => AppColors.chipBg;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSecondary = Color(0xFF8E8E93);
-const _border = Color(0xFFE5E5EA);
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSecondary => AppColors.textSec;
+Color get _border => AppColors.border;
 const _occupied = Color(0xFFFF3B30);
 const _available = Color(0xFF34C759);
+
+Color get _tableFreeBg => AppColors.card;
+Color get _tableOccupiedBg =>
+    AppColors.isDark ? const Color(0xFF2A1F1A) : const Color(0xFFFFF4EC);
 
 class TablesView extends StatefulWidget {
   const TablesView({super.key, this.embedded = false});
@@ -49,7 +54,7 @@ class _TablesViewState extends State<TablesView> {
   }) {
     Get.dialog(
       Dialog(
-        backgroundColor: Colors.white,
+        backgroundColor: _card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -75,16 +80,16 @@ class _TablesViewState extends State<TablesView> {
                 style: GoogleFonts.poppins(
                   fontSize: 19,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1C1C1E),
+                  color: _textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Sipariş alabilmek için önce\ngünü başlatmanız gerekmektedir.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
-                  color: Color(0xFF8E8E93),
+                  color: _textSecondary,
                   height: 1.5,
                 ),
               ),
@@ -130,10 +135,10 @@ class _TablesViewState extends State<TablesView> {
                 height: 44,
                 child: TextButton(
                   onPressed: Get.back,
-                  child: const Text(
+                  child: Text(
                     'Vazgeç',
                     style: TextStyle(
-                        fontWeight: FontWeight.w500, color: Color(0xFF8E8E93)),
+                        fontWeight: FontWeight.w500, color: _textSecondary),
                   ),
                 ),
               ),
@@ -155,7 +160,7 @@ class _TablesViewState extends State<TablesView> {
     if (hasOrders) {
       Get.dialog(
         Dialog(
-          backgroundColor: Colors.white,
+          backgroundColor: _card,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Padding(
@@ -174,21 +179,21 @@ class _TablesViewState extends State<TablesView> {
                       size: 32, color: Color(0xFFFF3B30)),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Açık Sipariş Var',
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1C1C1E),
+                    color: _textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Tüm masalar kapatılmadan\nçıkış yapılamaz.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
-                    color: Color(0xFF8E8E93),
+                    color: _textSecondary,
                     height: 1.5,
                   ),
                 ),
@@ -222,7 +227,7 @@ class _TablesViewState extends State<TablesView> {
     if (dayActive) {
       Get.dialog(
         Dialog(
-          backgroundColor: Colors.white,
+          backgroundColor: _card,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Padding(
@@ -241,22 +246,22 @@ class _TablesViewState extends State<TablesView> {
                       size: 32, color: Color(0xFFFF9500)),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Günü Bitir ve Çıkış Yap',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1C1C1E),
+                    color: _textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Aktif gününüz var. Çıkış yaparsanız\ngün otomatik olarak bitecektir.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
-                    color: Color(0xFF8E8E93),
+                    color: _textSecondary,
                     height: 1.5,
                   ),
                 ),
@@ -290,11 +295,11 @@ class _TablesViewState extends State<TablesView> {
                   height: 44,
                   child: TextButton(
                     onPressed: Get.back,
-                    child: const Text(
+                    child: Text(
                       'Vazgeç',
                       style: TextStyle(
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF8E8E93)),
+                          color: _textSecondary),
                     ),
                   ),
                 ),
@@ -488,7 +493,7 @@ class _TablesViewState extends State<TablesView> {
                         Expanded(
                           child: Text(
                             'edit_table'.tr,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
                               color: _textPrimary,
@@ -510,7 +515,7 @@ class _TablesViewState extends State<TablesView> {
                                   color: _chip,
                                   borderRadius: BorderRadius.circular(16),
                                 ),
-                                child: const Icon(CupertinoIcons.xmark,
+                                child: Icon(CupertinoIcons.xmark,
                                     size: 15, color: _textSecondary),
                               ),
                             ),
@@ -520,7 +525,7 @@ class _TablesViewState extends State<TablesView> {
                     ),
                   ),
 
-                  const Divider(height: 1, color: _border),
+                  Divider(height: 1, color: _border),
 
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -528,7 +533,7 @@ class _TablesViewState extends State<TablesView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // ── Table name field ─────────────────────
-                        const Text(
+                        Text(
                           'MASA ADI',
                           style: TextStyle(
                             fontSize: 11,
@@ -548,7 +553,7 @@ class _TablesViewState extends State<TablesView> {
                             controller: ctrl,
                             textCapitalization: TextCapitalization.characters,
                             autofocus: true,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                               color: _textPrimary,
@@ -564,7 +569,7 @@ class _TablesViewState extends State<TablesView> {
                         // ── Section picker ───────────────────────
                         if (sections.isNotEmpty) ...[
                           const SizedBox(height: 20),
-                          const Text(
+                          Text(
                             'BÖLÜM',
                             style: TextStyle(
                               fontSize: 11,
@@ -612,7 +617,7 @@ class _TablesViewState extends State<TablesView> {
                   ),
 
                   // ── Footer ──────────────────────────────────
-                  const Divider(height: 1, color: _border),
+                  Divider(height: 1, color: _border),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
                     child: Row(
@@ -782,7 +787,7 @@ class _TablesViewState extends State<TablesView> {
           children: [
             // ── Header bar ─────────────────────────────────
             Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: _card,
                 border: Border(bottom: BorderSide(color: _border, width: 1)),
               ),
@@ -799,7 +804,7 @@ class _TablesViewState extends State<TablesView> {
                         embedded: widget.embedded, color: _textPrimary),
                     Text(
                       'tables'.tr,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                         color: _textPrimary,
@@ -812,7 +817,7 @@ class _TablesViewState extends State<TablesView> {
                       return Padding(
                         padding: const EdgeInsets.only(left: 8),
                         child: Text(name,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 12, color: _textSecondary)),
                       );
                     }),
@@ -821,7 +826,7 @@ class _TablesViewState extends State<TablesView> {
                       if (!StaffService.to.hasActiveStaff)
                         return const SizedBox.shrink();
                       return IconButton(
-                        icon: const Icon(CupertinoIcons.square_arrow_right,
+                        icon: Icon(CupertinoIcons.square_arrow_right,
                             size: 18, color: _textSecondary),
                         tooltip: 'Çıkış',
                         onPressed: () => _handleStaffLogout(),
@@ -1095,7 +1100,7 @@ class _StatBox extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
               color: _textSecondary,
@@ -1304,8 +1309,8 @@ class _TableCard extends StatelessWidget {
       onLongPressStart: (d) => onLongPress(d.globalPosition),
       child: Container(
         decoration: BoxDecoration(
-          // Occupied cards get a very subtle warm tint so they pop out of the grid
-          color: isOccupied ? const Color(0xFFFFF4EC) : Colors.white,
+          // Occupied: warm tint; free: surface card (adapts to dark).
+          color: isOccupied ? _tableOccupiedBg : _tableFreeBg,
           borderRadius: BorderRadius.circular(radius),
           border: Border(
             left: BorderSide(color: accentColor, width: compact ? 3.5 : 4),
@@ -1313,8 +1318,10 @@ class _TableCard extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: isOccupied
-                  ? _occupied.withOpacity(0.08)
-                  : const Color(0x08000000),
+                  ? _occupied.withOpacity(AppColors.isDark ? 0.22 : 0.08)
+                  : (AppColors.isDark
+                      ? const Color(0x66000000)
+                      : const Color(0x08000000)),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),

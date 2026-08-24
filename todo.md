@@ -4,6 +4,16 @@
 -pos entegrasyonu
 -getir,trendyol,yemeksepeti entegrasyonu
 
+-ordi'ye iş ile ilgili tahmin özelliği ekle. forecast gelecekte neler olabilir?
+
+
+
+-koyu mod açık mod eklenecek. logolar görseller otomatik değişmeli. (sistem,açık,koyu) ✅
+
+-Ayarlar en alta silik görünen 
+    -smartlogy bilgisi eklenecek ✅
+    -uygulama versiyonu eklenecek ✅
+
 -web kısmından kayıt ol butonunu kaldır. ✅
 -web favicon yap. ✅
 

@@ -8,13 +8,14 @@ import 'package:printing/printing.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/utils/receipt_pdf_builder.dart';
 import 'package:orderix/widgets/app_toast.dart';
+import 'package:orderix/themes/app_colors.dart';
 
-const _bg = Color(0xFFF2F2F7);
-const _card = Colors.white;
+Color get _bg => AppColors.scaffold;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
-const _border = Color(0xFFE5E5EA);
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
+Color get _border => AppColors.border;
 
 /// In-app adisyon preview before handing off to the system print sheet.
 class ReceiptPrintPreviewView extends StatefulWidget {
@@ -136,7 +137,7 @@ class _ReceiptPrintPreviewViewState extends State<ReceiptPrintPreviewView> {
         children: [
           Container(
             padding: EdgeInsets.only(top: topPad),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: _card,
               border: Border(bottom: BorderSide(color: _border)),
             ),
@@ -146,9 +147,9 @@ class _ReceiptPrintPreviewViewState extends State<ReceiptPrintPreviewView> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(CupertinoIcons.xmark, color: _textPrimary),
+                    icon: Icon(CupertinoIcons.xmark, color: _textPrimary),
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Yazdırma önizlemesi',
                       textAlign: TextAlign.center,
@@ -171,7 +172,7 @@ class _ReceiptPrintPreviewViewState extends State<ReceiptPrintPreviewView> {
                 Expanded(
                   child: Text(
                     widget.tableLabel,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: _textPrimary,
@@ -197,7 +198,7 @@ class _ReceiptPrintPreviewViewState extends State<ReceiptPrintPreviewView> {
               ],
             ),
           ),
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(20, 6, 20, 8),
             child: Align(
               alignment: Alignment.centerLeft,
@@ -219,7 +220,7 @@ class _ReceiptPrintPreviewViewState extends State<ReceiptPrintPreviewView> {
                           child: Text(
                             'Önizleme oluşturulamadı.\n$_error',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: _textSec),
+                            style: TextStyle(color: _textSec),
                           ),
                         ),
                       )

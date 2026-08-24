@@ -12,6 +12,7 @@ import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/services/report_excel_exporter.dart';
 import 'package:orderix/views/report_breakdowns.dart';
 import 'package:orderix/utils/app_haptics.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 /// Returns "Section · tableName" when a live table with that name has a section.
 String _resolveTableLabel(String rawName) {
@@ -28,11 +29,11 @@ String _resolveTableLabel(String rawName) {
 }
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _bg = Colors.white;
-const _card = Colors.white;
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
-const _border = Color(0xFFE5E5EA);
+Color get _bg => AppColors.bg;
+Color get _card => AppColors.card;
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
+Color get _border => AppColors.border;
 
 class DailyReportView extends StatelessWidget {
   /// [inline] renders the report body only (no own Scaffold/header), for
@@ -74,7 +75,7 @@ class DailyReportView extends StatelessWidget {
                             'dd MMMM yyyy, EEEE',
                             Get.locale?.languageCode ?? 'tr')
                         .format(day),
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: _textSec,
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -236,7 +237,7 @@ class DailyReportView extends StatelessWidget {
       child: Column(
         children: [
           for (var i = 0; i < sales.length; i++) ...[
-            if (i > 0) const Divider(height: 1, color: _border),
+            if (i > 0) Divider(height: 1, color: _border),
             ReportSaleTile(
               sale: sales[i],
               cs: cs,
@@ -318,7 +319,7 @@ class DailyReportView extends StatelessWidget {
                 reservedSize: 46,
                 getTitlesWidget: (value, meta) => Text(
                   '$cs${value.toInt()}',
-                  style: const TextStyle(fontSize: 9, color: _textSec),
+                  style: TextStyle(fontSize: 9, color: _textSec),
                 ),
               ),
             ),
@@ -330,7 +331,7 @@ class DailyReportView extends StatelessWidget {
                   final h = value.toInt();
                   return Text(
                     '$h:00',
-                    style: const TextStyle(fontSize: 9, color: _textSec),
+                    style: TextStyle(fontSize: 9, color: _textSec),
                   );
                 },
               ),
@@ -344,7 +345,7 @@ class DailyReportView extends StatelessWidget {
             drawVerticalLine: false,
             horizontalInterval: maxY > 0 ? maxY / 4 : 1,
             getDrawingHorizontalLine: (_) =>
-                const FlLine(color: _border, strokeWidth: 1),
+                FlLine(color: _border, strokeWidth: 1),
           ),
         ),
       ),
@@ -385,7 +386,7 @@ class DailyReportView extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(label,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: _textPrimary)),
@@ -452,13 +453,13 @@ class DailyReportView extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(item.key,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13,
                                 color: _textPrimary)),
                         Text('${item.value.toInt()} adet',
                             style:
-                                const TextStyle(color: _textSec, fontSize: 12)),
+                                TextStyle(color: _textSec, fontSize: 12)),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -488,17 +489,17 @@ class DailyReportView extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: _border,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(CupertinoIcons.chart_bar_alt_fill,
+              child: Icon(CupertinoIcons.chart_bar_alt_fill,
                   size: 48, color: _textSec),
             ),
             const SizedBox(height: 16),
             Text(
               'no_sales_today'.tr,
-              style: const TextStyle(color: _textSec, fontSize: 15),
+              style: TextStyle(color: _textSec, fontSize: 15),
             ),
           ],
         ),
@@ -518,7 +519,7 @@ class _Header extends StatelessWidget {
     final topPad = MediaQuery.of(context).padding.top;
     return Container(
       padding: EdgeInsets.only(top: topPad),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         border: Border(bottom: BorderSide(color: _border, width: 1)),
       ),
@@ -527,13 +528,13 @@ class _Header extends StatelessWidget {
         child: Row(
           children: [
             IconButton(
-              icon: const Icon(CupertinoIcons.chevron_back,
+              icon: Icon(CupertinoIcons.chevron_back,
                   size: 18, color: _textPrimary),
               onPressed: () => Get.back(),
             ),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: _textPrimary,
@@ -563,7 +564,7 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.all(Radius.circular(16)),
         border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
@@ -584,7 +585,7 @@ class _StatCard extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 color: _textPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
@@ -593,7 +594,7 @@ class _StatCard extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(label,
-              style: const TextStyle(color: _textSec, fontSize: 11),
+              style: TextStyle(color: _textSec, fontSize: 11),
               maxLines: 1,
               overflow: TextOverflow.ellipsis),
         ],
@@ -622,7 +623,7 @@ class _SectionTitle extends StatelessWidget {
         const SizedBox(width: 10),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w700,
             color: _textPrimary,
@@ -642,7 +643,7 @@ class _ChartCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 16, 16, 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.all(Radius.circular(16)),
         border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
@@ -666,7 +667,7 @@ class _ContentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.all(Radius.circular(16)),
         border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),

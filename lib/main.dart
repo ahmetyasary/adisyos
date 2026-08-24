@@ -5,6 +5,7 @@ import 'package:responsive_framework/responsive_framework.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:orderix/themes/app_theme.dart';
+import 'package:orderix/themes/app_colors.dart';
 import 'package:orderix/translations/app_translations.dart';
 import 'package:orderix/navigation/app_shell.dart';
 import 'package:orderix/views/auth_screen.dart';
@@ -52,9 +53,8 @@ Future<void> main() async {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness:
-          Brightness.dark, // dark icons on light bg (Android)
-      statusBarBrightness: Brightness.light, // dark icons on light bg (iOS)
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
     ),
   );
 
@@ -74,6 +74,8 @@ Future<void> main() async {
   // Registration order matters: SalesHistoryService, KitchenService and
   // InventoryService must all exist before TableService starts.
   Get.put(SettingsService());
+  // Apply saved theme before first frame (prefs hydrate continues in onInit).
+  await SettingsService.to.ensureThemeLoaded();
   Get.put(StaffService());
   Get.put(SectionService());
   Get.put(SalesHistoryService());
@@ -172,7 +174,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       debugShowCheckedModeBanner: false,
       scrollBehavior: _SmoothScrollBehavior(),
       theme: AppTheme.lightTheme,
-      themeMode: ThemeMode.light,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: AppTheme.themeModeFrom(SettingsService.to.themeMode.value),
       translations: AppTranslations(),
       locale: const Locale('tr', 'TR'),
       fallbackLocale: const Locale('en', 'US'),
@@ -185,15 +188,43 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         Locale('tr', 'TR'),
         Locale('en', 'US'),
       ],
-      builder: (context, child) => ResponsiveBreakpoints.builder(
-        child: child!,
-        breakpoints: [
-          const Breakpoint(start: 0, end: 450, name: MOBILE),
-          const Breakpoint(start: 451, end: 800, name: TABLET),
-          const Breakpoint(start: 801, end: 1920, name: DESKTOP),
-          const Breakpoint(start: 1921, end: double.infinity, name: '4K'),
-        ],
-      ),
+      builder: (context, child) {
+        return Obx(() {
+          // Depend on preference + epoch so AppColors stays correct.
+          final mode = SettingsService.to.themeMode.value;
+          final _ = SettingsService.to.themeEpoch.value;
+          final preferred = AppTheme.themeModeFrom(mode);
+          // Resolve from preference + platform — never copy lagging Theme.
+          final brightness = switch (preferred) {
+            ThemeMode.light => Brightness.light,
+            ThemeMode.dark => Brightness.dark,
+            ThemeMode.system => MediaQuery.platformBrightnessOf(context),
+          };
+          AppColors.syncBrightness(brightness);
+          SystemChrome.setSystemUIOverlayStyle(
+            SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness:
+                  AppColors.isDark ? Brightness.light : Brightness.dark,
+              statusBarBrightness:
+                  AppColors.isDark ? Brightness.dark : Brightness.light,
+            ),
+          );
+          return ResponsiveBreakpoints.builder(
+            child: child!,
+            breakpoints: [
+              const Breakpoint(start: 0, end: 450, name: MOBILE),
+              const Breakpoint(start: 451, end: 800, name: TABLET),
+              const Breakpoint(start: 801, end: 1920, name: DESKTOP),
+              const Breakpoint(
+                start: 1921,
+                end: double.infinity,
+                name: '4K',
+              ),
+            ],
+          );
+        });
+      },
       initialRoute: AppRoutes.login,
       getPages: [
         GetPage(

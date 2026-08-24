@@ -9,13 +9,15 @@ import 'package:orderix/features/auth/presentation/controller/auth_controller.da
 import 'package:orderix/services/subscription_service.dart';
 import 'package:orderix/views/auth_screen.dart';
 import 'package:orderix/widgets/app_toast.dart';
+import 'package:orderix/themes/app_colors.dart';
+import 'package:orderix/widgets/brand_assets.dart';
 
 // ── Design tokens ──────────────────────────────────────────────
 const _orange = Color(0xFFFF9500);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
-const _surface = Color(0xFFF2F2F7);
-const _border = Color(0xFFE5E5EA);
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
+Color get _surface => AppColors.scaffold;
+Color get _border => AppColors.border;
 
 // Legal links (App Store Guideline 3.1.2 — must be functional on the paywall).
 const _privacyUrl = 'https://orderix.tr/privacy';
@@ -319,15 +321,12 @@ class _BrandHero extends StatelessWidget {
           height: 56,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: Image.asset(
-              'assets/images/app_logo.png',
-              fit: BoxFit.cover,
-            ),
+            child: const BrandMark(size: 56),
           ),
         ),
         const SizedBox(height: 12),
         RichText(
-          text: const TextSpan(
+          text: TextSpan(
             style: TextStyle(
               fontSize: 25,
               fontWeight: FontWeight.w800,
@@ -345,7 +344,7 @@ class _BrandHero extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'Restoranınızı tek bir yerden yönetin',
           style: TextStyle(
             fontSize: 14,
@@ -375,7 +374,7 @@ class _TrialExpiredBanner extends StatelessWidget {
         color: _surface,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Row(
+      child: Row(
         children: [
           Icon(CupertinoIcons.lock, size: 16, color: _orange),
           SizedBox(width: 10),
@@ -434,7 +433,7 @@ class _FeatureList extends StatelessWidget {
                   Expanded(
                     child: Text(
                       f,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                         color: _textPrimary,
@@ -500,7 +499,7 @@ class _PlanRow extends StatelessWidget {
           color: _surface,
           borderRadius: BorderRadius.circular(14),
         ),
-        child: const Text(
+        child: Text(
           'Planlar yüklenemedi.\nİnternet bağlantınızı kontrol edin.',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 13, color: _textSec, height: 1.5),
@@ -649,7 +648,7 @@ class _PlanCard extends StatelessWidget {
                 // Price
                 Text(
                   price,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 21,
                     fontWeight: FontWeight.w800,
                     color: _textPrimary,
@@ -661,7 +660,7 @@ class _PlanCard extends StatelessWidget {
                 // Period
                 Text(
                   period,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: _textSec,
@@ -832,7 +831,7 @@ class _Footer extends StatelessWidget {
                 : 'Abonelik otomatik yenilenir. İstediğin zaman App Store\'dan '
                     'iptal edebilirsin.',
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               color: _textSec,
               height: 1.4,
@@ -878,7 +877,7 @@ class _PaywallLegal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const textStyle = TextStyle(
+    final textStyle = TextStyle(
       fontSize: 11,
       color: _textSec,
       height: 1.5,
@@ -898,17 +897,17 @@ class _PaywallLegal extends StatelessWidget {
       alignment: WrapAlignment.center,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        const Text('Devam ederek ', style: textStyle),
+        Text('Devam ederek ', style: textStyle),
         GestureDetector(
           onTap: () => _open(_termsUrl),
           child: const Text('Kullanım Koşulları', style: linkStyle),
         ),
-        const Text(' ve ', style: textStyle),
+        Text(' ve ', style: textStyle),
         GestureDetector(
           onTap: () => _open(_privacyUrl),
           child: const Text('Gizlilik Politikası', style: linkStyle),
         ),
-        const Text('\'nı kabul edersin.', style: textStyle),
+        Text('\'nı kabul edersin.', style: textStyle),
       ],
     );
   }

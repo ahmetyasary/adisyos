@@ -8,12 +8,14 @@ import 'package:orderix/models/app_role.dart';
 import 'package:orderix/views/auth_screen.dart';
 import 'package:orderix/navigation/app_shell.dart';
 import 'package:orderix/navigation/app_sections.dart';
+import 'package:orderix/themes/app_colors.dart';
+import 'package:orderix/widgets/brand_assets.dart';
 
-const _bg = Color(0xFFF2F2F7);
-const _card = Colors.white;
+Color get _bg => AppColors.scaffold;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
 const _separator = Color(0xFFE5E5EA);
 const _red = Color(0xFFFF3B30);
 
@@ -114,7 +116,7 @@ class _StaffPicker extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(0, 12, 16, 0),
             child: IconButton(
-              icon: const Icon(CupertinoIcons.square_arrow_right,
+              icon: Icon(CupertinoIcons.square_arrow_right,
                   size: 20, color: _textSec),
               tooltip: 'Hesaptan Çık',
               onPressed: () async {
@@ -131,12 +133,9 @@ class _StaffPicker extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         // Brand
-        Image.asset(
-          'assets/images/orderix_logo_text.png',
-          height: 48,
-        ),
+        const BrandWordmark(height: 48),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Kim giriş yapıyor?',
           style: TextStyle(
             fontSize: 22,
@@ -146,7 +145,7 @@ class _StaffPicker extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           'Adınıza dokunun',
           style: TextStyle(fontSize: 14, color: _textSec),
         ),
@@ -196,7 +195,7 @@ class _StaffPicker extends StatelessWidget {
                           size: 36, color: _orange),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       'Henüz personel eklenmedi',
                       style: TextStyle(
                           fontSize: 15,
@@ -204,7 +203,7 @@ class _StaffPicker extends StatelessWidget {
                           color: _textPrimary),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
+                    Text(
                       'Ayarlar\'dan personel ekleyebilirsiniz',
                       style: TextStyle(fontSize: 13, color: _textSec),
                     ),
@@ -249,7 +248,7 @@ class _StaffPicker extends StatelessWidget {
                         offset: Offset(0, 3)),
                   ],
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(CupertinoIcons.lock_shield, size: 18, color: _textSec),
@@ -361,7 +360,7 @@ class _StaffCardState extends State<_StaffCard> {
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Text(
                   name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: _textPrimary,
@@ -377,7 +376,7 @@ class _StaffCardState extends State<_StaffCard> {
                 AppRoleX.fromString(
                         widget.staff['role'] as String? ?? 'garson')
                     .labelTr,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                   color: _textSec,
@@ -434,7 +433,7 @@ class _PinPad extends StatelessWidget {
           child: Row(
             children: [
               IconButton(
-                icon: const Icon(CupertinoIcons.chevron_back,
+                icon: Icon(CupertinoIcons.chevron_back,
                     size: 18, color: _textPrimary),
                 onPressed: onBack,
               ),
@@ -481,7 +480,7 @@ class _PinPad extends StatelessWidget {
 
         Text(
           name,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,
             color: _textPrimary,

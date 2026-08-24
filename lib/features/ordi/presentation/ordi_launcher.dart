@@ -7,12 +7,14 @@ import 'package:orderix/features/ordi/presentation/ordi_chat_sheet.dart';
 import 'package:orderix/features/ordi/presentation/ordi_controller.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/utils/app_haptics.dart';
+import 'package:orderix/themes/app_colors.dart';
+import 'package:orderix/widgets/brand_assets.dart';
 
 // ── Apple-inspired design tokens (matched to the rest of the shell) ────────
 const _orange = Color(0xFFFF9500);
-const _card = Colors.white;
-const _labelPrimary = Color(0xFF1C1C1E);
-const _labelSecondary = Color(0xFF8E8E93);
+Color get _card => AppColors.card;
+Color get _labelPrimary => AppColors.textPrimary;
+Color get _labelSecondary => AppColors.textSec;
 
 const double _edgePad = 16;
 const Duration _dockDuration = Duration(milliseconds: 420);
@@ -425,7 +427,6 @@ class _OrdiBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final pad = fabSize * 0.155;
     final spark = (fabSize * 0.21).clamp(10.0, 16.0);
-    final fallbackFont = fabSize * 0.45;
     return Container(
         width: fabSize,
         height: fabSize,
@@ -451,19 +452,9 @@ class _OrdiBadge extends StatelessWidget {
           children: [
             Padding(
               padding: EdgeInsets.all(pad),
-              child: Image.asset(
-                'assets/images/app_logo.png',
-                fit: BoxFit.contain,
-                // The bundled logo is the brand "O"; if it ever goes missing
-                // the button must still render something tappable.
-                errorBuilder: (_, __, ___) => Text(
-                  'O',
-                  style: TextStyle(
-                    fontSize: fallbackFont,
-                    fontWeight: FontWeight.w800,
-                    color: _orange,
-                  ),
-                ),
+              child: BrandMark(
+                size: fabSize - pad * 2,
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
             // "AI" spark marker so the button reads as an assistant rather than
@@ -473,7 +464,7 @@ class _OrdiBadge extends StatelessWidget {
               top: 2,
               child: Container(
                 padding: const EdgeInsets.all(3),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: _card,
                 ),

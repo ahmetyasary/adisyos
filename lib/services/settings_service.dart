@@ -1,12 +1,14 @@
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:orderix/models/payment_type.dart';
 import 'package:orderix/models/receipt_layout.dart';
+import 'package:orderix/themes/app_colors.dart';
+import 'package:orderix/themes/app_theme.dart';
 
 /// Tenant-aware, local-first settings store.
 ///
@@ -57,6 +59,11 @@ class SettingsService extends GetxService {
   final RxString notifySoundIntensity = 'high'.obs;
   /// Account UI language: `tr` | `en`.
   final RxString language = 'tr'.obs;
+  /// Appearance: `system` | `light` | `dark`.
+  final RxString themeMode = 'system'.obs;
+  /// Bumped on every theme apply so shells/pages that read [AppColors]
+  /// getters rebuild immediately (ThemeInheritedWidget alone is not enough).
+  final RxInt themeEpoch = 0.obs;
   /// Account payment methods (nakit/kart/havale + custom, e.g. yemek kartı).
   final RxList<PaymentType> paymentTypes =
       List<PaymentType>.from(kDefaultPaymentTypes).obs;
@@ -91,6 +98,7 @@ class SettingsService extends GetxService {
   static const _kNotifySoundsEnabled = 'notify_sounds_enabled';
   static const _kNotifySoundIntensity = 'notify_sound_intensity';
   static const _kLanguage       = 'language';
+  static const _kThemeMode      = 'theme_mode';
   static const _kPaymentTypes   = 'payment_types';
   static const _kReceiptLayout  = 'receipt_layout';
   static const _kDiscountMode   = 'discount_mode';
@@ -166,6 +174,7 @@ class SettingsService extends GetxService {
         notifySoundIntensity.value = 'high';
         language.value = 'tr';
         _applyLocale('tr');
+        // Keep device theme preference across sign-out.
         paymentTypes.assignAll(kDefaultPaymentTypes);
         receiptLayout.value = ReceiptLayout.defaults;
         discountMode.value = 'percent';
@@ -174,10 +183,22 @@ class SettingsService extends GetxService {
 
     _load();
     _subscribeRealtime();
+    _bindPlatformBrightness();
+  }
+
+  void _bindPlatformBrightness() {
+    final dispatcher = WidgetsBinding.instance.platformDispatcher;
+    dispatcher.onPlatformBrightnessChanged = () {
+      if (themeMode.value != 'system') return;
+      _applyThemeMode('system');
+    };
   }
 
   @override
   void onClose() {
+    // Clear only our handler if still ours — avoid clobbering others.
+    final dispatcher = WidgetsBinding.instance.platformDispatcher;
+    dispatcher.onPlatformBrightnessChanged = null;
     _channel?.unsubscribe();
     super.onClose();
   }
@@ -281,6 +302,13 @@ class SettingsService extends GetxService {
           _applyLocale(next);
           _writePref(_kLanguage, next);
         }
+      case _kThemeMode:
+        final next = _sanitizeThemeMode(rawVal);
+        if (themeMode.value != next) {
+          themeMode.value = next;
+          _applyThemeMode(next);
+          _writePref(_kThemeMode, next);
+        }
       case _kDiscountMode:
         final next = _sanitizeDiscountMode(rawVal);
         if (discountMode.value != next) {
@@ -303,6 +331,23 @@ class SettingsService extends GetxService {
   /// Re-reads from the remote DB. Local cache is preserved if the DB is
   /// empty or contains only blank values (see [_load]).
   Future<void> refresh() => _load();
+
+  /// Hydrate [themeMode] from SharedPreferences before the first frame.
+  Future<void> ensureThemeLoaded() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final tenantId = _currentTenantId();
+      String? raw;
+      if (tenantId != null) {
+        raw = prefs.getString(_tenantPrefKey(tenantId, _kThemeMode));
+      }
+      raw ??= prefs.getString('settings.$_kThemeMode');
+      raw ??= prefs.getString('theme_mode');
+      if (raw != null && raw.isNotEmpty) {
+        themeMode.value = _sanitizeThemeMode(raw);
+      }
+    } catch (_) {}
+  }
 
   /// Persists a new company name. Optimistically updates the in-memory
   /// value + local cache, then writes to Supabase. Throws [PostgrestException]
@@ -493,6 +538,54 @@ class SettingsService extends GetxService {
     }
   }
 
+  Future<void> setThemeMode(String mode) async {
+    final next = _sanitizeThemeMode(mode);
+    if (themeMode.value == next) return;
+    themeMode.value = next;
+    _applyThemeMode(next);
+    await _writePref(_kThemeMode, next);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('theme_mode', next);
+    } catch (_) {}
+    try {
+      await _writeValue(_kThemeMode, next);
+    } catch (e) {
+      if (kDebugMode) print('[SettingsService] setThemeMode DB error: $e');
+    }
+  }
+
+  void _applyThemeMode(String mode) {
+    final themeModeEnum = AppTheme.themeModeFrom(mode);
+    final brightness = _resolveBrightness(themeModeEnum);
+    AppColors.syncBrightness(brightness);
+    Get.changeThemeMode(themeModeEnum);
+    themeEpoch.value++;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Theme may lag one frame — re-assert resolved brightness, then paint.
+      AppColors.syncBrightness(brightness);
+      AppColors.rebuildTree(Get.context ?? Get.key.currentContext);
+      Get.forceAppUpdate();
+    });
+    AppColors.rebuildTree(Get.context ?? Get.key.currentContext);
+    Get.forceAppUpdate();
+  }
+
+  /// Resolved light/dark for the current preference (never trust a lagging Theme).
+  Brightness resolvedBrightness() =>
+      _resolveBrightness(AppTheme.themeModeFrom(themeMode.value));
+
+  Brightness _resolveBrightness(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light:
+        return Brightness.light;
+      case ThemeMode.dark:
+        return Brightness.dark;
+      case ThemeMode.system:
+        return WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    }
+  }
+
   void _applyLocale(String code) {
     final locale =
         code == 'en' ? const Locale('en', 'US') : const Locale('tr', 'TR');
@@ -507,6 +600,16 @@ class SettingsService extends GetxService {
         return 'en';
       default:
         return 'tr';
+    }
+  }
+
+  String _sanitizeThemeMode(String raw) {
+    switch (raw) {
+      case 'light':
+      case 'dark':
+        return raw;
+      default:
+        return 'system';
     }
   }
 
@@ -703,6 +806,7 @@ class SettingsService extends GetxService {
       String? readNotifySounds;
       String? readNotifySoundIntensity;
       String? readLanguage;
+      String? readThemeMode;
       String? readPayTypes;
       String? readReceipt;
       String? readDiscountMode;
@@ -734,6 +838,8 @@ class SettingsService extends GetxService {
             prefs.getString(_tenantPrefKey(tenantId, _kNotifySoundIntensity));
         readLanguage =
             prefs.getString(_tenantPrefKey(tenantId, _kLanguage));
+        readThemeMode =
+            prefs.getString(_tenantPrefKey(tenantId, _kThemeMode));
         readPayTypes =
             prefs.getString(_tenantPrefKey(tenantId, _kPaymentTypes));
         readReceipt =
@@ -761,6 +867,8 @@ class SettingsService extends GetxService {
       readLanguage ??= prefs.getString('settings.$_kLanguage');
       // Older builds stored language outside the settings.* namespace.
       readLanguage ??= prefs.getString('language');
+      readThemeMode ??= prefs.getString('settings.$_kThemeMode');
+      readThemeMode ??= prefs.getString('theme_mode');
       readPayTypes ??= prefs.getString('settings.$_kPaymentTypes');
       readReceipt ??= prefs.getString('settings.$_kReceiptLayout');
       readDiscountMode ??= prefs.getString('settings.$_kDiscountMode');
@@ -815,6 +923,10 @@ class SettingsService extends GetxService {
       if (readLanguage != null && readLanguage.isNotEmpty) {
         language.value = _sanitizeLanguage(readLanguage);
         _applyLocale(language.value);
+      }
+      if (readThemeMode != null && readThemeMode.isNotEmpty) {
+        themeMode.value = _sanitizeThemeMode(readThemeMode);
+        _applyThemeMode(themeMode.value);
       }
       if (readPayTypes != null && readPayTypes.isNotEmpty) {
         paymentTypes.assignAll(parsePaymentTypesJson(readPayTypes));
@@ -953,6 +1065,15 @@ class SettingsService extends GetxService {
                 _applyLocale(next);
               }
               await _writePref(_kLanguage, next);
+            }
+          case _kThemeMode:
+            if (rawVal.isNotEmpty) {
+              final next = _sanitizeThemeMode(rawVal);
+              if (themeMode.value != next) {
+                themeMode.value = next;
+                _applyThemeMode(next);
+              }
+              await _writePref(_kThemeMode, next);
             }
           case _kPaymentTypes:
             if (rawVal.isNotEmpty) {

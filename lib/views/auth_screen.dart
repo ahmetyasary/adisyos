@@ -9,14 +9,16 @@ import 'package:orderix/features/auth/presentation/controller/auth_controller.da
 import 'package:orderix/guards/auth_middleware.dart';
 import 'package:orderix/views/pin_screen.dart';
 import 'package:orderix/utils/app_info.dart';
+import 'package:orderix/themes/app_colors.dart';
+import 'package:orderix/widgets/brand_assets.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _bg = Color(0xFFF2F2F7);
-const _card = Colors.white;
+Color get _bg => AppColors.scaffold;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
-const _border = Color(0xFFE5E5EA);
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
+Color get _border => AppColors.border;
 const _error = Color(0xFFFF3B30);
 
 // ─────────────────────────────────────────────────────────────
@@ -222,7 +224,7 @@ class _SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: _bg,
       body: Center(
         child: Column(
@@ -266,10 +268,7 @@ class _SplashIcon extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
-        child: Image.asset(
-          'assets/images/app_logo.png',
-          fit: BoxFit.cover,
-        ),
+        child: const BrandMark(size: 80),
       ),
     );
   }
@@ -357,16 +356,13 @@ class _BrandHero extends StatelessWidget {
         const SizedBox(height: 14),
 
         // Wordmark
-        Image.asset(
-          'assets/images/orderix_logo_text.png',
-          height: 48,
-        ),
+        const BrandWordmark(height: 48),
         const SizedBox(height: 4),
 
         // Tagline
         Text(
           'auth_subtitle'.tr,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             color: _textSec,
             letterSpacing: 0.3,
@@ -433,7 +429,7 @@ class _LoginCard extends StatelessWidget {
             // Section heading
             Text(
               'auth_login_title'.tr,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
                 color: _textPrimary,
@@ -443,7 +439,7 @@ class _LoginCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'auth_login_subtitle'.tr,
-              style: const TextStyle(fontSize: 13, color: _textSec),
+              style: TextStyle(fontSize: 13, color: _textSec),
             ),
             const SizedBox(height: 28),
 
@@ -530,7 +526,7 @@ class _FieldLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w600,
         color: _textPrimary,
@@ -603,14 +599,14 @@ class _AuthTextFieldState extends State<_AuthTextField> {
       validator: widget.validator,
       onFieldSubmitted: widget.onFieldSubmitted,
       autofillHints: widget.autofillHints,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 14,
         color: _textPrimary,
         fontWeight: FontWeight.w500,
       ),
       decoration: InputDecoration(
         hintText: widget.hint,
-        hintStyle: const TextStyle(color: _textSec, fontSize: 14),
+        hintStyle: TextStyle(color: _textSec, fontSize: 14),
         prefixIcon: Padding(
           padding: const EdgeInsets.only(left: 16, right: 12),
           child: AnimatedSwitcher(
@@ -631,11 +627,11 @@ class _AuthTextFieldState extends State<_AuthTextField> {
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: _border),
+          borderSide: BorderSide(color: _border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: _border),
+          borderSide: BorderSide(color: _border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -791,7 +787,7 @@ class _SignUpLink extends StatelessWidget {
       children: [
         Text(
           'auth_no_account'.tr,
-          style: const TextStyle(fontSize: 13, color: _textSec),
+          style: TextStyle(fontSize: 13, color: _textSec),
         ),
         const SizedBox(width: 4),
         GestureDetector(
@@ -831,7 +827,7 @@ class _BottomFooter extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           AppInfo.brandLine,
-          style: const TextStyle(fontSize: 12, color: _textSec),
+          style: TextStyle(fontSize: 12, color: _textSec),
         ),
         const SizedBox(width: 8),
         Container(

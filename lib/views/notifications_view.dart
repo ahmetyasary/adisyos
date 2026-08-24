@@ -6,13 +6,14 @@ import 'package:orderix/services/sales_history_service.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/themes/app_theme.dart';
 import 'package:orderix/widgets/shell_leading.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _bg = Colors.white;
-const _card = Colors.white;
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
-const _border = Color(0xFFECECEF);
+Color get _bg => AppColors.bg;
+Color get _card => AppColors.card;
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
+Color get _border => AppColors.borderSoft;
 
 class NotificationsView extends StatelessWidget {
   const NotificationsView({super.key, this.embedded = false});
@@ -44,7 +45,7 @@ class NotificationsView extends StatelessWidget {
                             color: _textSec.withValues(alpha: 0.08),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             CupertinoIcons.bell,
                             size: 48,
                             color: _textSec,
@@ -53,7 +54,7 @@ class NotificationsView extends StatelessWidget {
                         const SizedBox(height: 16),
                         Text(
                           'no_notifications'.tr,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: _textSec,
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
@@ -93,7 +94,7 @@ class _PageHeader extends StatelessWidget {
     final topPad = MediaQuery.of(context).padding.top;
     return Container(
       padding: EdgeInsets.only(top: topPad),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         border: Border(bottom: BorderSide(color: _border, width: 1)),
       ),
@@ -104,7 +105,7 @@ class _PageHeader extends StatelessWidget {
             ShellLeading(embedded: embedded, color: _textPrimary),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: _textPrimary,
@@ -185,7 +186,7 @@ class _NotificationCard extends StatelessWidget {
                   children: [
                     Text(
                       'payment_notification'.tr,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: _textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -213,7 +214,7 @@ class _NotificationCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   '$tableName · $itemCount ürün${discount > 0 ? ' · İndirimli' : ''}',
-                  style: const TextStyle(color: _textSec, fontSize: 12),
+                  style: TextStyle(color: _textSec, fontSize: 12),
                 ),
                 const SizedBox(height: 6),
                 Row(
@@ -229,7 +230,7 @@ class _NotificationCard extends StatelessWidget {
                         )),
                     Text(
                       timeLabel,
-                      style: const TextStyle(color: _textSec, fontSize: 11),
+                      style: TextStyle(color: _textSec, fontSize: 11),
                     ),
                   ],
                 ),

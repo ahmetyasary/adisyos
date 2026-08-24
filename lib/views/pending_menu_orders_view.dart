@@ -6,13 +6,14 @@ import 'package:orderix/services/digital_menu_order_service.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/widgets/app_toast.dart';
 import 'package:orderix/widgets/shell_leading.dart';
+import 'package:orderix/themes/app_colors.dart';
 
-const _bg = Colors.white;
-const _card = Colors.white;
+Color get _bg => AppColors.bg;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
-const _border = Color(0xFFE5E5EA);
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
+Color get _border => AppColors.border;
 const _green = Color(0xFF34C759);
 const _red = Color(0xFFFF3B30);
 
@@ -32,7 +33,7 @@ class PendingMenuOrdersView extends StatelessWidget {
         children: [
           Container(
             padding: EdgeInsets.only(top: topPad, left: 8, right: 8),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: _card,
               border: Border(bottom: BorderSide(color: _border)),
             ),
@@ -41,7 +42,7 @@ class PendingMenuOrdersView extends StatelessWidget {
               child: Row(
                 children: [
                   ShellLeading(embedded: embedded, color: _textPrimary),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Bekleyen siparişler',
                       style: TextStyle(
@@ -53,7 +54,7 @@ class PendingMenuOrdersView extends StatelessWidget {
                   ),
                   IconButton(
                     onPressed: svc.refresh,
-                    icon: const Icon(CupertinoIcons.arrow_clockwise,
+                    icon: Icon(CupertinoIcons.arrow_clockwise,
                         color: _textSec),
                   ),
                 ],
@@ -69,7 +70,7 @@ class PendingMenuOrdersView extends StatelessWidget {
               }
               final list = svc.pending.toList();
               if (list.isEmpty) {
-                return const Center(
+                return Center(
                   child: Padding(
                     padding: EdgeInsets.all(32),
                     child: Column(
@@ -149,7 +150,7 @@ class _OrderCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   order['tableName'] as String? ?? 'Masa',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                     color: _textPrimary,
@@ -158,7 +159,7 @@ class _OrderCard extends StatelessWidget {
               ),
               if (timeLabel.isNotEmpty)
                 Text(timeLabel,
-                    style: const TextStyle(fontSize: 12, color: _textSec)),
+                    style: TextStyle(fontSize: 12, color: _textSec)),
             ],
           ),
           if (occupied) ...[
@@ -190,7 +191,7 @@ class _OrderCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       '$qty×  ${it['name']}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: _textPrimary,
@@ -199,7 +200,7 @@ class _OrderCard extends StatelessWidget {
                   ),
                   Text(
                     '$cs${(price * qty).toStringAsFixed(2)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: _textSec,
@@ -226,7 +227,7 @@ class _OrderCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       note,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                         color: _textPrimary,
@@ -242,7 +243,7 @@ class _OrderCard extends StatelessWidget {
             children: [
               Text(
                 'Toplam $cs${total.toStringAsFixed(2)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: _textPrimary,

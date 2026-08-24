@@ -6,14 +6,15 @@ import 'package:orderix/services/inventory_service.dart';
 import 'package:orderix/widgets/app_dialog.dart';
 import 'package:orderix/widgets/responsive_content.dart';
 import 'package:orderix/widgets/shell_leading.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _bg = Colors.white;
-const _card = Colors.white;
-const _border = Color(0xFFECECEF);
+Color get _bg => AppColors.bg;
+Color get _card => AppColors.card;
+Color get _border => AppColors.borderSoft;
 const _orange = Color(0xFFFF9500);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
 const _colLow = Color(0xFFFF9500);
 const _colOut = Color(0xFFFF3B30);
 const _colOk = Color(0xFF34C759);
@@ -43,7 +44,7 @@ class InventoryManagementView extends StatelessWidget {
                     return Center(
                       child: Text(
                         'Menü tanımlı değil.',
-                        style: const TextStyle(color: _textSec, fontSize: 16),
+                        style: TextStyle(color: _textSec, fontSize: 16),
                       ),
                     );
                   }
@@ -71,7 +72,7 @@ class InventoryManagementView extends StatelessWidget {
                                 const SizedBox(width: 10),
                                 Text(
                                   menu['name'] as String,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
                                       color: _textPrimary),
@@ -101,7 +102,7 @@ class InventoryManagementView extends StatelessWidget {
   Widget _buildHeader(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         border: Border(bottom: BorderSide(color: _border, width: 1)),
       ),
@@ -110,7 +111,7 @@ class InventoryManagementView extends StatelessWidget {
         child: Row(
           children: [
             ShellLeading(embedded: embedded, color: _textPrimary),
-            const Text(
+            Text(
               'Stok Yönetimi',
               style: TextStyle(
                 fontWeight: FontWeight.w700,
@@ -216,7 +217,7 @@ class _InventoryItemCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'Stok miktarı (boş bırakırsanız sınırsız olur)',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: _textSec),
@@ -280,7 +281,7 @@ class _InventoryItemCard extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: _card,
             borderRadius: BorderRadius.all(Radius.circular(12)),
             border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
@@ -296,7 +297,7 @@ class _InventoryItemCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   itemName,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontWeight: FontWeight.w500,
                       color: _textPrimary,
                       fontSize: 14),
@@ -318,7 +319,7 @@ class _InventoryItemCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              const Icon(CupertinoIcons.pencil, size: 16, color: _textSec),
+              Icon(CupertinoIcons.pencil, size: 16, color: _textSec),
             ],
           ),
         ),

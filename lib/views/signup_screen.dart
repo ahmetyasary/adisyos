@@ -7,17 +7,19 @@ import 'package:orderix/features/auth/presentation/controller/auth_controller.da
 import 'package:orderix/guards/auth_middleware.dart';
 import 'package:orderix/views/pin_screen.dart';
 import 'package:orderix/utils/app_info.dart';
+import 'package:orderix/themes/app_colors.dart';
+import 'package:orderix/widgets/brand_assets.dart';
 
 const _privacyUrl = 'https://orderix.tr/privacy';
 const _termsUrl = 'https://orderix.tr/terms';
 
 // ── Design tokens — identical to AuthScreen ───────────────────
-const _bg = Color(0xFFF2F2F7);
-const _card = Colors.white;
+Color get _bg => AppColors.scaffold;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
-const _border = Color(0xFFE5E5EA);
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
+Color get _border => AppColors.border;
 const _error = Color(0xFFFF3B30);
 const _success = Color(0xFF34C759);
 
@@ -230,7 +232,7 @@ class _BackButton extends StatelessWidget {
               ),
             ],
           ),
-          child: const Icon(
+          child: Icon(
             CupertinoIcons.chevron_back,
             size: 18,
             color: _textPrimary,
@@ -318,14 +320,11 @@ class _BrandHero extends StatelessWidget {
           // ),
         ),
         const SizedBox(height: 14),
-        Image.asset(
-          'assets/images/orderix_logo_text.png',
-          height: 48,
-        ),
+        const BrandWordmark(height: 48),
         const SizedBox(height: 4),
         Text(
           'auth_subtitle'.tr,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             color: _textSec,
             letterSpacing: 0.3,
@@ -399,7 +398,7 @@ class _SignUpCard extends StatelessWidget {
             // Header
             Text(
               'auth_signup_title'.tr,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
                 color: _textPrimary,
@@ -409,7 +408,7 @@ class _SignUpCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'auth_signup_subtitle'.tr,
-              style: const TextStyle(fontSize: 13, color: _textSec),
+              style: TextStyle(fontSize: 13, color: _textSec),
             ),
             const SizedBox(height: 28),
 
@@ -545,7 +544,7 @@ class _LegalDisclosure extends StatelessWidget {
       decorationColor: _orange,
       height: 1.5,
     );
-    const textStyle = TextStyle(
+    final textStyle = TextStyle(
       fontSize: 12,
       color: _textSec,
       height: 1.5,
@@ -566,7 +565,7 @@ class _LegalDisclosure extends StatelessWidget {
               onTap: () => _open(_termsUrl),
               child: Text('terms_of_use'.tr, style: linkStyle),
             ),
-            const Text(' · ', style: textStyle),
+            Text(' · ', style: textStyle),
             GestureDetector(
               onTap: () => _open(_privacyUrl),
               child: Text('privacy_policy'.tr, style: linkStyle),
@@ -629,7 +628,7 @@ class _SuccessCard extends StatelessWidget {
           Text(
             'auth_signup_success'.tr,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
               color: _textPrimary,
@@ -642,7 +641,7 @@ class _SuccessCard extends StatelessWidget {
           Text(
             'auth_signup_success_body'.tr,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               color: _textSec,
               height: 1.5,
@@ -673,7 +672,7 @@ class _FieldLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w600,
         color: _textPrimary,
@@ -746,14 +745,14 @@ class _SignUpTextFieldState extends State<_SignUpTextField> {
       validator: widget.validator,
       onFieldSubmitted: widget.onFieldSubmitted,
       autofillHints: widget.autofillHints,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 14,
         color: _textPrimary,
         fontWeight: FontWeight.w500,
       ),
       decoration: InputDecoration(
         hintText: widget.hint,
-        hintStyle: const TextStyle(color: _textSec, fontSize: 14),
+        hintStyle: TextStyle(color: _textSec, fontSize: 14),
         prefixIcon: Padding(
           padding: const EdgeInsets.only(left: 16, right: 12),
           child: AnimatedSwitcher(
@@ -774,11 +773,11 @@ class _SignUpTextFieldState extends State<_SignUpTextField> {
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: _border),
+          borderSide: BorderSide(color: _border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: _border),
+          borderSide: BorderSide(color: _border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -1003,7 +1002,7 @@ class _LoginLink extends StatelessWidget {
       children: [
         Text(
           'auth_have_account'.tr,
-          style: const TextStyle(fontSize: 13, color: _textSec),
+          style: TextStyle(fontSize: 13, color: _textSec),
         ),
         const SizedBox(width: 4),
         GestureDetector(
@@ -1043,7 +1042,7 @@ class _BottomFooter extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           AppInfo.brandLine,
-          style: const TextStyle(fontSize: 12, color: _textSec),
+          style: TextStyle(fontSize: 12, color: _textSec),
         ),
         const SizedBox(width: 8),
         Container(

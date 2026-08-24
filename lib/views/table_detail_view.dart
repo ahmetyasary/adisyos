@@ -12,15 +12,16 @@ import 'package:orderix/utils/app_haptics.dart';
 import 'package:orderix/views/receipt_print_preview_view.dart';
 import 'package:orderix/widgets/app_toast.dart';
 import 'package:orderix/widgets/app_dialog.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _bg = Colors.white;
-const _chip = Color(0xFFF2F2F7);
-const _card = Colors.white;
+Color get _bg => AppColors.bg;
+Color get _chip => AppColors.chipBg;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSecondary = Color(0xFF8E8E93);
-const _border = Color(0xFFE5E5EA);
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSecondary => AppColors.textSec;
+Color get _border => AppColors.border;
 
 // ── Menu icon key → IconData ──────────────────────────────────
 IconData _menuIconData(String key) {
@@ -150,7 +151,7 @@ class _TableDetailViewState extends State<TableDetailView> {
     return Column(
       children: [
         _buildMobileHorizontalCategories(context),
-        const Divider(color: _border, height: 1),
+        Divider(color: _border, height: 1),
         Expanded(child: _buildMobileOrderTop(context)),
         _buildMobileCheckoutBottom(context),
       ],
@@ -246,21 +247,21 @@ class _TableDetailViewState extends State<TableDetailView> {
                       size: 26, color: Color(0xFFFF3B30)),
                 ),
                 const SizedBox(height: 14),
-                const Text(
+                Text(
                   'Siparişi Kaldır',
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1C1C1E),
+                    color: _textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   '"$itemName" siparişten kaldırılsın mı?',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF8E8E93),
+                    color: _textSecondary,
                     height: 1.4,
                   ),
                 ),
@@ -273,16 +274,16 @@ class _TableDetailViewState extends State<TableDetailView> {
                         child: Container(
                           height: 46,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF2F2F7),
+                            color: _chip,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           alignment: Alignment.center,
-                          child: const Text(
+                          child: Text(
                             'İptal',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF1C1C1E),
+                              color: _textPrimary,
                             ),
                           ),
                         ),
@@ -327,12 +328,12 @@ class _TableDetailViewState extends State<TableDetailView> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           alignment: Alignment.center,
-                          child: const Text(
+                          child: Text(
                             'Kaldır',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                              color: _card,
                             ),
                           ),
                         ),
@@ -358,7 +359,7 @@ class _TableDetailViewState extends State<TableDetailView> {
       tooltip: 'İşlemler',
       padding: EdgeInsets.zero,
       offset: const Offset(0, 8),
-      color: Colors.white,
+      color: _card,
       elevation: 8,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       onSelected: (value) {
@@ -383,18 +384,18 @@ class _TableDetailViewState extends State<TableDetailView> {
             ],
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'price',
           child: Row(
             children: [
-              Icon(CupertinoIcons.pencil, size: 18, color: Color(0xFF1C1C1E)),
+              Icon(CupertinoIcons.pencil, size: 18, color: _textPrimary),
               SizedBox(width: 10),
               Text(
                 'Fiyat Değiştir',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF1C1C1E),
+                  color: _textPrimary,
                 ),
               ),
             ],
@@ -408,7 +409,7 @@ class _TableDetailViewState extends State<TableDetailView> {
           color: _chip,
           borderRadius: BorderRadius.circular(11),
         ),
-        child: const Icon(
+        child: Icon(
           CupertinoIcons.ellipsis_vertical,
           size: 18,
           color: _textSecondary,
@@ -447,10 +448,10 @@ class _TableDetailViewState extends State<TableDetailView> {
         children: [
           Text(
             '“$itemName” için yeni birim fiyat. Menü fiyatı değişmez; yalnızca bu adisyon geçerlidir.',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               height: 1.4,
-              color: Color(0xFF8E8E93),
+              color: _textSecondary,
             ),
           ),
           const SizedBox(height: 14),
@@ -488,7 +489,7 @@ class _TableDetailViewState extends State<TableDetailView> {
             margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: _card,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: _border, width: 1),
               boxShadow: const [
@@ -505,12 +506,12 @@ class _TableDetailViewState extends State<TableDetailView> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Sipariş Detayı',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1C1C1E),
+                    color: _textPrimary,
                     letterSpacing: -0.3,
                   ),
                 ),
@@ -542,11 +543,11 @@ class _TableDetailViewState extends State<TableDetailView> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(CupertinoIcons.cart,
+                      Icon(CupertinoIcons.cart,
                           size: 44, color: _textSecondary),
                       const SizedBox(height: 12),
                       Text('no_orders_yet'.tr,
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: _textSecondary, fontSize: 14),
                           textAlign: TextAlign.center),
                     ],
@@ -583,7 +584,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                         decoration: BoxDecoration(
                           color: isPartial && selCount > 0
                               ? _orange.withOpacity(0.05)
-                              : Colors.white,
+                              : _card,
                           borderRadius: BorderRadius.circular(16),
                           border: isPartial
                               ? Border.all(
@@ -632,7 +633,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                           onTap: () => TableService.to
                                               .decrementOrder(
                                                   widget.tableIndex, index),
-                                          child: const SizedBox(
+                                          child: SizedBox(
                                             width: 38,
                                             height: 42,
                                             child: Icon(CupertinoIcons.minus,
@@ -645,17 +646,17 @@ class _TableDetailViewState extends State<TableDetailView> {
                                           child: Text(
                                             '$quantity',
                                             textAlign: TextAlign.center,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 17,
                                               fontWeight: FontWeight.bold,
-                                              color: Color(0xFF1C1C1E),
+                                              color: _textPrimary,
                                             ),
                                           ),
                                         ),
                                         GestureDetector(
                                           onTap: () => TableService.to.addOrder(
                                               widget.tableIndex, name, price),
-                                          child: const SizedBox(
+                                          child: SizedBox(
                                             width: 38,
                                             height: 42,
                                             child: Icon(CupertinoIcons.add,
@@ -671,7 +672,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                             Expanded(
                               child: Text(
                                 name,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                   color: _textPrimary,
@@ -736,8 +737,8 @@ class _TableDetailViewState extends State<TableDetailView> {
   Widget _buildMobileCheckoutBottom(BuildContext context) {
     final bottomPad = MediaQuery.of(context).padding.bottom;
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: _card,
         boxShadow: [
           BoxShadow(
               color: Color(0x0E000000), blurRadius: 20, offset: Offset(0, -4)),
@@ -772,12 +773,12 @@ class _TableDetailViewState extends State<TableDetailView> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Toplam',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
-                          color: Color(0xFF1C1C1E),
+                          color: _textPrimary,
                         ),
                       ),
                       Text(
@@ -986,7 +987,7 @@ class _TableDetailViewState extends State<TableDetailView> {
   Widget _buildMobileCategorySidebar(BuildContext context) {
     return Container(
       width: 72,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         boxShadow: [
           BoxShadow(
@@ -1116,7 +1117,7 @@ class _TableDetailViewState extends State<TableDetailView> {
               minChildSize: 0.45,
               maxChildSize: 0.97,
               builder: (ctx, scrollController) => Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: _chip,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
@@ -1148,7 +1149,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                           const SizedBox(width: 8),
                           Text(
                             menus[selectedCategory]['name'] as String,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
                               color: _textPrimary,
@@ -1163,7 +1164,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                 color: _textSecondary.withOpacity(0.1),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(CupertinoIcons.xmark,
+                              child: Icon(CupertinoIcons.xmark,
                                   size: 18, color: _textSecondary),
                             ),
                           ),
@@ -1195,7 +1196,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 14),
                               decoration: BoxDecoration(
-                                color: isActive ? _orange : Colors.white,
+                                color: isActive ? _orange : _card,
                                 borderRadius: BorderRadius.circular(20),
                                 boxShadow: isActive
                                     ? [
@@ -1237,12 +1238,12 @@ class _TableDetailViewState extends State<TableDetailView> {
                         controller: searchCtrl,
                         decoration: InputDecoration(
                           hintText: 'search_menu'.tr,
-                          hintStyle: const TextStyle(
+                          hintStyle: TextStyle(
                               color: _textSecondary, fontSize: 14),
-                          prefixIcon: const Icon(CupertinoIcons.search,
+                          prefixIcon: Icon(CupertinoIcons.search,
                               color: _textSecondary, size: 20),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: _card,
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 0),
                           border: OutlineInputBorder(
@@ -1272,7 +1273,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                 localSearch.isNotEmpty
                                     ? 'Sonuç bulunamadı'
                                     : 'no_menu_defined'.tr,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: _textSecondary, fontSize: 15),
                               ),
                             )
@@ -1347,8 +1348,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                                               ),
                                               child: Text(
                                                 isOut ? 'Bitti' : '$stockVal',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
+                                                style: TextStyle(
+                                                  color: _card,
                                                   fontSize: 9,
                                                   fontWeight: FontWeight.bold,
                                                 ),
@@ -1375,7 +1376,7 @@ class _TableDetailViewState extends State<TableDetailView> {
   Widget _buildTopBar(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         border: Border(bottom: BorderSide(color: _border, width: 1)),
       ),
@@ -1387,7 +1388,7 @@ class _TableDetailViewState extends State<TableDetailView> {
           children: [
             // Back button
             IconButton(
-              icon: const Icon(CupertinoIcons.chevron_back,
+              icon: Icon(CupertinoIcons.chevron_back,
                   size: 18, color: _textPrimary),
               onPressed: () => Get.back(),
             ),
@@ -1396,7 +1397,7 @@ class _TableDetailViewState extends State<TableDetailView> {
               child: Text(
                 _fullTableLabel,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 17,
                   color: _textPrimary,
@@ -1415,7 +1416,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    const Icon(CupertinoIcons.doc_text_fill,
+                    Icon(CupertinoIcons.doc_text_fill,
                         color: _textSecondary, size: 22),
                     if (count > 0)
                       Positioned(
@@ -1431,8 +1432,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                           child: Center(
                             child: Text(
                               '$count',
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: _card,
                                 fontSize: 9,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -1453,7 +1454,7 @@ class _TableDetailViewState extends State<TableDetailView> {
   Widget _buildCategorySidebar() {
     return Container(
       width: 88,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         boxShadow: [
           BoxShadow(
@@ -1562,13 +1563,13 @@ class _TableDetailViewState extends State<TableDetailView> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'search_menu'.tr,
-                hintStyle: const TextStyle(color: _textSecondary, fontSize: 14),
-                prefixIcon: const Icon(CupertinoIcons.search,
+                hintStyle: TextStyle(color: _textSecondary, fontSize: 14),
+                prefixIcon: Icon(CupertinoIcons.search,
                     color: _textSecondary, size: 20),
-                suffixIcon: const Icon(CupertinoIcons.slider_horizontal_3,
+                suffixIcon: Icon(CupertinoIcons.slider_horizontal_3,
                     color: _textSecondary, size: 20),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: _card,
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                 border: OutlineInputBorder(
@@ -1610,12 +1611,12 @@ class _TableDetailViewState extends State<TableDetailView> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(CupertinoIcons.square_list_fill,
+              Icon(CupertinoIcons.square_list_fill,
                   size: 48, color: _textSecondary),
               const SizedBox(height: 12),
               Text(
                 'no_menu_defined'.tr,
-                style: const TextStyle(
+                style: TextStyle(
                   color: _textSecondary,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -1652,7 +1653,7 @@ class _TableDetailViewState extends State<TableDetailView> {
         return Center(
           child: Text(
             _isSearching ? 'Sonuç bulunamadı' : 'no_menu_defined'.tr,
-            style: const TextStyle(color: _textSecondary, fontSize: 16),
+            style: TextStyle(color: _textSecondary, fontSize: 16),
           ),
         );
       }
@@ -1719,8 +1720,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                           ),
                           child: Text(
                             isOut ? 'Bitti' : '$stockVal',
-                            style: const TextStyle(
-                                color: Colors.white,
+                            style: TextStyle(
+                                color: _card,
                                 fontSize: 9,
                                 fontWeight: FontWeight.bold),
                           ),
@@ -1743,7 +1744,7 @@ class _TableDetailViewState extends State<TableDetailView> {
       opacity: dimmed ? 0.45 : 1.0,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _card,
           borderRadius: BorderRadius.circular(20),
           boxShadow: dimmed
               ? []
@@ -1798,7 +1799,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                         name,
                         style: TextStyle(
                           fontSize: isCompact ? 12.0 : 13.0,
-                          color: const Color(0xFF1C1C1E),
+                          color: _textPrimary,
                           fontWeight: FontWeight.w600,
                           letterSpacing: -0.2,
                           height: 1.25,
@@ -1877,7 +1878,7 @@ class _TableDetailViewState extends State<TableDetailView> {
   Widget _buildOrderPanel(BuildContext context, {double? width}) {
     return Container(
       width: width,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         boxShadow: [
           BoxShadow(
@@ -1919,7 +1920,7 @@ class _TableDetailViewState extends State<TableDetailView> {
               ],
             ),
           ),
-          const Divider(color: _border, height: 1),
+          Divider(color: _border, height: 1),
           // Order list
           Expanded(
             child: Obx(() {
@@ -1929,12 +1930,12 @@ class _TableDetailViewState extends State<TableDetailView> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(CupertinoIcons.cart,
+                      Icon(CupertinoIcons.cart,
                           size: 48, color: _textSecondary),
                       const SizedBox(height: 12),
                       Text(
                         'no_orders_yet'.tr,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: _textSecondary,
                           fontSize: 14,
                         ),
@@ -1946,7 +1947,7 @@ class _TableDetailViewState extends State<TableDetailView> {
               }
               return ListView.separated(
                 itemCount: orders.length,
-                separatorBuilder: (_, __) => const Divider(
+                separatorBuilder: (_, __) => Divider(
                     color: _border, height: 1, indent: 16, endIndent: 16),
                 itemBuilder: (context, index) {
                   final order = orders[index];
@@ -2004,7 +2005,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                           onTap: () => TableService.to
                                               .decrementOrder(
                                                   widget.tableIndex, index),
-                                          child: const SizedBox(
+                                          child: SizedBox(
                                             width: 38,
                                             height: 42,
                                             child: Icon(CupertinoIcons.minus,
@@ -2017,17 +2018,17 @@ class _TableDetailViewState extends State<TableDetailView> {
                                           child: Text(
                                             '$quantity',
                                             textAlign: TextAlign.center,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 17,
                                               fontWeight: FontWeight.bold,
-                                              color: Color(0xFF1C1C1E),
+                                              color: _textPrimary,
                                             ),
                                           ),
                                         ),
                                         GestureDetector(
                                           onTap: () => TableService.to.addOrder(
                                               widget.tableIndex, name, price),
-                                          child: const SizedBox(
+                                          child: SizedBox(
                                             width: 38,
                                             height: 42,
                                             child: Icon(CupertinoIcons.add,
@@ -2043,7 +2044,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                             Expanded(
                               child: Text(
                                 name,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w500,
                                   color: _textPrimary,
@@ -2102,7 +2103,7 @@ class _TableDetailViewState extends State<TableDetailView> {
               );
             }),
           ),
-          const Divider(color: _border, height: 1),
+          Divider(color: _border, height: 1),
           // Payment summary
           Obx(() {
             final subtotal = TableService.to.getTotal(widget.tableIndex);
@@ -2412,7 +2413,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F7),
+                  color: _chip,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -2420,18 +2421,18 @@ class _TableDetailViewState extends State<TableDetailView> {
                   children: [
                     Text(
                       'total'.tr,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: Color(0xFF8E8E93),
+                        color: _textSecondary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                     Text(
                       '${SettingsService.cs}${subtotal.toStringAsFixed(2)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF1C1C1E),
+                        color: _textPrimary,
                       ),
                     ),
                   ],
@@ -2441,7 +2442,7 @@ class _TableDetailViewState extends State<TableDetailView> {
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F7),
+                  color: _chip,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -2518,7 +2519,7 @@ class _TableDetailViewState extends State<TableDetailView> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: selected ? _orange : const Color(0xFF8E8E93),
+            color: selected ? _orange : _textSecondary,
           ),
         ),
       ),
@@ -2619,7 +2620,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                           children: [
                             Text(
                               'move_orders'.tr,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w700,
                                 color: _textPrimary,
@@ -2629,7 +2630,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                             const SizedBox(height: 1),
                             Text(
                               '${orders.length} sipariş · ${_fullTableLabel}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 color: _textSecondary,
                               ),
@@ -2651,7 +2652,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                 color: _chip,
                                 borderRadius: BorderRadius.circular(16),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 CupertinoIcons.xmark,
                                 size: 16,
                                 color: _textSecondary,
@@ -2664,7 +2665,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                   ),
                 ),
 
-                const Divider(height: 1, color: _border),
+                Divider(height: 1, color: _border),
 
                 // ── Grouped table list ───────────────────────────
                 Flexible(
@@ -2698,7 +2699,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                               ),
                             ),
                             const SizedBox(height: 14),
-                            const Text(
+                            Text(
                               'Boş masa bulunamadı',
                               style: TextStyle(
                                 fontSize: 15,
@@ -2707,7 +2708,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
+                            Text(
                               'Tüm masalar dolu.',
                               style: TextStyle(
                                 fontSize: 13,
@@ -2757,7 +2758,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                       const EdgeInsets.only(left: 4, bottom: 8),
                                   child: Text(
                                     sectionName.toUpperCase(),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
                                       color: _textSecondary,
@@ -2826,7 +2827,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                             Expanded(
                                               child: Text(
                                                 tableName,
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.w600,
                                                   color: _textPrimary,
@@ -2836,7 +2837,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                               ),
                                             ),
                                             const SizedBox(width: 4),
-                                            const Icon(
+                                            Icon(
                                               CupertinoIcons.chevron_forward,
                                               size: 18,
                                               color: _textSecondary,
@@ -2857,7 +2858,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                 ),
 
                 // ── Footer ──────────────────────────────────────
-                const Divider(height: 1, color: _border),
+                Divider(height: 1, color: _border),
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -2895,7 +2896,7 @@ class _TableDetailViewState extends State<TableDetailView> {
       context: context,
       barrierColor: Colors.black.withOpacity(0.35),
       builder: (ctx) => Dialog(
-        backgroundColor: Colors.white,
+        backgroundColor: _card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
         child: ConstrainedBox(
@@ -2908,20 +2909,20 @@ class _TableDetailViewState extends State<TableDetailView> {
                 padding: const EdgeInsets.fromLTRB(20, 18, 12, 0),
                 child: Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'Ödemeler',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF1C1C1E),
+                          color: _textPrimary,
                         ),
                       ),
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(ctx),
-                      icon: const Icon(CupertinoIcons.xmark,
-                          size: 20, color: Color(0xFF8E8E93)),
+                      icon: Icon(CupertinoIcons.xmark,
+                          size: 20, color: _textSecondary),
                     ),
                   ],
                 ),
@@ -2932,14 +2933,14 @@ class _TableDetailViewState extends State<TableDetailView> {
                 final payments =
                     TableService.to.getPartialPayments(widget.tableIndex);
                 if (payments.isEmpty) {
-                  return const Padding(
+                  return Padding(
                     padding: EdgeInsets.symmetric(vertical: 32),
                     child: Center(
                       child: Text(
                         'Henüz ödeme yapılmamış',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Color(0xFF8E8E93),
+                          color: _textSecondary,
                         ),
                       ),
                     ),
@@ -2982,17 +2983,17 @@ class _TableDetailViewState extends State<TableDetailView> {
                                 children: [
                                   Text(
                                     p['name'] as String,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
-                                      color: Color(0xFF1C1C1E),
+                                      color: _textPrimary,
                                     ),
                                   ),
                                   Text(
                                     '${p['qty']}x · $methodLabel',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
-                                      color: Color(0xFF8E8E93),
+                                      color: _textSecondary,
                                     ),
                                   ),
                                 ],
@@ -3028,12 +3029,12 @@ class _TableDetailViewState extends State<TableDetailView> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Ödenen Toplam',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF1C1C1E),
+                              color: _textPrimary,
                             ),
                           ),
                           Text(
@@ -3100,8 +3101,8 @@ class _TableDetailViewState extends State<TableDetailView> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: _card,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -3122,7 +3123,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Seçilen Ürünler',
                 style: TextStyle(
                   fontSize: 17,
@@ -3146,10 +3147,10 @@ class _TableDetailViewState extends State<TableDetailView> {
                           child: Center(
                             child: Text(
                               '${item['qty']}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w800,
-                                color: Colors.white,
+                                color: _card,
                               ),
                             ),
                           ),
@@ -3158,7 +3159,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                         Expanded(
                           child: Text(
                             item['name'] as String,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
                               color: _textPrimary,
@@ -3167,7 +3168,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                         ),
                         Text(
                           '${SettingsService.cs}${(item['total'] as double).toStringAsFixed(2)}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
                             color: _textPrimary,
@@ -3176,11 +3177,11 @@ class _TableDetailViewState extends State<TableDetailView> {
                       ],
                     ),
                   )),
-              const Divider(height: 20, color: _border),
+              Divider(height: 20, color: _border),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Toplam',
                     style: TextStyle(
                       fontSize: 16,
@@ -3199,7 +3200,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                 ],
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'Ödeme Yöntemi',
                 style: TextStyle(
                   fontSize: 13,
@@ -3388,8 +3389,8 @@ class _TableDetailViewState extends State<TableDetailView> {
     Get.bottomSheet(
       StatefulBuilder(
         builder: (context, setState) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: _card,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -3434,7 +3435,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                       children: [
                         Text(
                           'pay_title'.tr,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: _textPrimary,
@@ -3442,7 +3443,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                         ),
                         Text(
                           _fullTableLabel,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             color: _textSecondary,
                           ),
@@ -3468,11 +3469,11 @@ class _TableDetailViewState extends State<TableDetailView> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('subtotal'.tr,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: _textSecondary, fontSize: 13)),
                             Text(
                                 '${SettingsService.cs}${total.toStringAsFixed(2)}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: _textSecondary, fontSize: 13)),
                           ],
                         ),
@@ -3502,7 +3503,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                         children: [
                           Text(
                             'total'.tr,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 15,
                               color: _textPrimary,
@@ -3569,7 +3570,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                               ? const Icon(CupertinoIcons.chevron_up,
                                   color: AppTheme.infoColor,
                                   key: ValueKey('up'))
-                              : const Icon(CupertinoIcons.chevron_down,
+                              : Icon(CupertinoIcons.chevron_down,
                                   color: _textSecondary, key: ValueKey('down')),
                         ),
                       ],
@@ -3603,7 +3604,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                       children: [
                                         Text(
                                           '$splitCount',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 36,
                                             fontWeight: FontWeight.bold,
                                             color: _textPrimary,
@@ -3611,7 +3612,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                         ),
                                         Text(
                                           'how_many_people'.tr,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 11,
                                             color: _textSecondary,
                                           ),
@@ -3648,7 +3649,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                                   children: [
                                     Text(
                                       'per_person'.tr,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 13,
                                         color: _textSecondary,
                                       ),
@@ -3675,7 +3676,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                 // ── Payment method label ─────────────────────────
                 Text(
                   'pay_method'.tr,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                     color: _textPrimary,
@@ -3715,7 +3716,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                         onPressed: () => Get.back(),
                         child: Text(
                           'cancel'.tr,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: _textSecondary,
                             fontWeight: FontWeight.w600,
                           ),
@@ -3841,7 +3842,7 @@ class _PartialPayMethodBtn extends StatelessWidget {
         width: 108,
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
         decoration: BoxDecoration(
-          color: selected ? _orange : const Color(0xFFF2F2F7),
+          color: selected ? _orange : _chip,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
@@ -3849,7 +3850,7 @@ class _PartialPayMethodBtn extends StatelessWidget {
           children: [
             Icon(icon,
                 size: 22,
-                color: selected ? Colors.white : const Color(0xFF8E8E93)),
+                color: selected ? Colors.white : _textSecondary),
             const SizedBox(height: 4),
             Text(
               label,
@@ -3858,7 +3859,7 @@ class _PartialPayMethodBtn extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : const Color(0xFF8E8E93),
+                color: selected ? Colors.white : _textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -4001,7 +4002,7 @@ class _SummaryRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               color: _textSecondary,
             ),

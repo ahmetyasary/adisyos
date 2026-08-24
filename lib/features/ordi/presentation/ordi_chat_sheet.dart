@@ -8,10 +8,12 @@ import 'package:orderix/features/ordi/domain/ordi_message.dart';
 import 'package:orderix/features/ordi/presentation/ordi_controller.dart';
 import 'package:orderix/features/ordi/presentation/ordi_voice_service.dart';
 import 'package:orderix/utils/app_haptics.dart';
+import 'package:orderix/themes/app_colors.dart';
+import 'package:orderix/widgets/brand_assets.dart';
 
 // ── Apple-inspired design tokens (matched to the rest of the shell) ────────
-const _bg = Color(0xFFF2F2F7);
-const _card = Colors.white;
+Color get _bg => AppColors.scaffold;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
 const _labelPrimary = Color(0xFF1C1C1E);
 const _labelSecondary = Color(0xFF8E8E93);
@@ -164,14 +166,14 @@ class _OrdiChatSheetState extends State<_OrdiChatSheet> {
           'Sohbeti Temizle',
           style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
         ),
-        content: const Text(
+        content: Text(
           'Ordi ile olan tüm yazışmanız kalıcı olarak silinecek.',
           style: TextStyle(fontSize: 13, color: _labelSecondary, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(false),
-            child: const Text('Vazgeç',
+            child: Text('Vazgeç',
                 style: TextStyle(color: _labelSecondary)),
           ),
           TextButton(
@@ -195,7 +197,7 @@ class _OrdiChatSheetState extends State<_OrdiChatSheet> {
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Container(
         height: maxHeight,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: _bg,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
@@ -267,7 +269,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         border: Border(bottom: BorderSide(color: _separator, width: 0.5)),
@@ -288,7 +290,7 @@ class _Header extends StatelessWidget {
             children: [
               const _OrdiAvatar(size: 42),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -344,16 +346,7 @@ class _OrdiAvatar extends StatelessWidget {
         color: _card,
         border: Border.all(color: _orange.withValues(alpha: 0.3), width: 1.2),
       ),
-      child: Image.asset(
-        'assets/images/app_logo.png',
-        fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) => const FittedBox(
-          child: Text(
-            'O',
-            style: TextStyle(fontWeight: FontWeight.w800, color: _orange),
-          ),
-        ),
-      ),
+      child: BrandMark(size: size * 0.68),
     );
   }
 }
@@ -484,7 +477,7 @@ class _SourceChip extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 10,
             color: _labelSecondary,
             fontWeight: FontWeight.w500,
@@ -568,7 +561,7 @@ class _TypingBubbleState extends State<_TypingBubble>
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: _card,
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(18),
@@ -692,7 +685,7 @@ class _Composer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         border: Border(top: BorderSide(color: _separator, width: 0.5)),
       ),
@@ -732,7 +725,7 @@ class _Composer extends StatelessWidget {
                         textInputAction: TextInputAction.send,
                         textCapitalization: TextCapitalization.sentences,
                         onSubmitted: (_) => onSubmit(),
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 15, color: _labelPrimary),
                         decoration: InputDecoration(
                           counterText: '',
@@ -743,7 +736,7 @@ class _Composer extends StatelessWidget {
                           hintText: voiceSession
                               ? 'Dinleniyor… bitince X’e dokunun'
                               : 'Ordi\'ye bir soru sorun…',
-                          hintStyle: const TextStyle(
+                          hintStyle: TextStyle(
                               fontSize: 15, color: _labelSecondary),
                         ),
                       ),

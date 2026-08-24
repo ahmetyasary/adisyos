@@ -8,19 +8,20 @@ import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/models/app_role.dart';
 import 'package:orderix/widgets/shell_leading.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _bg = Colors.white;
-const _card = Colors.white;
+Color get _bg => AppColors.bg;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
 const _orangeLight = Color(0xFFFFF4E0);
 const _green = Color(0xFF34C759);
 const _greenLight = Color(0xFFE8FAF0);
 const _red = Color(0xFFFF3B30);
 const _blue = Color(0xFF007AFF);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
-const _border = Color(0xFFE5E5EA);
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
+Color get _border => AppColors.border;
 
 class ShiftManagementView extends StatefulWidget {
   const ShiftManagementView({super.key, this.embedded = false});
@@ -126,7 +127,7 @@ class _Header extends StatelessWidget {
     final topPad = MediaQuery.of(context).padding.top;
     return Container(
       padding: EdgeInsets.only(top: topPad),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         border: Border(bottom: BorderSide(color: _border, width: 1)),
       ),
@@ -135,7 +136,7 @@ class _Header extends StatelessWidget {
         child: Row(
           children: [
             ShellLeading(embedded: embedded, color: _textPrimary),
-            const Text(
+            Text(
               'Vardiya Yönetimi',
               style: TextStyle(
                   fontSize: 17,
@@ -238,14 +239,14 @@ class _MyShiftCard extends StatelessWidget {
                   children: [
                     Text(
                       email.split('@').first,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: _textPrimary),
                     ),
                     const SizedBox(height: 2),
                     Text(email,
-                        style: const TextStyle(fontSize: 12, color: _textSec)),
+                        style: TextStyle(fontSize: 12, color: _textSec)),
                   ],
                 ),
               ),
@@ -268,7 +269,7 @@ class _MyShiftCard extends StatelessWidget {
           ),
           if (isClockedIn) ...[
             const SizedBox(height: 16),
-            const Divider(height: 1, color: _border),
+            Divider(height: 1, color: _border),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -328,11 +329,11 @@ class _ShiftStat extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(value,
-            style: const TextStyle(
+            style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 14,
                 color: _textPrimary)),
-        Text(label, style: const TextStyle(fontSize: 11, color: _textSec)),
+        Text(label, style: TextStyle(fontSize: 11, color: _textSec)),
       ],
     );
   }
@@ -464,7 +465,7 @@ class _SectionLabel extends StatelessWidget {
         const SizedBox(width: 10),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
               color: _textPrimary,
@@ -495,7 +496,7 @@ class _ShiftRow extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.all(Radius.circular(14)),
         border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
@@ -532,7 +533,7 @@ class _ShiftRow extends StatelessWidget {
               children: [
                 Text(
                   staffEmail.split('@').first,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                       color: _textPrimary),
@@ -541,7 +542,7 @@ class _ShiftRow extends StatelessWidget {
                 Text(
                   '${DateFormat('HH:mm').format(start)} → '
                   '${end != null ? DateFormat('HH:mm').format(end) : 'devam ediyor'}',
-                  style: const TextStyle(fontSize: 12, color: _textSec),
+                  style: TextStyle(fontSize: 12, color: _textSec),
                 ),
               ],
             ),
@@ -551,7 +552,7 @@ class _ShiftRow extends StatelessWidget {
             children: [
               Text(
                 ShiftService.to.formatDuration(workMins),
-                style: const TextStyle(
+                style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
                     color: _textPrimary),
@@ -559,7 +560,7 @@ class _ShiftRow extends StatelessWidget {
               if (breakMins > 0)
                 Text(
                   'Mola: ${ShiftService.to.formatDuration(breakMins)}',
-                  style: const TextStyle(fontSize: 11, color: _textSec),
+                  style: TextStyle(fontSize: 11, color: _textSec),
                 ),
             ],
           ),

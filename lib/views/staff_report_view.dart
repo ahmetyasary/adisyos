@@ -10,14 +10,15 @@ import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/widgets/app_dialog.dart';
 import 'package:orderix/widgets/shell_leading.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 // ── Design tokens ─────────────────────────────────────────────
-const _bg = Colors.white;
-const _card = Colors.white;
-const _border = Color(0xFFECECEF);
+Color get _bg => AppColors.bg;
+Color get _card => AppColors.card;
+Color get _border => AppColors.borderSoft;
 const _orange = Color(0xFFFF9500);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
 const _green = Color(0xFF34C759);
 const _blue = Color(0xFF007AFF);
 
@@ -134,7 +135,7 @@ class StaffReportView extends StatelessWidget {
             // ── Header ─────────────────────────────────────
             Container(
               padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: _card,
                 border: Border(bottom: BorderSide(color: _border, width: 1)),
               ),
@@ -143,7 +144,7 @@ class StaffReportView extends StatelessWidget {
                 child: Row(
                   children: [
                     ShellLeading(embedded: embedded, color: _textPrimary),
-                    const Text(
+                    Text(
                       'Personel Raporu',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
@@ -170,7 +171,7 @@ class StaffReportView extends StatelessWidget {
                 final stats = _buildStats();
 
                 if (stats.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -404,7 +405,7 @@ class _StaffCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.all(Radius.circular(18)),
         border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
@@ -475,7 +476,7 @@ class _StaffCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         name,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 14,
                             color: _textPrimary),
@@ -521,15 +522,15 @@ class _StaffCard extends StatelessWidget {
                     if (count > 0)
                       Text(
                         '$count işlem',
-                        style: const TextStyle(fontSize: 12, color: _textSec),
+                        style: TextStyle(fontSize: 12, color: _textSec),
                       ),
                     if (count > 0 && lastSale != null)
-                      const Text(' · ',
+                      Text(' · ',
                           style: TextStyle(fontSize: 12, color: _textSec)),
                     if (lastSale != null)
                       Text(
                         DateFormat('dd/MM/yyyy').format(lastSale),
-                        style: const TextStyle(fontSize: 12, color: _textSec),
+                        style: TextStyle(fontSize: 12, color: _textSec),
                       ),
                   ],
                 ),
@@ -563,7 +564,7 @@ class _StaffCard extends StatelessWidget {
                 style: const TextStyle(
                     fontWeight: FontWeight.bold, fontSize: 16, color: _orange),
               ),
-              const Text('toplam',
+              Text('toplam',
                   style: TextStyle(fontSize: 11, color: _textSec)),
             ],
           ),
@@ -589,7 +590,7 @@ class _StaffRolePicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Rol',
           style: TextStyle(
             fontSize: 13,

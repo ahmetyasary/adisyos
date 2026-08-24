@@ -3,14 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:orderix/navigation/app_sections.dart';
 import 'package:orderix/services/digital_menu_order_service.dart';
+import 'package:orderix/themes/app_colors.dart';
+import 'package:orderix/widgets/brand_assets.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _card = Colors.white;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
-const _orangeTint = Color(0xFFFFF4E0);
-const _labelPrimary = Color(0xFF1C1C1E);
-const _labelSecondary = Color(0xFF8E8E93);
-const _separator = Color(0xFFE5E5EA);
+Color get _orangeTint =>
+    AppColors.isDark ? const Color(0xFF3A2A14) : const Color(0xFFFFF4E0);
+Color get _labelPrimary => AppColors.textPrimary;
+Color get _labelSecondary => AppColors.textSec;
+Color get _separator => AppColors.border;
 const _red = Color(0xFFFF3B30);
 
 const double kSidebarExpandedWidth = 248;
@@ -53,7 +56,7 @@ class AppSidebar extends StatelessWidget {
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeInOut,
       width: collapsed ? kSidebarCollapsedWidth : kSidebarExpandedWidth,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         border: Border(right: BorderSide(color: _separator, width: 0.5)),
         boxShadow: [
@@ -67,7 +70,7 @@ class AppSidebar extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildHeader(),
-            const Divider(height: 1, thickness: 0.5, color: _separator),
+            Divider(height: 1, thickness: 0.5, color: _separator),
             Expanded(
               child: Obx(() {
                 // Touch pending list so title count rebuilds when QR orders arrive.
@@ -92,7 +95,7 @@ class AppSidebar extends StatelessWidget {
                 );
               }),
             ),
-            const Divider(height: 1, thickness: 0.5, color: _separator),
+            Divider(height: 1, thickness: 0.5, color: _separator),
             _buildFooter(),
           ],
         ),
@@ -111,8 +114,8 @@ class AppSidebar extends StatelessWidget {
         child: collapsed
             ? Center(
                 child: _LogoButton(
-                  asset: 'assets/images/app_logo.png',
                   height: 30,
+                  mark: true,
                   onTap: onToggleCollapse,
                 ),
               )
@@ -121,8 +124,8 @@ class AppSidebar extends StatelessWidget {
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: _LogoButton(
-                    asset: 'assets/images/orderix_logo_text.png',
                     height: 24,
+                    mark: false,
                     onTap: onToggleCollapse,
                   ),
                 ),
@@ -328,18 +331,20 @@ class _PinnedExpandedRow extends StatelessWidget {
 /// [onTap] is provided (null → a plain, non-interactive logo).
 class _LogoButton extends StatelessWidget {
   const _LogoButton({
-    required this.asset,
     required this.height,
+    required this.mark,
     this.onTap,
   });
 
-  final String asset;
   final double height;
+  final bool mark;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final logo = Image.asset(asset, height: height);
+    final logo = mark
+        ? BrandMark(size: height)
+        : BrandWordmark(height: height);
     if (onTap == null) return logo;
     return Material(
       color: Colors.transparent,

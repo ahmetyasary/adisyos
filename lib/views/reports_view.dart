@@ -8,14 +8,15 @@ import 'package:orderix/widgets/shell_leading.dart';
 import 'daily_report_view.dart';
 import 'monthly_report_view.dart';
 import 'yearly_report_view.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _bg = Colors.white;
-const _card = Colors.white;
+Color get _bg => AppColors.bg;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
-const _border = Color(0xFFECECEF);
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
+Color get _border => AppColors.borderSoft;
 
 enum _ReportType { daily, monthly, yearly }
 
@@ -60,7 +61,7 @@ class _ReportsViewState extends State<ReportsView> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       SizedBox(width: 360, child: list),
-                      const VerticalDivider(width: 1, color: _border),
+                      VerticalDivider(width: 1, color: _border),
                       Expanded(child: _buildDetail()),
                     ],
                   );
@@ -196,7 +197,7 @@ class _EmptyDetail extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(CupertinoIcons.chart_bar_alt_fill,
+          Icon(CupertinoIcons.chart_bar_alt_fill,
               size: 44, color: _textSec),
           const SizedBox(height: 16),
           Text(
@@ -222,7 +223,7 @@ class _PageHeader extends StatelessWidget {
     final topPad = MediaQuery.of(context).padding.top;
     return Container(
       padding: EdgeInsets.only(top: topPad),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         border: Border(bottom: BorderSide(color: _border, width: 1)),
       ),
@@ -233,7 +234,7 @@ class _PageHeader extends StatelessWidget {
             ShellLeading(embedded: embedded, color: _textPrimary),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: _textPrimary,
@@ -289,7 +290,7 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               color: _textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w700,
@@ -298,9 +299,9 @@ class _StatCard extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(label,
-              style: const TextStyle(
+              style: TextStyle(
                   color: _textSec, fontSize: 11, fontWeight: FontWeight.w500)),
-          Text(sub, style: const TextStyle(color: _textSec, fontSize: 11)),
+          Text(sub, style: TextStyle(color: _textSec, fontSize: 11)),
         ],
       ),
     );
@@ -363,7 +364,7 @@ class _ReportTile extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: _textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -372,13 +373,13 @@ class _ReportTile extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       subtitle,
-                      style: const TextStyle(color: _textSec, fontSize: 12),
+                      style: TextStyle(color: _textSec, fontSize: 12),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(CupertinoIcons.chevron_forward,
+              Icon(CupertinoIcons.chevron_forward,
                   color: _textSec, size: 15),
             ],
           ),

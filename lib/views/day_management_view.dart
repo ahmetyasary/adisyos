@@ -6,17 +6,18 @@ import 'package:orderix/services/day_service.dart';
 import 'package:orderix/services/sales_history_service.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/widgets/shell_leading.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 // ── Design tokens ─────────────────────────────────────────────
-const _bg = Colors.white;
-const _card = Colors.white;
+Color get _bg => AppColors.bg;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
 const _green = Color(0xFF34C759);
 const _red = Color(0xFFFF3B30);
 const _blue = Color(0xFF007AFF);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
-const _border = Color(0xFFE5E5EA);
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
+Color get _border => AppColors.border;
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -66,7 +67,7 @@ class DayManagementView extends StatelessWidget {
             // ── Header ─────────────────────────────────────
             Container(
               padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: _card,
                 border: Border(bottom: BorderSide(color: _border, width: 1)),
               ),
@@ -75,7 +76,7 @@ class DayManagementView extends StatelessWidget {
                 child: Row(
                   children: [
                     ShellLeading(embedded: embedded, color: _textPrimary),
-                    const Text(
+                    Text(
                       'Gün Yönetimi',
                       style: TextStyle(
                         fontSize: 17,
@@ -115,7 +116,7 @@ class DayManagementView extends StatelessWidget {
                               size: 40, color: _orange),
                         ),
                         const SizedBox(height: 16),
-                        const Text(
+                        Text(
                           'Henüz gün kaydı yok',
                           style: TextStyle(
                               fontSize: 16,
@@ -123,7 +124,7 @@ class DayManagementView extends StatelessWidget {
                               color: _textPrimary),
                         ),
                         const SizedBox(height: 6),
-                        const Text(
+                        Text(
                           'Günler başlatıldığında burada görünecek.',
                           style: TextStyle(fontSize: 13, color: _textSec),
                         ),
@@ -199,7 +200,7 @@ class _DayGroup extends StatelessWidget {
             children: [
               Text(
                 label.toUpperCase(),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: _textSec,
@@ -336,7 +337,7 @@ class _SessionCard extends StatelessWidget {
                         children: [
                           Text(
                             displayName,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
                               color: _textPrimary,
@@ -419,7 +420,7 @@ class _SessionCard extends StatelessWidget {
           ),
 
           // ── Divider ──────────────────────────────────────
-          const Divider(height: 1, color: _border),
+          Divider(height: 1, color: _border),
 
           // ── Bottom row: time + sales ──────────────────────
           Padding(
@@ -464,7 +465,7 @@ class _SessionCard extends StatelessWidget {
                           )),
                       Text(
                         '$salesCount işlem',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           color: _textSec,
                         ),
@@ -472,7 +473,7 @@ class _SessionCard extends StatelessWidget {
                     ],
                   ),
                 ] else ...[
-                  const Text(
+                  Text(
                     'Satış yok',
                     style: TextStyle(fontSize: 12, color: _textSec),
                   ),
@@ -519,10 +520,10 @@ class _InfoChip extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(fontSize: 10, color: _textSec)),
+            Text(label, style: TextStyle(fontSize: 10, color: _textSec)),
             Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: _textPrimary,

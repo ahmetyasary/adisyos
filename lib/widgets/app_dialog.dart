@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 // ── Shared design tokens (matches the rest of the app) ────────
-const _card           = Colors.white;
-const _labelPrimary   = Color(0xFF1C1C1E);
-const _labelSecondary = Color(0xFF8E8E93);
-const _separator      = Color(0xFFE5E5EA);
+Color get _card => AppColors.card;
+Color get _labelPrimary => AppColors.textPrimary;
+Color get _labelSecondary => AppColors.textSec;
+Color get _separator => AppColors.border;
 const _orange         = Color(0xFFFF9500);
 const _red            = Color(0xFFFF3B30);
 
@@ -146,7 +147,7 @@ class _ConfirmBody extends StatelessWidget {
         Text(
           message,
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             color: _labelSecondary,
             height: 1.5,
@@ -163,7 +164,7 @@ class _ConfirmBody extends StatelessWidget {
                     onPressed: () => Get.back(result: false),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _labelPrimary,
-                      side: const BorderSide(color: _separator),
+                      side: BorderSide(color: _separator),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -271,7 +272,7 @@ class _FormBody extends StatelessWidget {
                   onPressed: () => Get.back(),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: _labelPrimary,
-                    side: const BorderSide(color: _separator),
+                    side: BorderSide(color: _separator),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -345,7 +346,7 @@ class AppDialogTextField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
             color: _labelSecondary,
@@ -361,7 +362,7 @@ class AppDialogTextField extends StatelessWidget {
           obscureText: obscureText,
           maxLength: maxLength,
           cursorColor: _orange,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             color: _labelPrimary,
             fontWeight: FontWeight.w500,
@@ -369,7 +370,7 @@ class AppDialogTextField extends StatelessWidget {
           decoration: InputDecoration(
             hintText: hintText,
             counterText: '',
-            hintStyle: const TextStyle(color: _labelSecondary, fontSize: 14),
+            hintStyle: TextStyle(color: _labelSecondary, fontSize: 14),
             filled: true,
             fillColor: const Color(0xFFF2F2F7),
             isDense: true,

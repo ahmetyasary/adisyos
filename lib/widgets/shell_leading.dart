@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 /// Exposes the surrounding [AppShell]'s drawer controls to views hosted in the
 /// shell content area. Needed because each hosted view is itself a [Scaffold],
@@ -44,17 +45,18 @@ class ShellLeading extends StatelessWidget {
   const ShellLeading({
     super.key,
     required this.embedded,
-    this.color = const Color(0xFF1C1C1E),
+    this.color,
   });
 
   final bool embedded;
-  final Color color;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
+    final iconColor = color ?? AppColors.textPrimary;
     if (!embedded) {
       return IconButton(
-        icon: Icon(CupertinoIcons.chevron_back, size: 20, color: color),
+        icon: Icon(CupertinoIcons.chevron_back, size: 20, color: iconColor),
         onPressed: () => Get.back(),
       );
     }
@@ -62,7 +64,7 @@ class ShellLeading extends StatelessWidget {
     final shell = ShellScope.maybeOf(context);
     if (shell != null && shell.hasDrawer) {
       return IconButton(
-        icon: Icon(CupertinoIcons.line_horizontal_3, size: 22, color: color),
+        icon: Icon(CupertinoIcons.line_horizontal_3, size: 22, color: iconColor),
         onPressed: shell.openDrawer,
       );
     }

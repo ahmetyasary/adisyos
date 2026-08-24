@@ -10,16 +10,17 @@ import 'package:orderix/widgets/app_toast.dart';
 import 'package:orderix/widgets/app_dialog.dart';
 import 'package:orderix/widgets/responsive_content.dart';
 import 'package:orderix/widgets/shell_leading.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 // ── Design tokens ──────────────────────────────────────────────
-const _bg = Colors.white;
-const _chip = Color(0xFFF2F2F7);
-const _card = Colors.white;
+Color get _bg => AppColors.bg;
+Color get _chip => AppColors.chipBg;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
 const _orangeLight = Color(0xFFFFF4E0);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
-const _border = Color(0xFFE5E5EA);
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
+Color get _border => AppColors.border;
 
 // ── Icon catalogue ─────────────────────────────────────────────
 
@@ -195,7 +196,7 @@ class _MenuManagementViewState extends State<MenuManagementView> {
             // ── Header ───────────────────────────────────
             Container(
               padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: _card,
                 border: Border(bottom: BorderSide(color: _border, width: 1)),
               ),
@@ -207,7 +208,7 @@ class _MenuManagementViewState extends State<MenuManagementView> {
                         embedded: widget.embedded, color: _textPrimary),
                     Text(
                       'menu_management'.tr,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                         color: _textPrimary,
@@ -265,7 +266,7 @@ class _MenuManagementViewState extends State<MenuManagementView> {
                                 const SizedBox(width: 10),
                                 Text(
                                   'add_menu'.tr,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
                                     color: _textPrimary,
@@ -283,7 +284,7 @@ class _MenuManagementViewState extends State<MenuManagementView> {
                                 const SizedBox(width: 10),
                                 Text(
                                   'reorder'.tr,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
                                     color: _textPrimary,
@@ -336,7 +337,7 @@ class _MenuManagementViewState extends State<MenuManagementView> {
                                   color: _textSec.withValues(alpha: 0.08),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   CupertinoIcons.square_list_fill,
                                   size: 48,
                                   color: _textSec,
@@ -345,7 +346,7 @@ class _MenuManagementViewState extends State<MenuManagementView> {
                               const SizedBox(height: 16),
                               Text(
                                 'no_menus'.tr,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: _textSec,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w500,
@@ -479,7 +480,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
               // Title
               Text(
                 isAdd ? 'Menü Ekle' : 'Menü Düzenle',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: _textPrimary,
@@ -506,7 +507,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
               const SizedBox(height: 22),
 
               // Icon picker
-              const Text(
+              Text(
                 'KATEGORİ İKONU',
                 style: TextStyle(
                   fontSize: 11,
@@ -531,7 +532,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
                   const SizedBox(width: 8),
                   Text(
                     _iconLabel(_iconKey),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: _textPrimary,
@@ -704,7 +705,7 @@ class _ItemFormDialogState extends State<_ItemFormDialog> {
               // Title
               Text(
                 isAdd ? 'Ürün Ekle' : 'Ürün Düzenle',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: _textPrimary,
@@ -939,7 +940,7 @@ class _ImagePickerArea extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        const Text(
+        Text(
           'Fotoğraf Ekle',
           style: TextStyle(
             fontSize: 13,
@@ -948,7 +949,7 @@ class _ImagePickerArea extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        const Text(
+        Text(
           'Galeriden seçmek için dokunun',
           style: TextStyle(fontSize: 11, color: _textSec),
         ),
@@ -1063,7 +1064,7 @@ class _MenuCardState extends State<_MenuCard> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.all(Radius.circular(16)),
         border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
@@ -1084,7 +1085,7 @@ class _MenuCardState extends State<_MenuCard> {
                 if (sortMode)
                   ReorderableDragStartListener(
                     index: menuIndex,
-                    child: const Padding(
+                    child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                       child: Icon(
                         CupertinoIcons.line_horizontal_3,
@@ -1105,7 +1106,7 @@ class _MenuCardState extends State<_MenuCard> {
                     children: [
                       Text(
                         menuName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           color: _textPrimary,
@@ -1113,7 +1114,7 @@ class _MenuCardState extends State<_MenuCard> {
                       ),
                       Text(
                         '${items.length} ürün',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           color: _textSec,
                         ),
@@ -1147,11 +1148,11 @@ class _MenuCardState extends State<_MenuCard> {
             ),
           ),
           if (_quickAdd && !sortMode) ...[
-            const Divider(height: 1, color: _border),
+            Divider(height: 1, color: _border),
             _quickAddRow(),
           ],
           if (items.isNotEmpty) ...[
-            const Divider(height: 1, color: _border),
+            Divider(height: 1, color: _border),
             if (sortMode)
               ReorderableListView.builder(
                 shrinkWrap: true,
@@ -1176,7 +1177,7 @@ class _MenuCardState extends State<_MenuCard> {
                 padding: EdgeInsets.zero,
                 itemCount: items.length,
                 separatorBuilder: (_, __) =>
-                    const Divider(height: 1, color: _border),
+                    Divider(height: 1, color: _border),
                 itemBuilder: (_, itemIndex) => _itemTile(items, itemIndex),
               ),
           ],
@@ -1209,7 +1210,7 @@ class _MenuCardState extends State<_MenuCard> {
               focusNode: _nameFocus,
               textInputAction: TextInputAction.next,
               textCapitalization: TextCapitalization.sentences,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: _textPrimary,
@@ -1217,7 +1218,7 @@ class _MenuCardState extends State<_MenuCard> {
               decoration: InputDecoration(
                 isDense: true,
                 hintText: 'Ürün adı',
-                hintStyle: const TextStyle(color: _textSec, fontSize: 14),
+                hintStyle: TextStyle(color: _textSec, fontSize: 14),
                 filled: true,
                 fillColor: _chip,
                 contentPadding:
@@ -1238,7 +1239,7 @@ class _MenuCardState extends State<_MenuCard> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               textInputAction: TextInputAction.done,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: _textPrimary,
@@ -1252,7 +1253,7 @@ class _MenuCardState extends State<_MenuCard> {
                   fontWeight: FontWeight.w600,
                   color: _orange,
                 ),
-                hintStyle: const TextStyle(color: _textSec, fontSize: 14),
+                hintStyle: TextStyle(color: _textSec, fontSize: 14),
                 filled: true,
                 fillColor: _chip,
                 contentPadding:
@@ -1294,7 +1295,7 @@ class _MenuCardState extends State<_MenuCard> {
           if (widget.sortMode)
             ReorderableDragStartListener(
               index: itemIndex,
-              child: const Padding(
+              child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8),
                 child: Icon(
                   CupertinoIcons.line_horizontal_3,
@@ -1308,7 +1309,7 @@ class _MenuCardState extends State<_MenuCard> {
           Expanded(
             child: Text(
               itemName,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: _textPrimary,
@@ -1385,7 +1386,7 @@ class _ItemThumbnail extends StatelessWidget {
         color: _chip,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Icon(CupertinoIcons.photo, size: 18, color: _textSec),
+      child: Icon(CupertinoIcons.photo, size: 18, color: _textSec),
     );
   }
 }

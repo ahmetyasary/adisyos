@@ -9,15 +9,19 @@ import 'package:orderix/services/table_service.dart';
 import 'package:orderix/widgets/app_dialog.dart';
 import 'package:orderix/widgets/app_toast.dart';
 import 'package:orderix/widgets/shell_leading.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _card = Colors.white;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
-const _ink = Color(0xFF1C1C1E);
 const _green = Color(0xFF34C759);
 const _red = Color(0xFFFF3B30);
-const _labelPrimary = Color(0xFF1C1C1E);
-const _labelSecondary = Color(0xFF8E8E93);
+Color get _labelPrimary => AppColors.textPrimary;
+Color get _labelSecondary => AppColors.textSec;
+
+/// Dashboard hero stays a dark panel with white type in both themes.
+Color get _heroBg =>
+    AppColors.isDark ? const Color(0xFF2C2C2E) : const Color(0xFF1C1C1E);
 
 /// Single card that switches between "start the day" and "day is active /
 /// end the day". Self-contained — owns its own start/end logic so it can be
@@ -103,7 +107,7 @@ class DayToggleCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Tüm masalar kapatılmadan\ngün bitirilemez.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -235,7 +239,7 @@ class DayToggleCard extends StatelessWidget {
                   ),
                   if (!dense) ...[
                     const SizedBox(height: 2),
-                    const Text(
+                    Text(
                       'Sipariş almak için günü başlatın',
                       style: TextStyle(fontSize: 12, color: _labelSecondary),
                     ),
@@ -396,7 +400,7 @@ class DayToggleCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: _ink,
+        color: _heroBg,
         borderRadius: BorderRadius.circular(22),
       ),
       clipBehavior: Clip.antiAlias,

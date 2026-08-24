@@ -8,14 +8,15 @@ import 'package:orderix/services/kitchen_service.dart';
 import 'package:orderix/services/table_service.dart';
 import 'package:orderix/services/section_service.dart';
 import 'package:orderix/widgets/shell_leading.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 // ── Design tokens ──────────────────────────────────────────────
-const _bg = Colors.white;
-const _chip = Color(0xFFF2F2F7);
-const _card = Colors.white;
-const _border = Color(0xFFECECEF);
-const _textPrimary = Color(0xFF1C1C1E);
-const _textSec = Color(0xFF8E8E93);
+Color get _bg => AppColors.bg;
+Color get _chip => AppColors.chipBg;
+Color get _card => AppColors.card;
+Color get _border => AppColors.borderSoft;
+Color get _textPrimary => AppColors.textPrimary;
+Color get _textSec => AppColors.textSec;
 const _colPending = Color(0xFFFF9500);
 const _colPreparing = Color(0xFF007AFF);
 const _colReady = Color(0xFF34C759);
@@ -84,7 +85,7 @@ class _KitchenDisplayViewState extends State<KitchenDisplayView>
   Widget _buildHeader(BuildContext context, bool isMobile) {
     return Container(
       padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         border: Border(bottom: BorderSide(color: _border, width: 1)),
       ),
@@ -96,7 +97,7 @@ class _KitchenDisplayViewState extends State<KitchenDisplayView>
             child: Row(
               children: [
                 ShellLeading(embedded: widget.embedded, color: _textPrimary),
-                const Text(
+                Text(
                   'Mutfak Ekranı',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
@@ -437,7 +438,7 @@ class _KitchenColumn extends StatelessWidget {
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () => KitchenService.to.clearReadyTickets(),
-                    child: const Icon(CupertinoIcons.trash,
+                    child: Icon(CupertinoIcons.trash,
                         size: 18, color: _textSec),
                   ),
                 ],
@@ -512,7 +513,7 @@ class _TicketCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.all(Radius.circular(14)),
         border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
@@ -543,14 +544,14 @@ class _TicketCard extends StatelessWidget {
               ),
               Text(
                 _timeAgo(ticket['orderedAt'] as String),
-                style: const TextStyle(color: _textSec, fontSize: 11),
+                style: TextStyle(color: _textSec, fontSize: 11),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             ticket['itemName'] as String,
-            style: const TextStyle(
+            style: TextStyle(
                 fontWeight: FontWeight.bold, fontSize: 16, color: _textPrimary),
           ),
           const SizedBox(height: 8),
@@ -566,7 +567,7 @@ class _TicketCard extends StatelessWidget {
                 ),
                 child: Text(
                   '${ticket['quantity']}x',
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: _textPrimary,
                       fontSize: 14),
@@ -625,7 +626,7 @@ class _KitchenDayClosedPanel extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Gün başlamadı',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -636,7 +637,7 @@ class _KitchenDayClosedPanel extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Gün başlamadığı için bilgi ekranı aktif değildir.',
               textAlign: TextAlign.center,
               style: TextStyle(

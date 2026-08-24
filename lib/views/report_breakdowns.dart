@@ -6,8 +6,9 @@ import 'package:orderix/models/payment_type.dart';
 import 'package:orderix/services/sales_history_service.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/themes/app_theme.dart';
+import 'package:orderix/themes/app_colors.dart';
 
-const _reportCard = Colors.white;
+Color get _reportCard => AppColors.card;
 const _reportTextPrimary = Color(0xFF1C1C1E);
 const _reportTextSec = Color(0xFF8E8E93);
 const _reportBorder = Color(0xFFE5E5EA);
@@ -214,7 +215,7 @@ void showReportSaleItemsSheet(Map<String, dynamic> sale, String cs) {
 
   Get.bottomSheet(
     Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _reportCard,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),

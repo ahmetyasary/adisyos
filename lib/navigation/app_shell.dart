@@ -18,13 +18,14 @@ import 'package:orderix/views/auth_screen.dart';
 import 'package:orderix/views/pin_screen.dart';
 import 'package:orderix/views/paywall_sheet.dart';
 import 'package:orderix/widgets/shell_leading.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _bg = Color(0xFFF2F2F7);
-const _card = Colors.white;
+Color get _bg => AppColors.scaffold;
+Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
-const _labelPrimary = Color(0xFF1C1C1E);
-const _labelSecondary = Color(0xFF8E8E93);
+Color get _labelPrimary => AppColors.textPrimary;
+Color get _labelSecondary => AppColors.textSec;
 
 /// Width below which the sidebar collapses into a hamburger [Drawer].
 /// Above it, the sidebar is permanent (tablet/desktop).
@@ -159,7 +160,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                       size: 32, color: Color(0xFFFF3B30)),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Açık Sipariş Var',
                   style: TextStyle(
                     fontSize: 17,
@@ -168,7 +169,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Tüm masalar kapatılmadan\nçıkış yapılamaz.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -228,7 +229,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                       size: 32, color: Color(0xFFFF9500)),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Günü Bitir ve Çıkış Yap',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -238,7 +239,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Aktif gününüz var. Çıkış yaparsanız\ngün otomatik olarak bitecektir.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -272,7 +273,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                   height: 44,
                   child: TextButton(
                     onPressed: () => Get.back(result: false),
-                    child: const Text(
+                    child: Text(
                       'Vazgeç',
                       style: TextStyle(
                           fontWeight: FontWeight.w500, color: _labelSecondary),
@@ -320,6 +321,13 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       // Explicit deps so tablet sidebar + phone bottom bar both rebuild when
       // the admin reorders navigation (local or realtime).
       SettingsService.to.navOrder.length;
+      // Theme epoch: pages read AppColors getters — rebuild shell + section.
+      final themeEpoch = SettingsService.to.themeEpoch.value;
+      SettingsService.to.themeMode.value;
+      // System mode follows OS light/dark without leaving the screen.
+      MediaQuery.platformBrightnessOf(context);
+      AppColors.syncBrightness(SettingsService.to.resolvedBrightness());
+
       final AppRole? role = AuthController.to.currentRole;
       final mainSections = sectionsFor(role);
       final footerSections = footerSectionsFor(role);
@@ -331,7 +339,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         duration: const Duration(milliseconds: 200),
         child: section == null
             ? const SizedBox.shrink()
-            : KeyedSubtree(key: ValueKey(section.id), child: section.builder()),
+            : KeyedSubtree(
+                key: ValueKey('${section.id}-$themeEpoch'),
+                child: section.builder(),
+              ),
       );
 
       if (isWide) {

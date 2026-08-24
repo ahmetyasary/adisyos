@@ -3,17 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:orderix/navigation/app_sections.dart';
 import 'package:orderix/services/digital_menu_order_service.dart';
+import 'package:orderix/themes/app_colors.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
-const _card = Colors.white;
-const _bg = Color(0xFFF2F2F7);
+Color get _card => AppColors.card;
+Color get _bg => AppColors.scaffold;
 const _orange = Color(0xFFFF9500);
-const _labelPrimary = Color(0xFF1C1C1E);
-const _labelSecondary = Color(0xFF8E8E93);
-const _separator = Color(0xFFE5E5EA);
+Color get _labelPrimary => AppColors.textPrimary;
+Color get _labelSecondary => AppColors.textSec;
+Color get _separator => AppColors.border;
 const _red = Color(0xFFFF3B30);
-const _iconChipBg = Color(0xFFF2F2F7); // neutral badge background
-const _iconChipFg = Color(0xFF3A3A3C); // neutral badge icon
+Color get _iconChipBg => AppColors.chipBg;
+Color get _iconChipFg => AppColors.textPrimary;
 
 int _pendingOrdersCount() {
   if (!Get.isRegistered<DigitalMenuOrderService>()) return 0;
@@ -46,7 +47,7 @@ class AppBottomBar extends StatelessWidget {
       final moreActive = !sections.any((s) => s.id == selectedId);
 
       return Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: _card,
           border: Border(top: BorderSide(color: _separator, width: 0.5)),
           boxShadow: [
@@ -235,7 +236,7 @@ class _MoreSheet extends StatelessWidget {
       constraints: BoxConstraints(
         maxHeight: MediaQuery.sizeOf(context).height * 0.85,
       ),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _bg,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -257,7 +258,7 @@ class _MoreSheet extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 16, 16, 12),
               child: Row(
                 children: [
-                  const Text(
+                  Text(
                     'Daha Fazla',
                     style: TextStyle(
                       fontSize: 20,
@@ -368,7 +369,7 @@ class _Group extends StatelessWidget {
 class _RowDivider extends StatelessWidget {
   const _RowDivider();
   @override
-  Widget build(BuildContext context) => const Padding(
+  Widget build(BuildContext context) => Padding(
         // Inset to align under the label, past the 40px badge + 12px gap.
         padding: EdgeInsets.only(left: 68),
         child: Divider(height: 0.5, thickness: 0.5, color: _separator),
@@ -428,7 +429,7 @@ class _MoreRow extends StatelessWidget {
               ),
               if (badgeCount > 0) _CountBadge(count: badgeCount),
               if (!isLogout)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(left: 8),
                   child: Icon(CupertinoIcons.chevron_right,
                       size: 22, color: _labelSecondary),
@@ -480,7 +481,7 @@ class _CloseButton extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         customBorder: const CircleBorder(),
-        child: const SizedBox(
+        child: SizedBox(
           width: 30,
           height: 30,
           child: Icon(CupertinoIcons.xmark, size: 18, color: _labelSecondary),
