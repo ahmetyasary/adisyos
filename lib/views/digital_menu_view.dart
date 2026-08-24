@@ -529,15 +529,16 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                                           data: url,
                                           version: QrVersions.auto,
                                           size: 200,
-                                          eyeStyle: QrEyeStyle(
+                                          backgroundColor: Colors.white,
+                                          eyeStyle: const QrEyeStyle(
                                             eyeShape: QrEyeShape.square,
-                                            color: _textPrimary,
+                                            color: Color(0xFF1C1C1E),
                                           ),
                                           dataModuleStyle:
-                                              QrDataModuleStyle(
+                                              const QrDataModuleStyle(
                                             dataModuleShape:
                                                 QrDataModuleShape.square,
-                                            color: _textPrimary,
+                                            color: Color(0xFF1C1C1E),
                                           ),
                                         ),
                                       ],
@@ -605,8 +606,11 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                                           : 'Barkod / QR yazdır',
                                     ),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: _textPrimary,
+                                      backgroundColor: _orange,
                                       foregroundColor: Colors.white,
+                                      disabledBackgroundColor:
+                                          _orange.withValues(alpha: 0.45),
+                                      disabledForegroundColor: Colors.white,
                                       elevation: 0,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),

@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:orderix/models/dashboard_layout.dart';
+import 'package:orderix/models/integrations_config.dart';
 import 'package:orderix/models/payment_type.dart';
 import 'package:orderix/models/receipt_layout.dart';
 import 'package:orderix/themes/app_colors.dart';
@@ -75,6 +76,8 @@ class SettingsService extends GetxService {
   /// Admin Ana Ekran widget layout (tenant-wide).
   final RxList<DashboardWidgetItem> dashboardLayout =
       defaultDashboardLayout().obs;
+  /// POS + pazaryeri entegrasyon ayarları (tenant-wide).
+  final Rx<IntegrationsConfig> integrations = IntegrationsConfig.defaults().obs;
 
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
@@ -107,6 +110,7 @@ class SettingsService extends GetxService {
   static const _kReceiptLayout  = 'receipt_layout';
   static const _kDiscountMode   = 'discount_mode';
   static const _kDashboardLayout = 'dashboard_layout';
+  static const _kIntegrations = 'integrations';
 
   /// Pixel diameter of the Ordi badge for the current [ordiSize].
   double get ordiFabSize {
@@ -184,6 +188,7 @@ class SettingsService extends GetxService {
         receiptLayout.value = ReceiptLayout.defaults;
         discountMode.value = 'percent';
         dashboardLayout.assignAll(defaultDashboardLayout());
+        integrations.value = IntegrationsConfig.defaults();
       }
     });
 
@@ -324,6 +329,9 @@ class SettingsService extends GetxService {
       case _kDashboardLayout:
         dashboardLayout.assignAll(parseDashboardLayout(rawVal));
         _writePref(_kDashboardLayout, rawVal);
+      case _kIntegrations:
+        integrations.value = parseIntegrationsConfig(rawVal);
+        _writePref(_kIntegrations, rawVal);
       default:
         break;
     }
@@ -405,6 +413,19 @@ class SettingsService extends GetxService {
 
   Future<void> resetDashboardLayout() =>
       setDashboardLayout(defaultDashboardLayout());
+
+  Future<void> setIntegrations(IntegrationsConfig config) async {
+    integrations.value = config;
+    final value = encodeIntegrationsConfig(config);
+    await _writePref(_kIntegrations, value);
+    try {
+      await _writeValue(_kIntegrations, value);
+    } catch (e) {
+      if (kDebugMode) {
+        print('[SettingsService] setIntegrations DB error: $e');
+      }
+    }
+  }
 
   /// Persists the account-wide Ordi corner. Local + prefs first, then Supabase
   /// so iPhone and iPad stay in sync.
@@ -836,6 +857,7 @@ class SettingsService extends GetxService {
       String? readReceipt;
       String? readDiscountMode;
       String? readDashboardLayout;
+      String? readIntegrations;
 
       if (tenantId != null) {
         readName   = prefs.getString(_tenantPrefKey(tenantId, _kCompanyName));
@@ -874,6 +896,8 @@ class SettingsService extends GetxService {
             prefs.getString(_tenantPrefKey(tenantId, _kDiscountMode));
         readDashboardLayout =
             prefs.getString(_tenantPrefKey(tenantId, _kDashboardLayout));
+        readIntegrations =
+            prefs.getString(_tenantPrefKey(tenantId, _kIntegrations));
       }
 
       // Legacy fallback — pre-tenant-scoping installs stored flat keys.
@@ -901,6 +925,7 @@ class SettingsService extends GetxService {
       readReceipt ??= prefs.getString('settings.$_kReceiptLayout');
       readDiscountMode ??= prefs.getString('settings.$_kDiscountMode');
       readDashboardLayout ??= prefs.getString('settings.$_kDashboardLayout');
+      readIntegrations ??= prefs.getString('settings.$_kIntegrations');
 
       if (readName != null && readName.isNotEmpty) {
         companyName.value = readName;
@@ -968,6 +993,9 @@ class SettingsService extends GetxService {
       }
       if (readDashboardLayout != null && readDashboardLayout.isNotEmpty) {
         dashboardLayout.assignAll(parseDashboardLayout(readDashboardLayout));
+      }
+      if (readIntegrations != null && readIntegrations.isNotEmpty) {
+        integrations.value = parseIntegrationsConfig(readIntegrations);
       }
     } catch (e) {
       if (kDebugMode) print('[SettingsService] prefs load error: $e');
@@ -1126,6 +1154,11 @@ class SettingsService extends GetxService {
             if (rawVal.isNotEmpty) {
               dashboardLayout.assignAll(parseDashboardLayout(rawVal));
               await _writePref(_kDashboardLayout, rawVal);
+            }
+          case _kIntegrations:
+            if (rawVal.isNotEmpty) {
+              integrations.value = parseIntegrationsConfig(rawVal);
+              await _writePref(_kIntegrations, rawVal);
             }
           default:
             if (rawKey.startsWith('ordi_corner.') && rawVal.isNotEmpty) {

@@ -71,13 +71,13 @@ class _DashboardViewState extends State<DashboardView> {
 
   void _enterEdit() {
     if (!_isAdmin || _editing) return;
-    AppHaptics.medium();
     setState(() {
       _editing = true;
       _draft = SettingsService.to.dashboardLayout
           .map((e) => e.copyWith())
           .toList();
     });
+    AppHaptics.medium();
   }
 
   Future<void> _saveEdit() async {
@@ -99,19 +99,19 @@ class _DashboardViewState extends State<DashboardView> {
     AppHaptics.light();
   }
 
-  void _reorder(int oldIndex, int newIndex) {
+  void _moveTo(int from, int to) {
+    if (from < 0 || to < 0 || from == to) return;
     setState(() {
-      if (newIndex > oldIndex) newIndex -= 1;
-      final item = _draft.removeAt(oldIndex);
-      _draft.insert(newIndex, item);
+      final item = _draft.removeAt(from);
+      _draft.insert(to, item);
     });
   }
 
   void _setSize(String id, DashboardWidgetSize size) {
-    setState(() {
-      final i = _draft.indexWhere((e) => e.id == id);
-      if (i >= 0) _draft[i] = _draft[i].copyWith(size: size);
-    });
+    final i = _draft.indexWhere((e) => e.id == id);
+    if (i < 0 || _draft[i].size == size) return;
+    setState(() => _draft[i] = _draft[i].copyWith(size: size));
+    AppHaptics.light();
   }
 
   void _remove(String id) {
@@ -241,7 +241,7 @@ class _DashboardViewState extends State<DashboardView> {
           children: [
             Expanded(
               child: _editing
-                  ? _buildEditList(topPad, data)
+                  ? _buildEditGrid(topPad, data, columns)
                   : GestureDetector(
                       onLongPress: _isAdmin ? _enterEdit : null,
                       child: ListView(
@@ -252,7 +252,6 @@ class _DashboardViewState extends State<DashboardView> {
                             unread: todaySales.isNotEmpty,
                             compact: compact,
                             onBell: () => _go('notifications'),
-                            showEditHint: _isAdmin,
                           ),
                           const SizedBox(height: 18),
                           LayoutBuilder(builder: (context, c) {
@@ -291,43 +290,82 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 
-  Widget _buildEditList(double topPad, _DashData data) {
-    return ReorderableListView.builder(
-      padding: EdgeInsets.fromLTRB(16, topPad + 12, 16, 16),
-      buildDefaultDragHandles: false,
-      itemCount: _draft.length,
-      onReorder: _reorder,
-      proxyDecorator: (child, index, animation) => Material(
-        elevation: 6,
-        borderRadius: BorderRadius.circular(18),
-        color: Colors.transparent,
-        child: child,
-      ),
-      header: Padding(
-        padding: const EdgeInsets.only(bottom: 14),
-        child: Text(
-          'Widget’ları sürükleyin · boyut seçin',
+  Widget _buildEditGrid(double topPad, _DashData data, int columns) {
+    return ListView(
+      padding: EdgeInsets.fromLTRB(16, topPad + 12, 16, 28),
+      children: [
+        Text(
+          'Boyut seçin · uzun basıp sürükleyin',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: _textSec,
           ),
         ),
-      ),
-      itemBuilder: (context, index) {
-        final item = _draft[index];
-        return Padding(
-          key: ValueKey(item.id),
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _EditTile(
-            index: index,
-            item: item,
-            body: _widgetBody(item, data, editing: true),
-            onSize: (s) => _setSize(item.id, s),
-            onRemove: () => _remove(item.id),
-          ),
-        );
-      },
+        const SizedBox(height: 14),
+        LayoutBuilder(builder: (context, c) {
+          const gap = 14.0;
+          final cell = (c.maxWidth - gap * (columns - 1)) / columns;
+          return _PackedGrid(
+            items: _draft,
+            columns: columns,
+            maxWidth: c.maxWidth,
+            animate: true,
+            builder: (item) {
+              final span = dashboardSpanFor(item.size, columns);
+              final tileW = span * cell + (span - 1) * gap;
+              final tile = _EditTile(
+                item: item,
+                body: _widgetBody(item, data, editing: true),
+                onSize: (s) => _setSize(item.id, s),
+                onRemove: () => _remove(item.id),
+              );
+              return LongPressDraggable<String>(
+                data: item.id,
+                hapticFeedbackOnStart: false,
+                onDragStarted: () => AppHaptics.medium(),
+                onDragEnd: (_) => AppHaptics.light(),
+                feedback: Material(
+                  elevation: 8,
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(20),
+                  child: SizedBox(width: tileW, child: tile),
+                ),
+                childWhenDragging: Opacity(opacity: 0.35, child: tile),
+                child: DragTarget<String>(
+                  onWillAcceptWithDetails: (d) => d.data != item.id,
+                  onAcceptWithDetails: (d) {
+                    final from =
+                        _draft.indexWhere((e) => e.id == d.data);
+                    final to =
+                        _draft.indexWhere((e) => e.id == item.id);
+                    _moveTo(from, to);
+                  },
+                  builder: (context, candidate, _) {
+                    final hovering = candidate.isNotEmpty;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: hovering
+                            ? [
+                                BoxShadow(
+                                  color: _orange.withValues(alpha: 0.35),
+                                  blurRadius: 12,
+                                  spreadRadius: 1,
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: tile,
+                    );
+                  },
+                ),
+              );
+            },
+          );
+        }),
+      ],
     );
   }
 
@@ -530,12 +568,14 @@ class _PackedGrid extends StatelessWidget {
     required this.columns,
     required this.maxWidth,
     required this.builder,
+    this.animate = false,
   });
 
   final List<DashboardWidgetItem> items;
   final int columns;
   final double maxWidth;
   final Widget Function(DashboardWidgetItem) builder;
+  final bool animate;
 
   @override
   Widget build(BuildContext context) {
@@ -546,14 +586,28 @@ class _PackedGrid extends StatelessWidget {
       runSpacing: gap,
       children: [
         for (final item in items)
-          SizedBox(
+          _gridChild(
+            item: item,
             width: () {
               final span = dashboardSpanFor(item.size, columns);
               return span * cell + (span - 1) * gap;
             }(),
-            child: builder(item),
           ),
       ],
+    );
+  }
+
+  Widget _gridChild({
+    required DashboardWidgetItem item,
+    required double width,
+  }) {
+    final child = builder(item);
+    if (!animate) return SizedBox(width: width, child: child);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      width: width,
+      child: child,
     );
   }
 }
@@ -562,14 +616,12 @@ class _PackedGrid extends StatelessWidget {
 
 class _EditTile extends StatelessWidget {
   const _EditTile({
-    required this.index,
     required this.item,
     required this.body,
     required this.onSize,
     required this.onRemove,
   });
 
-  final int index;
   final DashboardWidgetItem item;
   final Widget body;
   final ValueChanged<DashboardWidgetSize> onSize;
@@ -577,6 +629,7 @@ class _EditTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isSmall = item.size == DashboardWidgetSize.small;
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
@@ -585,52 +638,103 @@ class _EditTile extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             color: _chipBg,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            child: Row(
-              children: [
-                ReorderableDragStartListener(
-                  index: index,
-                  child: Icon(CupertinoIcons.line_horizontal_3,
-                      color: _textSec, size: 22),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    dashboardWidgetTitle(item.type),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: _textPrimary,
-                    ),
-                  ),
-                ),
-                for (final s in DashboardWidgetSize.values)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4),
-                    child: _SizeChip(
-                      label: switch (s) {
-                        DashboardWidgetSize.small => 'S',
-                        DashboardWidgetSize.medium => 'M',
-                        DashboardWidgetSize.large => 'L',
-                      },
-                      selected: item.size == s,
-                      onTap: () => onSize(s),
-                    ),
-                  ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  onPressed: onRemove,
-                  icon: const Icon(CupertinoIcons.trash,
-                      size: 18, color: _red),
-                ),
-              ],
-            ),
+            padding: EdgeInsets.fromLTRB(8, 6, 6, isSmall ? 8 : 6),
+            child: isSmall ? _compactChrome() : _wideChrome(),
           ),
           body,
         ],
+      ),
+    );
+  }
+
+  Widget _wideChrome() {
+    return Row(
+      children: [
+        Icon(CupertinoIcons.line_horizontal_3, color: _textSec, size: 18),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            dashboardWidgetTitle(item.type),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: _textPrimary,
+            ),
+          ),
+        ),
+        _sizeGroup(),
+        _deleteBtn(),
+      ],
+    );
+  }
+
+  /// S boyutta tek satıra sığmaz: üstte başlık, altta boyutlar.
+  Widget _compactChrome() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Icon(CupertinoIcons.line_horizontal_3, color: _textSec, size: 16),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                dashboardWidgetTitle(item.type),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: _textPrimary,
+                ),
+              ),
+            ),
+            _deleteBtn(),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Align(
+          alignment: Alignment.centerRight,
+          child: _sizeGroup(),
+        ),
+      ],
+    );
+  }
+
+  Widget _sizeGroup() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final s in DashboardWidgetSize.values)
+          Padding(
+            padding: const EdgeInsets.only(left: 3),
+            child: _SizeChip(
+              label: switch (s) {
+                DashboardWidgetSize.small => 'S',
+                DashboardWidgetSize.medium => 'M',
+                DashboardWidgetSize.large => 'L',
+              },
+              selected: item.size == s,
+              onTap: () => onSize(s),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _deleteBtn() {
+    return GestureDetector(
+      onTap: onRemove,
+      behavior: HitTestBehavior.opaque,
+      child: const Padding(
+        padding: EdgeInsets.all(6),
+        child: Icon(CupertinoIcons.trash, size: 16, color: _red),
       ),
     );
   }
@@ -652,12 +756,12 @@ class _SizeChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 28,
-        height: 28,
+        width: 26,
+        height: 26,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected ? _orange : _card,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(7),
           border: Border.all(
             color: selected ? _orange : _border,
           ),
@@ -729,12 +833,10 @@ class _Header extends StatelessWidget {
     required this.unread,
     required this.compact,
     required this.onBell,
-    required this.showEditHint,
   });
   final bool unread;
   final bool compact;
   final VoidCallback onBell;
-  final bool showEditHint;
 
   @override
   Widget build(BuildContext context) {
@@ -756,12 +858,16 @@ class _Header extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 3),
-              Text(
-                showEditHint
-                    ? 'Özet · uzun basarak düzenleyin'
-                    : 'Güncel özet bilgileri görüntüleyin.',
-                style: TextStyle(fontSize: compact ? 13 : 14, color: _textSec),
-              ),
+              Obx(() {
+                final name = SettingsService.to.companyName.value.trim();
+                return Text(
+                  name.isEmpty ? 'Güncel özet bilgileri' : name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style:
+                      TextStyle(fontSize: compact ? 13 : 14, color: _textSec),
+                );
+              }),
             ],
           ),
         ),

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/services/day_service.dart';
+import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/table_service.dart';
 import 'package:orderix/widgets/app_dialog.dart';
@@ -406,14 +407,18 @@ class DayToggleCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
-          // Subtle decorative motif (no asset dependency).
+          // Subtle decorative motif — matches Settings currency symbol.
           Positioned(
-            right: -16,
-            bottom: -18,
-            child: Icon(
-              CupertinoIcons.money_dollar_circle_fill,
-              size: 132,
-              color: Colors.white.withValues(alpha: 0.05),
+            right: -8,
+            bottom: -28,
+            child: Text(
+              SettingsService.to.currencySymbol.value,
+              style: TextStyle(
+                fontSize: 140,
+                fontWeight: FontWeight.w800,
+                height: 1,
+                color: Colors.white.withValues(alpha: 0.06),
+              ),
             ),
           ),
           Padding(

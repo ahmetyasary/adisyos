@@ -8,6 +8,7 @@ import 'package:orderix/core/errors/auth_exception.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/features/ordi/presentation/ordi_voice_service.dart';
 import 'package:orderix/models/app_role.dart';
+import 'package:orderix/models/integrations_config.dart';
 import 'package:orderix/models/payment_type.dart';
 import 'package:orderix/models/receipt_layout.dart';
 import 'package:orderix/navigation/app_sections.dart';
@@ -18,6 +19,7 @@ import 'package:orderix/utils/app_haptics.dart';
 import 'package:orderix/utils/app_info.dart';
 import 'package:orderix/views/paywall_sheet.dart';
 import 'package:orderix/views/auth_screen.dart';
+import 'package:orderix/views/integrations/integration_views.dart';
 import 'package:orderix/widgets/app_toast.dart';
 import 'package:orderix/widgets/app_dialog.dart';
 import 'package:orderix/widgets/responsive_content.dart';
@@ -171,6 +173,49 @@ class _SettingsViewState extends State<SettingsView> {
                         ),
                       ),
                       const SizedBox(height: 28),
+
+                      if (AuthController.to.isAdmin) ...[
+                        _SectionLabel('Entegrasyonlar'),
+                        const SizedBox(height: 10),
+                        _Card(
+                          child: Column(
+                            children: [
+                              _IntegrationNavRow(
+                                icon: CupertinoIcons.creditcard_fill,
+                                title: 'POS Entegrasyonu',
+                                subtitleBuilder: () {
+                                  final pos = SettingsService
+                                      .to.integrations.value.pos;
+                                  if (!pos.enabled) return 'Kapalı';
+                                  return '${pos.provider.label} · ${pos.statusLabel}';
+                                },
+                                onTap: () => openPosIntegration(context),
+                              ),
+                              Divider(
+                                  height: 1,
+                                  color: _border,
+                                  indent: 16,
+                                  endIndent: 16),
+                              _IntegrationNavRow(
+                                icon: CupertinoIcons.bag_fill,
+                                title: 'Pazaryeri',
+                                subtitleBuilder: () {
+                                  final n = SettingsService
+                                      .to.integrations.value
+                                      .activeMarketplaceCount;
+                                  if (n == 0) {
+                                    return 'Getir, Trendyol Go, Yemeksepeti';
+                                  }
+                                  return '$n kanal aktif';
+                                },
+                                onTap: () =>
+                                    openMarketplaceIntegration(context),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                      ],
 
                       _SectionLabel('Genel'),
                       const SizedBox(height: 10),
@@ -1927,6 +1972,77 @@ class _OrdiSettingsCard extends StatelessWidget {
         ],
       );
     });
+  }
+}
+
+// ── Integrations ───────────────────────────────────────────────
+
+class _IntegrationNavRow extends StatelessWidget {
+  const _IntegrationNavRow({
+    required this.icon,
+    required this.title,
+    required this.subtitleBuilder,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String Function() subtitleBuilder;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: _orange.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(icon, size: 17, color: _orange),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: _textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Obx(() {
+                      // Touch reactive integrations for live subtitle.
+                      SettingsService.to.integrations.value;
+                      return Text(
+                        subtitleBuilder(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: _textSec),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+              Icon(CupertinoIcons.chevron_right, size: 16, color: _textSec),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
