@@ -1,6 +1,6 @@
 #Yapılacaklar
 
--Dashboard ekranı güzelliştirilecek (widget mantığı olabilir.drag&drop)
+-Dashboard ekranı güzelliştirilecek (widget mantığı olabilir.drag&drop) ✅ (Yetkili: uzun bas → sürükle, boyut S/M/L, ekle, sıfırla)
 -pos entegrasyonu
 -getir,trendyol,yemeksepeti entegrasyonu
 

@@ -1,25 +1,33 @@
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:orderix/services/sales_history_service.dart';
-import 'package:orderix/services/table_service.dart';
+import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/models/dashboard_layout.dart';
+import 'package:orderix/services/digital_menu_order_service.dart';
+import 'package:orderix/services/inventory_service.dart';
 import 'package:orderix/services/kitchen_service.dart';
+import 'package:orderix/services/sales_history_service.dart';
 import 'package:orderix/services/settings_service.dart';
-import 'package:orderix/widgets/shell_leading.dart';
-import 'package:orderix/widgets/day_toggle_card.dart';
+import 'package:orderix/services/table_service.dart';
 import 'package:orderix/themes/app_colors.dart';
+import 'package:orderix/utils/app_haptics.dart';
+import 'package:orderix/widgets/app_toast.dart';
+import 'package:orderix/widgets/day_toggle_card.dart';
+import 'package:orderix/widgets/shell_leading.dart';
 
-// ── Apple-inspired design tokens ──────────────────────────────
+// ── Design tokens ─────────────────────────────────────────────
 Color get _bg => AppColors.bg;
 Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
 const _green = Color(0xFF34C759);
 const _blue = Color(0xFF007AFF);
 const _purple = Color(0xFFAF52DE);
+const _red = Color(0xFFFF3B30);
 Color get _textPrimary => AppColors.textPrimary;
 Color get _textSec => AppColors.textSec;
 Color get _border => AppColors.borderSoft;
@@ -37,12 +45,12 @@ class DashboardView extends StatefulWidget {
 class _DashboardViewState extends State<DashboardView> {
   late Timer _clock;
   DateTime _now = DateTime.now();
+  bool _editing = false;
+  List<DashboardWidgetItem> _draft = [];
 
   @override
   void initState() {
     super.initState();
-    // Coarse tick: refreshes the "active for / today" boundary and the hero's
-    // elapsed label without the cost of a per-second rebuild.
     _clock = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) setState(() => _now = DateTime.now());
     });
@@ -56,165 +64,660 @@ class _DashboardViewState extends State<DashboardView> {
 
   void _go(String id) => ShellScope.maybeOf(context)?.selectSection(id);
 
+  bool get _isAdmin => AuthController.to.isAdmin;
+
+  List<DashboardWidgetItem> get _items =>
+      _editing ? _draft : SettingsService.to.dashboardLayout.toList();
+
+  void _enterEdit() {
+    if (!_isAdmin || _editing) return;
+    AppHaptics.medium();
+    setState(() {
+      _editing = true;
+      _draft = SettingsService.to.dashboardLayout
+          .map((e) => e.copyWith())
+          .toList();
+    });
+  }
+
+  Future<void> _saveEdit() async {
+    await SettingsService.to.setDashboardLayout(_draft);
+    if (!mounted) return;
+    setState(() => _editing = false);
+    AppToast.success('Ana ekran düzeni kaydedildi');
+  }
+
+  void _cancelEdit() {
+    setState(() {
+      _editing = false;
+      _draft = [];
+    });
+  }
+
+  Future<void> _resetDefault() async {
+    setState(() => _draft = defaultDashboardLayout());
+    AppHaptics.light();
+  }
+
+  void _reorder(int oldIndex, int newIndex) {
+    setState(() {
+      if (newIndex > oldIndex) newIndex -= 1;
+      final item = _draft.removeAt(oldIndex);
+      _draft.insert(newIndex, item);
+    });
+  }
+
+  void _setSize(String id, DashboardWidgetSize size) {
+    setState(() {
+      final i = _draft.indexWhere((e) => e.id == id);
+      if (i >= 0) _draft[i] = _draft[i].copyWith(size: size);
+    });
+  }
+
+  void _remove(String id) {
+    setState(() => _draft.removeWhere((e) => e.id == id));
+  }
+
+  void _add(DashboardWidgetType type) {
+    if (_draft.any((e) => e.type == type)) {
+      AppToast.error('Bu widget zaten ekli');
+      return;
+    }
+    setState(() {
+      _draft.add(DashboardWidgetItem(
+        id: 'w${DateTime.now().microsecondsSinceEpoch}',
+        type: type,
+        size: defaultSizeFor(type),
+      ));
+    });
+  }
+
+  Future<void> _showAddSheet() async {
+    final used = _draft.map((e) => e.type).toSet();
+    final available = DashboardWidgetType.values
+        .where((t) => !used.contains(t))
+        .toList();
+    if (available.isEmpty) {
+      AppToast.error('Eklenecek widget kalmadı');
+      return;
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: _card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(8, 12, 8, 24),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+              child: Text(
+                'Widget ekle',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: _textPrimary,
+                ),
+              ),
+            ),
+            for (final t in available)
+              ListTile(
+                title: Text(dashboardWidgetTitle(t),
+                    style: TextStyle(color: _textPrimary)),
+                trailing: Icon(CupertinoIcons.plus_circle_fill,
+                    color: _orange),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _add(t);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
     final topPad = mq.padding.top;
-    // Phone-sized screens get slightly smaller type so values (e.g. large
-    // currency amounts) fit without truncating; tablets/desktop keep full size.
     final compact = mq.size.width < 600;
+    final columns = mq.size.width >= 900
+        ? 4
+        : mq.size.width >= 600
+            ? 3
+            : 2;
 
     return Scaffold(
       backgroundColor: _bg,
       body: Obx(() {
+        // Reactive deps for live data + layout (content, not only length).
+        SettingsService.to.dashboardLayout.toList();
         final cs = SettingsService.cs;
-
         final tables = TableService.to.tables;
         final total = tables.length;
-        final occupiedCount =
-            tables.where((t) => t['isOccupied'] == true).length;
-        final occupancyRate = total > 0 ? occupiedCount / total : 0.0;
-
+        final occupied =
+            tables.where((t) => t['isOccupied'] == true).toList();
+        final occupancyRate = total > 0 ? occupied.length / total : 0.0;
         final todaySales = SalesHistoryService.to.getSalesForDate(_now);
         final todayTotal = SalesHistoryService.to.getTotalForSales(todaySales);
         final avgOrder =
             todaySales.isNotEmpty ? todayTotal / todaySales.length : 0.0;
         final hourlyTotals = SalesHistoryService.to.getHourlyTotals(_now);
-        final pending = KitchenService.to.pendingTickets.length;
-        final recent = SalesHistoryService.to.getRecentSales(limit: 4);
+        final pendingKitchen = KitchenService.to.pendingTickets.length;
+        final recent = SalesHistoryService.to.getRecentSales(limit: 5);
+        final topItems =
+            SalesHistoryService.to.getTopItems(todaySales, top: 5);
+        final digitalPending = Get.isRegistered<DigitalMenuOrderService>()
+            ? DigitalMenuOrderService.to.pending.toList()
+            : const <Map<String, dynamic>>[];
+        final lowStock = Get.isRegistered<InventoryService>()
+            ? InventoryService.to.lowStockItems
+            : const <MapEntry<String, int>>[];
 
-        return ListView(
-          padding: EdgeInsets.fromLTRB(20, topPad + 12, 20, 28),
+        final data = _DashData(
+          cs: cs,
+          todayTotal: todayTotal,
+          todayCount: todaySales.length,
+          avgOrder: avgOrder,
+          occupancyRate: occupancyRate,
+          occupiedCount: occupied.length,
+          tableTotal: total,
+          pendingKitchen: pendingKitchen,
+          hourlyTotals: hourlyTotals,
+          recent: recent,
+          openTables: occupied,
+          topItems: topItems,
+          digitalPending: digitalPending,
+          lowStock: lowStock,
+          compact: compact,
+          onGo: _go,
+        );
+
+        return Column(
           children: [
-            _Header(
-              unread: todaySales.isNotEmpty,
-              compact: compact,
-              onBell: () => _go('notifications'),
-            ),
-            const SizedBox(height: 22),
-            const DayToggleCard(hero: true),
-            const SizedBox(height: 22),
-
-            // KPI grid — flat, professional badges (2×2 on phone, 4-up wide).
-            LayoutBuilder(builder: (context, c) {
-              final cols = c.maxWidth >= 720 ? 4 : 2;
-              const gap = 14.0;
-              final itemW = (c.maxWidth - gap * (cols - 1)) / cols;
-              final cards = <Widget>[
-                _KpiCard(
-                  label: 'Bugünkü Satış',
-                  value: '$cs${todayTotal.toStringAsFixed(2)}',
-                  sub: '${todaySales.length} işlem',
-                  icon: CupertinoIcons.arrow_up_right_circle_fill,
-                  color: _green,
-                  compact: compact,
-                ),
-                _KpiCard(
-                  label: 'Ortalama Sipariş',
-                  value: '$cs${avgOrder.toStringAsFixed(2)}',
-                  sub: 'işlem başına',
-                  icon: CupertinoIcons.cart_fill,
-                  color: _orange,
-                  compact: compact,
-                ),
-                _KpiCard(
-                  label: 'Doluluk Oranı',
-                  value: '${(occupancyRate * 100).toStringAsFixed(0)}%',
-                  sub: '$occupiedCount / $total masa',
-                  icon: Icons.table_bar_rounded,
-                  color: _blue,
-                  compact: compact,
-                ),
-                _KpiCard(
-                  label: 'Bekleyen Sipariş',
-                  value: '$pending',
-                  sub: 'adet',
-                  icon: CupertinoIcons.clock_fill,
-                  color: _purple,
-                  compact: compact,
-                ),
-              ];
-              return Wrap(
-                spacing: gap,
-                runSpacing: gap,
-                children: [
-                  for (final card in cards) SizedBox(width: itemW, child: card),
-                ],
-              );
-            }),
-            const SizedBox(height: 24),
-
-            // Daily sales line chart
-            _CardBox(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Günlük Satış Grafiği',
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: _textPrimary,
-                        letterSpacing: -0.3),
-                  ),
-                  const SizedBox(height: 18),
-                  _DailyLineChart(hourlyTotals: hourlyTotals, cs: cs),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                            color: _orange, shape: BoxShape.circle),
+            Expanded(
+              child: _editing
+                  ? _buildEditList(topPad, data)
+                  : GestureDetector(
+                      onLongPress: _isAdmin ? _enterEdit : null,
+                      child: ListView(
+                        padding:
+                            EdgeInsets.fromLTRB(20, topPad + 12, 20, 28),
+                        children: [
+                          _Header(
+                            unread: todaySales.isNotEmpty,
+                            compact: compact,
+                            onBell: () => _go('notifications'),
+                            showEditHint: _isAdmin,
+                          ),
+                          const SizedBox(height: 18),
+                          LayoutBuilder(builder: (context, c) {
+                            return _PackedGrid(
+                              items: _items,
+                              columns: columns,
+                              maxWidth: c.maxWidth,
+                              builder: (item) =>
+                                  _widgetBody(item, data, editing: false),
+                            );
+                          }),
+                          if (_isAdmin) ...[
+                            const SizedBox(height: 20),
+                            Text(
+                              'Düzenlemek için uzun basın',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _textSec.withValues(alpha: 0.8),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                      const SizedBox(width: 7),
-                      Text('Satış Tutarı ($cs)',
-                          style:
-                              TextStyle(fontSize: 12, color: _textSec)),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
             ),
-            const SizedBox(height: 28),
-
-            // Recent transactions
-            Row(
-              children: [
-                Text(
-                  'Son İşlemler',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: _textPrimary,
-                      letterSpacing: -0.3),
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () => _go('notifications'),
-                  child: const Text(
-                    'Tümünü Gör',
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: _orange),
-                  ),
-                ),
-              ],
+            if (_editing) _EditToolbar(
+              onAdd: _showAddSheet,
+              onReset: _resetDefault,
+              onCancel: _cancelEdit,
+              onSave: _saveEdit,
             ),
-            const SizedBox(height: 14),
-            if (recent.isEmpty)
-              const _RecentRow.empty()
-            else
-              for (int i = 0; i < recent.length; i++) ...[
-                _RecentRow(sale: recent[i], cs: cs),
-                if (i != recent.length - 1) const SizedBox(height: 10),
-              ],
           ],
         );
       }),
+    );
+  }
+
+  Widget _buildEditList(double topPad, _DashData data) {
+    return ReorderableListView.builder(
+      padding: EdgeInsets.fromLTRB(16, topPad + 12, 16, 16),
+      buildDefaultDragHandles: false,
+      itemCount: _draft.length,
+      onReorder: _reorder,
+      proxyDecorator: (child, index, animation) => Material(
+        elevation: 6,
+        borderRadius: BorderRadius.circular(18),
+        color: Colors.transparent,
+        child: child,
+      ),
+      header: Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Text(
+          'Widget’ları sürükleyin · boyut seçin',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: _textSec,
+          ),
+        ),
+      ),
+      itemBuilder: (context, index) {
+        final item = _draft[index];
+        return Padding(
+          key: ValueKey(item.id),
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _EditTile(
+            index: index,
+            item: item,
+            body: _widgetBody(item, data, editing: true),
+            onSize: (s) => _setSize(item.id, s),
+            onRemove: () => _remove(item.id),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _widgetBody(
+    DashboardWidgetItem item,
+    _DashData d, {
+    required bool editing,
+  }) {
+    switch (item.type) {
+      case DashboardWidgetType.dayToggle:
+        return const DayToggleCard(hero: true);
+      case DashboardWidgetType.salesToday:
+        return _KpiCard(
+          label: 'Bugünkü Satış',
+          value: '${d.cs}${d.todayTotal.toStringAsFixed(2)}',
+          sub: '${d.todayCount} işlem',
+          icon: CupertinoIcons.arrow_up_right_circle_fill,
+          color: _green,
+          compact: d.compact,
+        );
+      case DashboardWidgetType.avgOrder:
+        return _KpiCard(
+          label: 'Ortalama Sipariş',
+          value: '${d.cs}${d.avgOrder.toStringAsFixed(2)}',
+          sub: 'işlem başına',
+          icon: CupertinoIcons.cart_fill,
+          color: _orange,
+          compact: d.compact,
+        );
+      case DashboardWidgetType.occupancy:
+        return _KpiCard(
+          label: 'Doluluk Oranı',
+          value: '${(d.occupancyRate * 100).toStringAsFixed(0)}%',
+          sub: '${d.occupiedCount} / ${d.tableTotal} masa',
+          icon: Icons.table_bar_rounded,
+          color: _blue,
+          compact: d.compact,
+        );
+      case DashboardWidgetType.kitchenPending:
+        return _KpiCard(
+          label: 'Bekleyen Sipariş',
+          value: '${d.pendingKitchen}',
+          sub: 'mutfak',
+          icon: CupertinoIcons.clock_fill,
+          color: _purple,
+          compact: d.compact,
+          onTap: editing ? null : () => d.onGo('kitchen'),
+        );
+      case DashboardWidgetType.salesChart:
+        return _CardBox(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Günlük Satış Grafiği',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: _textPrimary,
+                ),
+              ),
+              const SizedBox(height: 14),
+              _DailyLineChart(hourlyTotals: d.hourlyTotals, cs: d.cs),
+            ],
+          ),
+        );
+      case DashboardWidgetType.recentSales:
+        return _ListCard(
+          title: 'Son İşlemler',
+          actionLabel: editing ? null : 'Tümünü Gör',
+          onAction: editing ? null : () => d.onGo('notifications'),
+          child: d.recent.isEmpty
+              ? const _RecentRow.empty()
+              : Column(
+                  children: [
+                    for (int i = 0; i < d.recent.length; i++) ...[
+                      _RecentRow(sale: d.recent[i], cs: d.cs),
+                      if (i != d.recent.length - 1) const SizedBox(height: 8),
+                    ],
+                  ],
+                ),
+        );
+      case DashboardWidgetType.openTables:
+        return _ListCard(
+          title: 'Açık Masalar',
+          actionLabel: editing ? null : 'Masalar',
+          onAction: editing ? null : () => d.onGo('tables'),
+          child: d.openTables.isEmpty
+              ? _EmptyHint('Açık masa yok')
+              : Column(
+                  children: [
+                    for (final t in d.openTables.take(6))
+                      _SimpleRow(
+                        title: '${t['name'] ?? 'Masa'}',
+                        trailing:
+                            '${d.cs}${((t['total'] as num?)?.toDouble() ?? 0).toStringAsFixed(0)}',
+                      ),
+                  ],
+                ),
+        );
+      case DashboardWidgetType.topItems:
+        return _ListCard(
+          title: 'En Çok Satanlar',
+          child: d.topItems.isEmpty
+              ? _EmptyHint('Bugün satış yok')
+              : Column(
+                  children: [
+                    for (final e in d.topItems)
+                      _SimpleRow(
+                        title: e.key,
+                        trailing: '${e.value.toStringAsFixed(0)} adet',
+                      ),
+                  ],
+                ),
+        );
+      case DashboardWidgetType.digitalPending:
+        return _ListCard(
+          title: 'Dijital Menü Siparişleri',
+          actionLabel: editing ? null : 'Bekleyenler',
+          onAction: editing ? null : () => d.onGo('pending_orders'),
+          child: d.digitalPending.isEmpty
+              ? _EmptyHint('Bekleyen QR sipariş yok')
+              : Column(
+                  children: [
+                    for (final o in d.digitalPending.take(5))
+                      _SimpleRow(
+                        title:
+                            '${o['table_name'] ?? o['tableName'] ?? o['table'] ?? 'Sipariş'}',
+                        trailing:
+                            '${(o['items'] as List?)?.length ?? 0} kalem',
+                      ),
+                  ],
+                ),
+        );
+      case DashboardWidgetType.stockAlerts:
+        return _ListCard(
+          title: 'Stok Uyarıları',
+          actionLabel: editing ? null : 'Stoklar',
+          onAction: editing ? null : () => d.onGo('inventory'),
+          child: d.lowStock.isEmpty
+              ? _EmptyHint('Düşük stok yok')
+              : Column(
+                  children: [
+                    for (final e in d.lowStock.take(6))
+                      _SimpleRow(
+                        title: e.key,
+                        trailing: '${e.value}',
+                        trailingColor: _red,
+                      ),
+                  ],
+                ),
+        );
+    }
+  }
+}
+
+class _DashData {
+  const _DashData({
+    required this.cs,
+    required this.todayTotal,
+    required this.todayCount,
+    required this.avgOrder,
+    required this.occupancyRate,
+    required this.occupiedCount,
+    required this.tableTotal,
+    required this.pendingKitchen,
+    required this.hourlyTotals,
+    required this.recent,
+    required this.openTables,
+    required this.topItems,
+    required this.digitalPending,
+    required this.lowStock,
+    required this.compact,
+    required this.onGo,
+  });
+
+  final String cs;
+  final double todayTotal;
+  final int todayCount;
+  final double avgOrder;
+  final double occupancyRate;
+  final int occupiedCount;
+  final int tableTotal;
+  final int pendingKitchen;
+  final Map<int, double> hourlyTotals;
+  final List<Map<String, dynamic>> recent;
+  final List<Map<String, dynamic>> openTables;
+  final List<MapEntry<String, double>> topItems;
+  final List<Map<String, dynamic>> digitalPending;
+  final List<MapEntry<String, int>> lowStock;
+  final bool compact;
+  final void Function(String id) onGo;
+}
+
+// ── Packed grid (view mode) ───────────────────────────────────
+
+class _PackedGrid extends StatelessWidget {
+  const _PackedGrid({
+    required this.items,
+    required this.columns,
+    required this.maxWidth,
+    required this.builder,
+  });
+
+  final List<DashboardWidgetItem> items;
+  final int columns;
+  final double maxWidth;
+  final Widget Function(DashboardWidgetItem) builder;
+
+  @override
+  Widget build(BuildContext context) {
+    const gap = 14.0;
+    final cell = (maxWidth - gap * (columns - 1)) / columns;
+    return Wrap(
+      spacing: gap,
+      runSpacing: gap,
+      children: [
+        for (final item in items)
+          SizedBox(
+            width: () {
+              final span = dashboardSpanFor(item.size, columns);
+              return span * cell + (span - 1) * gap;
+            }(),
+            child: builder(item),
+          ),
+      ],
+    );
+  }
+}
+
+// ── Edit chrome ───────────────────────────────────────────────
+
+class _EditTile extends StatelessWidget {
+  const _EditTile({
+    required this.index,
+    required this.item,
+    required this.body,
+    required this.onSize,
+    required this.onRemove,
+  });
+
+  final int index;
+  final DashboardWidgetItem item;
+  final Widget body;
+  final ValueChanged<DashboardWidgetSize> onSize;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _orange.withValues(alpha: 0.45), width: 1.5),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: _chipBg,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(
+              children: [
+                ReorderableDragStartListener(
+                  index: index,
+                  child: Icon(CupertinoIcons.line_horizontal_3,
+                      color: _textSec, size: 22),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    dashboardWidgetTitle(item.type),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _textPrimary,
+                    ),
+                  ),
+                ),
+                for (final s in DashboardWidgetSize.values)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: _SizeChip(
+                      label: switch (s) {
+                        DashboardWidgetSize.small => 'S',
+                        DashboardWidgetSize.medium => 'M',
+                        DashboardWidgetSize.large => 'L',
+                      },
+                      selected: item.size == s,
+                      onTap: () => onSize(s),
+                    ),
+                  ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onRemove,
+                  icon: const Icon(CupertinoIcons.trash,
+                      size: 18, color: _red),
+                ),
+              ],
+            ),
+          ),
+          body,
+        ],
+      ),
+    );
+  }
+}
+
+class _SizeChip extends StatelessWidget {
+  const _SizeChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 28,
+        height: 28,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? _orange : _card,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected ? _orange : _border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: selected ? Colors.white : _textSec,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EditToolbar extends StatelessWidget {
+  const _EditToolbar({
+    required this.onAdd,
+    required this.onReset,
+    required this.onCancel,
+    required this.onSave,
+  });
+
+  final VoidCallback onAdd;
+  final VoidCallback onReset;
+  final VoidCallback onCancel;
+  final VoidCallback onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).padding.bottom;
+    return Container(
+      padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottom),
+      decoration: BoxDecoration(
+        color: _card,
+        border: Border(top: BorderSide(color: _border)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 16,
+            offset: Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          TextButton(onPressed: onReset, child: const Text('Sıfırla')),
+          TextButton(onPressed: onAdd, child: const Text('Ekle')),
+          const Spacer(),
+          TextButton(onPressed: onCancel, child: const Text('Vazgeç')),
+          const SizedBox(width: 8),
+          FilledButton(
+            onPressed: onSave,
+            style: FilledButton.styleFrom(backgroundColor: _orange),
+            child: const Text('Kaydet'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -226,16 +729,19 @@ class _Header extends StatelessWidget {
     required this.unread,
     required this.compact,
     required this.onBell,
+    required this.showEditHint,
   });
   final bool unread;
   final bool compact;
   final VoidCallback onBell;
+  final bool showEditHint;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        ShellLeading(embedded: true),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -251,7 +757,9 @@ class _Header extends StatelessWidget {
               ),
               const SizedBox(height: 3),
               Text(
-                'Güncel özet bilgileri görüntüleyin.',
+                showEditHint
+                    ? 'Özet · uzun basarak düzenleyin'
+                    : 'Güncel özet bilgileri görüntüleyin.',
                 style: TextStyle(fontSize: compact ? 13 : 14, color: _textSec),
               ),
             ],
@@ -302,7 +810,7 @@ class _BellButton extends StatelessWidget {
   }
 }
 
-// ── KPI Card ─────────────────────────────────────────────────
+// ── Shared cards ─────────────────────────────────────────────
 
 class _KpiCard extends StatelessWidget {
   const _KpiCard({
@@ -312,6 +820,7 @@ class _KpiCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.compact,
+    this.onTap,
   });
 
   final String label;
@@ -320,10 +829,11 @@ class _KpiCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final bool compact;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final child = Container(
       padding: EdgeInsets.all(compact ? 14 : 16),
       decoration: _cardDeco,
       child: Row(
@@ -344,7 +854,7 @@ class _KpiCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: compact ? 19 : 24,
+                        fontSize: compact ? 19 : 22,
                         fontWeight: FontWeight.w800,
                         color: _textPrimary,
                         letterSpacing: -0.6)),
@@ -362,10 +872,116 @@ class _KpiCard extends StatelessWidget {
         ],
       ),
     );
+    if (onTap == null) return child;
+    return GestureDetector(onTap: onTap, child: child);
   }
 }
 
-// ── Daily line chart ─────────────────────────────────────────
+class _ListCard extends StatelessWidget {
+  const _ListCard({
+    required this.title,
+    required this.child,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final String title;
+  final Widget child;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return _CardBox(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _textPrimary,
+                  ),
+                ),
+              ),
+              if (actionLabel != null)
+                GestureDetector(
+                  onTap: onAction,
+                  child: Text(
+                    actionLabel!,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: _orange,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyHint extends StatelessWidget {
+  const _EmptyHint(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(text, style: TextStyle(fontSize: 13, color: _textSec));
+  }
+}
+
+class _SimpleRow extends StatelessWidget {
+  const _SimpleRow({
+    required this.title,
+    required this.trailing,
+    this.trailingColor,
+  });
+
+  final String title;
+  final String trailing;
+  final Color? trailingColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: _textPrimary,
+              ),
+            ),
+          ),
+          Text(
+            trailing,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: trailingColor ?? _textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _DailyLineChart extends StatelessWidget {
   const _DailyLineChart({required this.hourlyTotals, required this.cs});
@@ -384,7 +1000,7 @@ class _DailyLineChart extends StatelessWidget {
     final interval = maxY / 4;
 
     return SizedBox(
-      height: 200,
+      height: 180,
       child: LineChart(
         LineChartData(
           minX: 0,
@@ -482,8 +1098,6 @@ class _DailyLineChart extends StatelessWidget {
   }
 }
 
-// ── Recent transaction row ───────────────────────────────────
-
 class _RecentRow extends StatelessWidget {
   const _RecentRow({required this.sale, required this.cs}) : empty = false;
   const _RecentRow.empty()
@@ -498,21 +1112,8 @@ class _RecentRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (empty) {
-      return Container(
-        padding: const EdgeInsets.all(14),
-        decoration: _cardDeco,
-        child: Row(
-          children: [
-            const _NeutralChip(icon: CupertinoIcons.doc_text_fill),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text('Henüz işlem bulunmuyor.',
-                  style: TextStyle(fontSize: 14, color: _textSec)),
-            ),
-            Icon(CupertinoIcons.chevron_right, size: 20, color: _textSec),
-          ],
-        ),
-      );
+      return Text('Henüz işlem bulunmuyor.',
+          style: TextStyle(fontSize: 14, color: _textSec));
     }
 
     final s = sale!;
@@ -522,13 +1123,10 @@ class _RecentRow extends StatelessWidget {
     final date = DateTime.tryParse(s['date'] as String? ?? '');
     final time = date != null ? DateFormat('HH:mm').format(date) : '';
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: _cardDeco,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          const _NeutralChip(icon: CupertinoIcons.doc_text_fill),
-          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -540,55 +1138,28 @@ class _RecentRow extends StatelessWidget {
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: _textPrimary)),
-                const SizedBox(height: 2),
                 Text('$itemCount ürün${time.isNotEmpty ? ' · $time' : ''}',
                     style: TextStyle(fontSize: 12, color: _textSec)),
               ],
             ),
           ),
-          const SizedBox(width: 8),
           Text('$cs${total.toStringAsFixed(2)}',
               style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: _textPrimary)),
-          const SizedBox(width: 4),
-          Icon(CupertinoIcons.chevron_right, size: 20, color: _textSec),
         ],
       ),
     );
   }
 }
 
-class _NeutralChip extends StatelessWidget {
-  const _NeutralChip({required this.icon});
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: _chipBg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(icon, size: 20, color: const Color(0xFF3A3A3C)),
-    );
-  }
-}
-
-// ── Shared ───────────────────────────────────────────────────
-
 BoxDecoration get _cardDeco => BoxDecoration(
-  color: _card,
-  borderRadius: const BorderRadius.all(Radius.circular(18)),
-  border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
-  boxShadow: const [
-    BoxShadow(color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
-    BoxShadow(color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 1)),
-  ],
-);
+      color: _card,
+      borderRadius: const BorderRadius.all(Radius.circular(18)),
+      border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
+      boxShadow: AppColors.cardShadow,
+    );
 
 class _CardBox extends StatelessWidget {
   const _CardBox({required this.child});

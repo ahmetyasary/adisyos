@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:orderix/models/dashboard_layout.dart';
 import 'package:orderix/models/payment_type.dart';
 import 'package:orderix/models/receipt_layout.dart';
 import 'package:orderix/themes/app_colors.dart';
@@ -71,6 +72,9 @@ class SettingsService extends GetxService {
   final Rx<ReceiptLayout> receiptLayout = ReceiptLayout.defaults.obs;
   /// Last chosen discount UI mode: `percent` | `amount` (synced across devices).
   final RxString discountMode = 'percent'.obs;
+  /// Admin Ana Ekran widget layout (tenant-wide).
+  final RxList<DashboardWidgetItem> dashboardLayout =
+      defaultDashboardLayout().obs;
 
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
@@ -102,6 +106,7 @@ class SettingsService extends GetxService {
   static const _kPaymentTypes   = 'payment_types';
   static const _kReceiptLayout  = 'receipt_layout';
   static const _kDiscountMode   = 'discount_mode';
+  static const _kDashboardLayout = 'dashboard_layout';
 
   /// Pixel diameter of the Ordi badge for the current [ordiSize].
   double get ordiFabSize {
@@ -178,6 +183,7 @@ class SettingsService extends GetxService {
         paymentTypes.assignAll(kDefaultPaymentTypes);
         receiptLayout.value = ReceiptLayout.defaults;
         discountMode.value = 'percent';
+        dashboardLayout.assignAll(defaultDashboardLayout());
       }
     });
 
@@ -315,6 +321,9 @@ class SettingsService extends GetxService {
           discountMode.value = next;
           _writePref(_kDiscountMode, next);
         }
+      case _kDashboardLayout:
+        dashboardLayout.assignAll(parseDashboardLayout(rawVal));
+        _writePref(_kDashboardLayout, rawVal);
       default:
         break;
     }
@@ -380,6 +389,22 @@ class SettingsService extends GetxService {
   }
 
   Future<void> resetNavOrder() => setNavOrder(const []);
+
+  Future<void> setDashboardLayout(List<DashboardWidgetItem> items) async {
+    dashboardLayout.assignAll(items);
+    final value = encodeDashboardLayout(items);
+    await _writePref(_kDashboardLayout, value);
+    try {
+      await _writeValue(_kDashboardLayout, value);
+    } catch (e) {
+      if (kDebugMode) {
+        print('[SettingsService] setDashboardLayout DB error: $e');
+      }
+    }
+  }
+
+  Future<void> resetDashboardLayout() =>
+      setDashboardLayout(defaultDashboardLayout());
 
   /// Persists the account-wide Ordi corner. Local + prefs first, then Supabase
   /// so iPhone and iPad stay in sync.
@@ -810,6 +835,7 @@ class SettingsService extends GetxService {
       String? readPayTypes;
       String? readReceipt;
       String? readDiscountMode;
+      String? readDashboardLayout;
 
       if (tenantId != null) {
         readName   = prefs.getString(_tenantPrefKey(tenantId, _kCompanyName));
@@ -846,6 +872,8 @@ class SettingsService extends GetxService {
             prefs.getString(_tenantPrefKey(tenantId, _kReceiptLayout));
         readDiscountMode =
             prefs.getString(_tenantPrefKey(tenantId, _kDiscountMode));
+        readDashboardLayout =
+            prefs.getString(_tenantPrefKey(tenantId, _kDashboardLayout));
       }
 
       // Legacy fallback — pre-tenant-scoping installs stored flat keys.
@@ -872,6 +900,7 @@ class SettingsService extends GetxService {
       readPayTypes ??= prefs.getString('settings.$_kPaymentTypes');
       readReceipt ??= prefs.getString('settings.$_kReceiptLayout');
       readDiscountMode ??= prefs.getString('settings.$_kDiscountMode');
+      readDashboardLayout ??= prefs.getString('settings.$_kDashboardLayout');
 
       if (readName != null && readName.isNotEmpty) {
         companyName.value = readName;
@@ -936,6 +965,9 @@ class SettingsService extends GetxService {
       }
       if (readDiscountMode != null && readDiscountMode.isNotEmpty) {
         discountMode.value = _sanitizeDiscountMode(readDiscountMode);
+      }
+      if (readDashboardLayout != null && readDashboardLayout.isNotEmpty) {
+        dashboardLayout.assignAll(parseDashboardLayout(readDashboardLayout));
       }
     } catch (e) {
       if (kDebugMode) print('[SettingsService] prefs load error: $e');
@@ -1089,6 +1121,11 @@ class SettingsService extends GetxService {
             if (rawVal.isNotEmpty) {
               discountMode.value = _sanitizeDiscountMode(rawVal);
               await _writePref(_kDiscountMode, discountMode.value);
+            }
+          case _kDashboardLayout:
+            if (rawVal.isNotEmpty) {
+              dashboardLayout.assignAll(parseDashboardLayout(rawVal));
+              await _writePref(_kDashboardLayout, rawVal);
             }
           default:
             if (rawKey.startsWith('ordi_corner.') && rawVal.isNotEmpty) {
