@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:orderix/navigation/app_sections.dart';
+import 'package:orderix/services/cari_service.dart';
 import 'package:orderix/services/digital_menu_order_service.dart';
 import 'package:orderix/themes/app_colors.dart';
 
@@ -19,6 +20,11 @@ Color get _iconChipFg => AppColors.textPrimary;
 int _pendingOrdersCount() {
   if (!Get.isRegistered<DigitalMenuOrderService>()) return 0;
   return DigitalMenuOrderService.to.pendingCount;
+}
+
+int _openCariAccountsCount() {
+  if (!Get.isRegistered<CariService>()) return 0;
+  return CariService.to.openAccountCount;
 }
 
 /// The mobile shell's bottom tab bar. Shows the most-used, role-permitted
@@ -42,6 +48,7 @@ class AppBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(() {
       final pending = _pendingOrdersCount();
+      final openCariAccounts = _openCariAccountsCount();
       final pendingOnBar = sections.any((s) => s.id == 'pending_orders');
       // "Daha Fazla" is active whenever the current section isn't a bar tab.
       final moreActive = !sections.any((s) => s.id == selectedId);
@@ -69,8 +76,11 @@ class AppBottomBar extends StatelessWidget {
                       icon: s.icon,
                       label: s.title(),
                       active: s.id == selectedId,
-                      badgeCount:
-                          s.id == 'pending_orders' && pending > 0 ? pending : 0,
+                      badgeCount: s.id == 'pending_orders' && pending > 0
+                          ? pending
+                          : s.id == 'cari_accounts'
+                              ? openCariAccounts
+                              : 0,
                       onTap: () => onSelect(s.id),
                     ),
                   ),
@@ -79,8 +89,7 @@ class AppBottomBar extends StatelessWidget {
                     icon: CupertinoIcons.ellipsis,
                     label: 'Daha Fazla',
                     active: moreActive,
-                    badgeCount:
-                        !pendingOnBar && pending > 0 ? pending : 0,
+                    badgeCount: !pendingOnBar && pending > 0 ? pending : 0,
                     onTap: onMore,
                   ),
                 ),
@@ -287,7 +296,9 @@ class _MoreSheet extends StatelessWidget {
                               active: s.id == selectedId,
                               badgeCount: s.id == 'pending_orders'
                                   ? _pendingOrdersCount()
-                                  : 0,
+                                  : s.id == 'cari_accounts'
+                                      ? _openCariAccountsCount()
+                                      : 0,
                               onTap: () => onSelect(s.id),
                             ),
                         ]),

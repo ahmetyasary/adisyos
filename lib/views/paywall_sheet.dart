@@ -42,7 +42,7 @@ Future<void> showPaywallSheet(
     isDismissible: dismissible,
     enableDrag: dismissible,
     useSafeArea: true,
-    backgroundColor: Colors.white,
+    backgroundColor: AppColors.card,
     barrierColor: Colors.black.withValues(alpha: 0.45),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -586,7 +586,7 @@ class _PlanCard extends StatelessWidget {
             curve: Curves.easeOut,
             padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.card,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: selected ? _orange : _border,
@@ -602,7 +602,9 @@ class _PlanCard extends StatelessWidget {
                     ]
                   : [
                       BoxShadow(
-                        color: const Color(0x08000000),
+                      color: AppColors.isDark
+                          ? Colors.transparent
+                          : const Color(0x08000000),
                         blurRadius: 10,
                         offset: const Offset(0, 3),
                       ),
@@ -741,9 +743,11 @@ class _CtaButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
+      return Obx(() {
       final loading = SubscriptionService.to.isPurchasing.value;
       final enabled = package != null && !loading;
+        final foreground =
+            enabled ? Colors.white : AppColors.textSec;
 
       return GestureDetector(
         onTap: enabled ? onPurchase : null,
@@ -752,7 +756,7 @@ class _CtaButton extends StatelessWidget {
           height: subtitle != null ? 62 : 54,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: enabled ? _orange : const Color(0xFFD1D1D6),
+            color: enabled ? _orange : AppColors.chipBg,
             borderRadius: BorderRadius.circular(16),
             boxShadow: enabled
                 ? [
@@ -782,9 +786,8 @@ class _CtaButton extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: Colors.white,
                           letterSpacing: 0.2,
-                        ),
+                        ).copyWith(color: foreground),
                       ),
                       if (subtitle != null) ...[
                         const SizedBox(height: 2),
@@ -793,7 +796,7 @@ class _CtaButton extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w500,
-                            color: Colors.white.withValues(alpha: 0.85),
+                            color: foreground.withValues(alpha: 0.85),
                           ),
                         ),
                       ],

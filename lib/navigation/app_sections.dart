@@ -12,6 +12,8 @@ import 'package:orderix/views/pending_menu_orders_view.dart';
 import 'package:orderix/views/inventory_management_view.dart';
 import 'package:orderix/views/day_management_view.dart';
 import 'package:orderix/views/reports_view.dart';
+import 'package:orderix/views/completed_payments_view.dart';
+import 'package:orderix/views/cari_accounts_view.dart';
 import 'package:orderix/views/staff_report_view.dart';
 import 'package:orderix/views/shift_management_view.dart';
 import 'package:orderix/views/notifications_view.dart';
@@ -115,6 +117,20 @@ final List<AppSection> appSections = [
     builder: () => const ReportsView(embedded: true),
   ),
   AppSection(
+    id: 'completed_payments',
+    title: () => 'Tamamlanan ödemeler',
+    icon: CupertinoIcons.checkmark_seal_fill,
+    roles: const [AppRole.admin],
+    builder: () => const CompletedPaymentsView(embedded: true),
+  ),
+  AppSection(
+    id: 'cari_accounts',
+    title: () => 'Cari Hesaplar',
+    icon: CupertinoIcons.person_2_fill,
+    roles: const [AppRole.admin, AppRole.staff],
+    builder: () => const CariAccountsView(embedded: true),
+  ),
+  AppSection(
     id: 'staff_report',
     title: () => 'Personel',
     icon: CupertinoIcons.person_2_fill,
@@ -175,13 +191,21 @@ List<AppSection> _withNavOrder(List<AppSection> list) {
 
 /// Sections to show in the sidebar's main list for [role]
 /// (role-permitted, visible, non-footer).
+bool _isSectionAvailable(AppSection section, AppRole? role) =>
+    section.allows(role) &&
+    !section.hidden &&
+    (section.id != 'cari_accounts' ||
+        SettingsService.to.cariAccountsEnabled.value);
+
 List<AppSection> sectionsFor(AppRole? role) => _withNavOrder(
-      appSections.where((s) => s.allows(role) && !s.hidden && !s.footer).toList(),
+      appSections
+          .where((s) => _isSectionAvailable(s, role) && !s.footer)
+          .toList(),
     );
 
 /// Sections to show in the sidebar's footer for [role].
 List<AppSection> footerSectionsFor(AppRole? role) =>
-    appSections.where((s) => s.allows(role) && s.footer).toList();
+    appSections.where((s) => _isSectionAvailable(s, role) && s.footer).toList();
 
 /// The most-used sections for the mobile bottom bar = first N entries of the
 /// admin's custom [sectionsFor] order (not a fixed id set). Everything after
@@ -218,7 +242,7 @@ String? landingSectionFor(AppRole? role) {
 String? resolveSectionFor(AppRole? role, String? sectionId) {
   if (sectionId != null) {
     final s = sectionById(sectionId);
-    if (s != null && s.allows(role) && !s.hidden) return s.id;
+    if (s != null && _isSectionAvailable(s, role)) return s.id;
   }
   return landingSectionFor(role);
 }

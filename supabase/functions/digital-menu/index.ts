@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
   const { data: menus, error: menuErr } = await admin
     .from('menus')
     .select(
-      'id, name, sort_order, menu_items(id, name, price, image_url, sort_order)',
+      'id, name, is_featured, sort_order, menu_items(id, name, price, image_url, sort_order)',
     )
     .eq('tenant_id', tenantId)
     .in('id', menuIds)
@@ -121,6 +121,7 @@ Deno.serve(async (req) => {
       return {
         id: m.id,
         name: m.name,
+        featured: m.is_featured === true,
         items: items.map((item: {
           id: number
           name: string

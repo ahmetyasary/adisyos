@@ -402,23 +402,8 @@ class _LoginCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.circular(28),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 32,
-            offset: Offset(0, 10),
-          ),
-          BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-          BoxShadow(
-            color: Colors.white,
-            blurRadius: 0,
-            offset: Offset(0, -1),
-          ),
-        ],
+        border: Border.all(color: _border),
+        boxShadow: AppColors.cardShadow,
       ),
       padding: const EdgeInsets.fromLTRB(28, 32, 28, 28),
       child: Form(
@@ -596,6 +581,7 @@ class _AuthTextFieldState extends State<_AuthTextField> {
       obscureText: widget.obscureText,
       keyboardType: widget.keyboardType,
       textInputAction: widget.textInputAction,
+      cursorColor: _orange,
       validator: widget.validator,
       onFieldSubmitted: widget.onFieldSubmitted,
       autofillHints: widget.autofillHints,
@@ -622,7 +608,9 @@ class _AuthTextFieldState extends State<_AuthTextField> {
         prefixIconConstraints: const BoxConstraints(),
         suffixIcon: widget.suffixIcon,
         filled: true,
-        fillColor: const Color(0xFFF9F9FB),
+        fillColor: AppColors.isDark
+            ? AppColors.chipBg
+            : const Color(0xFFF9F9FB),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(

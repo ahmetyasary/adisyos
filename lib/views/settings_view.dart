@@ -82,7 +82,8 @@ class _SettingsViewState extends State<SettingsView> {
 
   void _onCompanyChanged(String _) {
     _companyDebounce?.cancel();
-    _companyDebounce = Timer(const Duration(milliseconds: 500), _persistCompany);
+    _companyDebounce =
+        Timer(const Duration(milliseconds: 500), _persistCompany);
   }
 
   Future<void> _persistCompany() async {
@@ -167,6 +168,12 @@ class _SettingsViewState extends State<SettingsView> {
                                 color: _border,
                                 indent: 16,
                                 endIndent: 16),
+                            const _CariAccountsRow(),
+                            Divider(
+                                height: 1,
+                                color: _border,
+                                indent: 16,
+                                endIndent: 16),
                             _ReceiptLayoutRow(
                               onTap: () => _showReceiptLayoutSheet(context),
                             ),
@@ -185,8 +192,8 @@ class _SettingsViewState extends State<SettingsView> {
                                 icon: CupertinoIcons.creditcard_fill,
                                 title: 'POS Entegrasyonu',
                                 subtitleBuilder: () {
-                                  final pos = SettingsService
-                                      .to.integrations.value.pos;
+                                  final pos =
+                                      SettingsService.to.integrations.value.pos;
                                   if (!pos.enabled) return 'Kapalı';
                                   return '${pos.provider.label} · ${pos.statusLabel}';
                                 },
@@ -201,9 +208,8 @@ class _SettingsViewState extends State<SettingsView> {
                                 icon: CupertinoIcons.bag_fill,
                                 title: 'Pazaryeri',
                                 subtitleBuilder: () {
-                                  final n = SettingsService
-                                      .to.integrations.value
-                                      .activeMarketplaceCount;
+                                  final n = SettingsService.to.integrations
+                                      .value.activeMarketplaceCount;
                                   if (n == 0) {
                                     return 'Getir, Trendyol Go, Yemeksepeti';
                                   }
@@ -583,8 +589,7 @@ class _InlineField extends StatelessWidget {
                     controller: controller,
                     textCapitalization: textCapitalization,
                     onChanged: onChanged,
-                    onEditingComplete: () =>
-                        onFocusChange?.call(false),
+                    onEditingComplete: () => onFocusChange?.call(false),
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
@@ -1126,8 +1131,7 @@ class _RestoreRow extends StatelessWidget {
                       color: _textPrimary),
                 ),
               ),
-              Icon(CupertinoIcons.chevron_forward,
-                  size: 18, color: _textSec),
+              Icon(CupertinoIcons.chevron_forward, size: 18, color: _textSec),
             ],
           ),
         ),
@@ -1289,8 +1293,7 @@ class _NavOrderRow extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(CupertinoIcons.chevron_right,
-                  size: 16, color: _textSec),
+              Icon(CupertinoIcons.chevron_right, size: 16, color: _textSec),
             ],
           ),
         ),
@@ -1533,8 +1536,7 @@ class _FeedbackSettingsCard extends StatelessWidget {
             ),
           ),
           if (hapticsOn) ...[
-            Divider(
-                height: 1, color: _border, indent: 16, endIndent: 16),
+            Divider(height: 1, color: _border, indent: 16, endIndent: 16),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
               child: Column(
@@ -1609,8 +1611,7 @@ class _FeedbackSettingsCard extends StatelessWidget {
             ),
           ),
           if (soundsOn) ...[
-            Divider(
-                height: 1, color: _border, indent: 16, endIndent: 16),
+            Divider(height: 1, color: _border, indent: 16, endIndent: 16),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
               child: Column(
@@ -1685,8 +1686,7 @@ class _FeedbackSettingsCard extends StatelessWidget {
             ),
           ),
           if (notifyOn) ...[
-            Divider(
-                height: 1, color: _border, indent: 16, endIndent: 16),
+            Divider(height: 1, color: _border, indent: 16, endIndent: 16),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
               child: Column(
@@ -1743,8 +1743,7 @@ class _IntensityChips extends StatelessWidget {
             onTap: () => onSelect(id),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
                 color: isSelected ? _orange : _bg,
                 borderRadius: BorderRadius.circular(12),
@@ -1838,8 +1837,7 @@ class _OrdiSettingsCard extends StatelessWidget {
             ),
           ),
           if (visible) ...[
-            Divider(
-                height: 1, color: _border, indent: 16, endIndent: 16),
+            Divider(height: 1, color: _border, indent: 16, endIndent: 16),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
               child: Column(
@@ -1903,8 +1901,8 @@ class _OrdiSettingsCard extends StatelessWidget {
                     color: _orange.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(9),
                   ),
-                  child: const Icon(CupertinoIcons.ear,
-                      size: 17, color: _orange),
+                  child:
+                      const Icon(CupertinoIcons.ear, size: 17, color: _orange),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1943,8 +1941,7 @@ class _OrdiSettingsCard extends StatelessWidget {
             ),
           ),
           if (ttsOn) ...[
-            Divider(
-                height: 1, color: _border, indent: 16, endIndent: 16),
+            Divider(height: 1, color: _border, indent: 16, endIndent: 16),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
               child: Column(
@@ -2050,6 +2047,67 @@ class _IntegrationNavRow extends StatelessWidget {
   }
 }
 
+// ── Cari accounts ──────────────────────────────────────────────
+
+class _CariAccountsRow extends StatelessWidget {
+  const _CariAccountsRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final enabled = SettingsService.to.cariAccountsEnabled.value;
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: const Color(0xFFAF52DE).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: const Icon(
+                CupertinoIcons.person_crop_circle_badge_minus,
+                size: 18,
+                color: Color(0xFFAF52DE),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Cari Hesaplar',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: _textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    enabled
+                        ? 'Masaları cariye gönderme aktif'
+                        : 'Veresiye hesap özelliği kapalı',
+                    style: TextStyle(fontSize: 12, color: _textSec),
+                  ),
+                ],
+              ),
+            ),
+            Switch.adaptive(
+              value: enabled,
+              activeTrackColor: _orange,
+              onChanged: SettingsService.to.setCariAccountsEnabled,
+            ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
 // ── Payment types ──────────────────────────────────────────────
 
 class _PaymentTypesRow extends StatelessWidget {
@@ -2105,8 +2163,7 @@ class _PaymentTypesRow extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(CupertinoIcons.chevron_right,
-                  size: 16, color: _textSec),
+              Icon(CupertinoIcons.chevron_right, size: 16, color: _textSec),
             ],
           ),
         ),
@@ -2386,8 +2443,7 @@ class _ReceiptLayoutRow extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(CupertinoIcons.chevron_right,
-                  size: 16, color: _textSec),
+              Icon(CupertinoIcons.chevron_right, size: 16, color: _textSec),
             ],
           ),
         ),
@@ -2590,7 +2646,8 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
                   const SizedBox(height: 6),
                   Text(
                     'Yazıcıya gönderirken sistem yazdırma ekranına bu ölçü aktarılır.',
-                    style: TextStyle(fontSize: 12, color: _textSec, height: 1.35),
+                    style:
+                        TextStyle(fontSize: 12, color: _textSec, height: 1.35),
                   ),
                   const SizedBox(height: 10),
                   Row(
@@ -2601,8 +2658,7 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: GestureDetector(
-                          onTap: () =>
-                              _patch((l) => l.copyWith(paperSize: id)),
+                          onTap: () => _patch((l) => l.copyWith(paperSize: id)),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 150),
                             padding: const EdgeInsets.symmetric(
@@ -2645,8 +2701,7 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: GestureDetector(
-                          onTap: () =>
-                              _patch((l) => l.copyWith(fontSize: id)),
+                          onTap: () => _patch((l) => l.copyWith(fontSize: id)),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 150),
                             padding: const EdgeInsets.symmetric(
@@ -2703,8 +2758,7 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
                         borderSide: const BorderSide(color: _orange),
                       ),
                     ),
-                    onChanged: (v) =>
-                        _patch((l) => l.copyWith(headerNote: v)),
+                    onChanged: (v) => _patch((l) => l.copyWith(headerNote: v)),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -2738,8 +2792,7 @@ class _ReceiptLayoutSheetState extends State<_ReceiptLayoutSheet> {
                         borderSide: const BorderSide(color: _orange),
                       ),
                     ),
-                    onChanged: (v) =>
-                        _patch((l) => l.copyWith(footerText: v)),
+                    onChanged: (v) => _patch((l) => l.copyWith(footerText: v)),
                   ),
                 ],
               );

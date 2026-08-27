@@ -90,9 +90,8 @@ class ReportMoneyRankList extends StatelessWidget {
                         Text(
                           trailing,
                           style: TextStyle(
-                            color: valueSuffix != null
-                                ? _reportTextSec
-                                : accent,
+                            color:
+                                valueSuffix != null ? _reportTextSec : accent,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -138,7 +137,8 @@ class ReportSaleTile extends StatelessWidget {
     final total = (sale['total'] as num).toDouble();
     final method = (sale['paymentMethod'] as String?) ?? 'cash';
     final staff = SalesHistoryService.staffLabel(sale['staffEmail'] as String?);
-    final (icon, color) = paymentTypeVisual(method);
+    final (icon, color) =
+        paymentTypeVisual(SettingsService.to.paymentMethodBaseId(method));
     final payLabel = SettingsService.to.paymentMethodLabel(method);
 
     return Material(

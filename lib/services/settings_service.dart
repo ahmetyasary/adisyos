@@ -33,51 +33,74 @@ class SettingsService extends GetxService {
   static const int _companyNameMaxLength = 80;
 
   // Reactive state bound to the UI.
-  final RxString companyName    = ''.obs;
+  final RxString companyName = ''.obs;
   final RxString currencySymbol = '₺'.obs;
+
   /// Ordered ids of main sidebar sections. Empty → built-in default order.
   final RxList<String> navOrder = <String>[].obs;
+
   /// Shared Ordi FAB corner for this account: `tl` | `tr` | `bl` | `br`.
   final RxString ordiCorner = 'br'.obs;
+
   /// Whether the Ordi FAB is shown on every device for this account.
   final RxBool ordiVisible = true.obs;
+
   /// Ordi FAB size: `sm` | `md` | `lg`.
   final RxString ordiSize = 'md'.obs;
+
   /// Whether Ordi speaks replies aloud (TTS).
   final RxBool ordiTtsEnabled = true.obs;
+
   /// Ordi TTS volume: `low` | `medium` | `high` (default high).
   final RxString ordiTtsVolume = 'high'.obs;
+
   /// App-wide haptic / vibration feedback.
   final RxBool hapticsEnabled = true.obs;
+
   /// Haptic strength: `low` | `medium` | `high` (default high).
   final RxString hapticIntensity = 'high'.obs;
+
   /// App-wide UI sounds paired with haptic moments.
   final RxBool soundsEnabled = true.obs;
+
   /// UI click-sound strength: `low` | `medium` | `high` (default high).
   final RxString soundIntensity = 'high'.obs;
+
   /// Local notification alert sounds (digital menu orders, etc.).
   final RxBool notifySoundsEnabled = true.obs;
+
   /// Notification sound strength: `low` | `medium` | `high` (default high).
   final RxString notifySoundIntensity = 'high'.obs;
+
   /// Account UI language: `tr` | `en`.
   final RxString language = 'tr'.obs;
+
   /// Appearance: `system` | `light` | `dark`.
   final RxString themeMode = 'system'.obs;
+
   /// Bumped on every theme apply so shells/pages that read [AppColors]
   /// getters rebuild immediately (ThemeInheritedWidget alone is not enough).
   final RxInt themeEpoch = 0.obs;
+
   /// Account payment methods (nakit/kart/havale + custom, e.g. yemek kartı).
   final RxList<PaymentType> paymentTypes =
       List<PaymentType>.from(kDefaultPaymentTypes).obs;
+
   /// Thermal receipt (adisyon) print layout for this account.
   final Rx<ReceiptLayout> receiptLayout = ReceiptLayout.defaults.obs;
+
   /// Last chosen discount UI mode: `percent` | `amount` (synced across devices).
   final RxString discountMode = 'percent'.obs;
+
   /// Admin Ana Ekran widget layout (tenant-wide).
   final RxList<DashboardWidgetItem> dashboardLayout =
       defaultDashboardLayout().obs;
+
   /// POS + pazaryeri entegrasyon ayarları (tenant-wide).
   final Rx<IntegrationsConfig> integrations = IntegrationsConfig.defaults().obs;
+
+  /// Cari hesaplar (veresiye) feature flag (tenant-wide).
+  final RxBool cariAccountsEnabled = false.obs;
 
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
@@ -90,27 +113,28 @@ class SettingsService extends GetxService {
   String _tenantPrefKey(String tenantId, String key) =>
       'settings.$tenantId.$key';
 
-  static const _kCompanyName    = 'company_name';
+  static const _kCompanyName = 'company_name';
   static const _kCurrencySymbol = 'currency_symbol';
-  static const _kNavOrder       = 'nav_order';
-  static const _kOrdiCorner     = 'ordi_corner';
-  static const _kOrdiVisible    = 'ordi_visible';
-  static const _kOrdiSize       = 'ordi_size';
+  static const _kNavOrder = 'nav_order';
+  static const _kOrdiCorner = 'ordi_corner';
+  static const _kOrdiVisible = 'ordi_visible';
+  static const _kOrdiSize = 'ordi_size';
   static const _kOrdiTtsEnabled = 'ordi_tts_enabled';
-  static const _kOrdiTtsVolume  = 'ordi_tts_volume';
+  static const _kOrdiTtsVolume = 'ordi_tts_volume';
   static const _kHapticsEnabled = 'haptics_enabled';
   static const _kHapticIntensity = 'haptic_intensity';
-  static const _kSoundsEnabled  = 'sounds_enabled';
+  static const _kSoundsEnabled = 'sounds_enabled';
   static const _kSoundIntensity = 'sound_intensity';
   static const _kNotifySoundsEnabled = 'notify_sounds_enabled';
   static const _kNotifySoundIntensity = 'notify_sound_intensity';
-  static const _kLanguage       = 'language';
-  static const _kThemeMode      = 'theme_mode';
-  static const _kPaymentTypes   = 'payment_types';
-  static const _kReceiptLayout  = 'receipt_layout';
-  static const _kDiscountMode   = 'discount_mode';
+  static const _kLanguage = 'language';
+  static const _kThemeMode = 'theme_mode';
+  static const _kPaymentTypes = 'payment_types';
+  static const _kReceiptLayout = 'receipt_layout';
+  static const _kDiscountMode = 'discount_mode';
   static const _kDashboardLayout = 'dashboard_layout';
   static const _kIntegrations = 'integrations';
+  static const _kCariAccountsEnabled = 'cari_accounts_enabled';
 
   /// Pixel diameter of the Ordi badge for the current [ordiSize].
   double get ordiFabSize {
@@ -129,6 +153,17 @@ class SettingsService extends GetxService {
 
   /// Display name for a stored payment method id (falls back to the id).
   String paymentMethodLabel(String id) {
+    final isCari = id.startsWith('cari_');
+    final baseId = isCari ? id.substring('cari_'.length) : id;
+    final baseLabel = _paymentMethodBaseLabel(baseId);
+    return isCari ? 'Cari - $baseLabel' : baseLabel;
+  }
+
+  /// Removes the Cari source marker before choosing a payment visual or editor.
+  String paymentMethodBaseId(String id) =>
+      id.startsWith('cari_') ? id.substring('cari_'.length) : id;
+
+  String _paymentMethodBaseLabel(String id) {
     for (final t in paymentTypes) {
       if (t.id == id) return t.name;
     }
@@ -189,6 +224,7 @@ class SettingsService extends GetxService {
         discountMode.value = 'percent';
         dashboardLayout.assignAll(defaultDashboardLayout());
         integrations.value = IntegrationsConfig.defaults();
+        cariAccountsEnabled.value = false;
       }
     });
 
@@ -216,9 +252,8 @@ class SettingsService extends GetxService {
 
   void _subscribeRealtime() {
     final tenantId = _currentTenantId();
-    final channelName = tenantId == null
-        ? 'settings_changes'
-        : 'settings_changes_$tenantId';
+    final channelName =
+        tenantId == null ? 'settings_changes' : 'settings_changes_$tenantId';
 
     var channel = _db.channel(channelName);
     if (tenantId != null) {
@@ -332,6 +367,12 @@ class SettingsService extends GetxService {
       case _kIntegrations:
         integrations.value = parseIntegrationsConfig(rawVal);
         _writePref(_kIntegrations, rawVal);
+      case _kCariAccountsEnabled:
+        final next = rawVal != '0' && rawVal != 'false';
+        if (cariAccountsEnabled.value != next) {
+          cariAccountsEnabled.value = next;
+        }
+        _writePref(_kCariAccountsEnabled, next ? '1' : '0');
       default:
         break;
     }
@@ -427,6 +468,19 @@ class SettingsService extends GetxService {
     }
   }
 
+  Future<void> setCariAccountsEnabled(bool enabled) async {
+    cariAccountsEnabled.value = enabled;
+    final value = enabled ? '1' : '0';
+    await _writePref(_kCariAccountsEnabled, value);
+    try {
+      await _writeValue(_kCariAccountsEnabled, value);
+    } catch (e) {
+      if (kDebugMode) {
+        print('[SettingsService] setCariAccountsEnabled DB error: $e');
+      }
+    }
+  }
+
   /// Persists the account-wide Ordi corner. Local + prefs first, then Supabase
   /// so iPhone and iPad stay in sync.
   Future<void> setOrdiCorner(String corner) async {
@@ -515,7 +569,8 @@ class SettingsService extends GetxService {
     try {
       await _writeValue(_kHapticIntensity, next);
     } catch (e) {
-      if (kDebugMode) print('[SettingsService] setHapticIntensity DB error: $e');
+      if (kDebugMode)
+        print('[SettingsService] setHapticIntensity DB error: $e');
     }
   }
 
@@ -771,8 +826,7 @@ class SettingsService extends GetxService {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return false;
     final lower = trimmed.toLowerCase();
-    if (paymentTypes
-        .any((t) => t.id != id && t.name.toLowerCase() == lower)) {
+    if (paymentTypes.any((t) => t.id != id && t.name.toLowerCase() == lower)) {
       return false;
     }
     final next = paymentTypes
@@ -814,9 +868,8 @@ class SettingsService extends GetxService {
         .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
         .replaceAll(RegExp(r'_+'), '_')
         .replaceAll(RegExp(r'^_|_$'), '');
-    final base = ascii.isEmpty
-        ? 'odeme'
-        : ascii.substring(0, min(ascii.length, 20));
+    final base =
+        ascii.isEmpty ? 'odeme' : ascii.substring(0, min(ascii.length, 20));
     var id = '${base}_$suffix';
     final existing = paymentTypes.map((t) => t.id).toSet();
     var n = 0;
@@ -858,16 +911,17 @@ class SettingsService extends GetxService {
       String? readDiscountMode;
       String? readDashboardLayout;
       String? readIntegrations;
+      String? readCariAccountsEnabled;
 
       if (tenantId != null) {
-        readName   = prefs.getString(_tenantPrefKey(tenantId, _kCompanyName));
-        readSymbol = prefs.getString(_tenantPrefKey(tenantId, _kCurrencySymbol));
-        readNav    = prefs.getString(_tenantPrefKey(tenantId, _kNavOrder));
+        readName = prefs.getString(_tenantPrefKey(tenantId, _kCompanyName));
+        readSymbol =
+            prefs.getString(_tenantPrefKey(tenantId, _kCurrencySymbol));
+        readNav = prefs.getString(_tenantPrefKey(tenantId, _kNavOrder));
         readCorner = prefs.getString(_tenantPrefKey(tenantId, _kOrdiCorner));
         readOrdiVisible =
             prefs.getString(_tenantPrefKey(tenantId, _kOrdiVisible));
-        readOrdiSize =
-            prefs.getString(_tenantPrefKey(tenantId, _kOrdiSize));
+        readOrdiSize = prefs.getString(_tenantPrefKey(tenantId, _kOrdiSize));
         readOrdiTts =
             prefs.getString(_tenantPrefKey(tenantId, _kOrdiTtsEnabled));
         readOrdiTtsVolume =
@@ -876,18 +930,15 @@ class SettingsService extends GetxService {
             prefs.getString(_tenantPrefKey(tenantId, _kHapticsEnabled));
         readHapticIntensity =
             prefs.getString(_tenantPrefKey(tenantId, _kHapticIntensity));
-        readSounds =
-            prefs.getString(_tenantPrefKey(tenantId, _kSoundsEnabled));
+        readSounds = prefs.getString(_tenantPrefKey(tenantId, _kSoundsEnabled));
         readSoundIntensity =
             prefs.getString(_tenantPrefKey(tenantId, _kSoundIntensity));
         readNotifySounds =
             prefs.getString(_tenantPrefKey(tenantId, _kNotifySoundsEnabled));
         readNotifySoundIntensity =
             prefs.getString(_tenantPrefKey(tenantId, _kNotifySoundIntensity));
-        readLanguage =
-            prefs.getString(_tenantPrefKey(tenantId, _kLanguage));
-        readThemeMode =
-            prefs.getString(_tenantPrefKey(tenantId, _kThemeMode));
+        readLanguage = prefs.getString(_tenantPrefKey(tenantId, _kLanguage));
+        readThemeMode = prefs.getString(_tenantPrefKey(tenantId, _kThemeMode));
         readPayTypes =
             prefs.getString(_tenantPrefKey(tenantId, _kPaymentTypes));
         readReceipt =
@@ -898,12 +949,14 @@ class SettingsService extends GetxService {
             prefs.getString(_tenantPrefKey(tenantId, _kDashboardLayout));
         readIntegrations =
             prefs.getString(_tenantPrefKey(tenantId, _kIntegrations));
+        readCariAccountsEnabled =
+            prefs.getString(_tenantPrefKey(tenantId, _kCariAccountsEnabled));
       }
 
       // Legacy fallback — pre-tenant-scoping installs stored flat keys.
-      readName   ??= prefs.getString('settings.$_kCompanyName');
+      readName ??= prefs.getString('settings.$_kCompanyName');
       readSymbol ??= prefs.getString('settings.$_kCurrencySymbol');
-      readNav    ??= prefs.getString('settings.$_kNavOrder');
+      readNav ??= prefs.getString('settings.$_kNavOrder');
       readCorner ??= prefs.getString('settings.$_kOrdiCorner');
       readOrdiVisible ??= prefs.getString('settings.$_kOrdiVisible');
       readOrdiSize ??= prefs.getString('settings.$_kOrdiSize');
@@ -926,6 +979,8 @@ class SettingsService extends GetxService {
       readDiscountMode ??= prefs.getString('settings.$_kDiscountMode');
       readDashboardLayout ??= prefs.getString('settings.$_kDashboardLayout');
       readIntegrations ??= prefs.getString('settings.$_kIntegrations');
+      readCariAccountsEnabled ??=
+          prefs.getString('settings.$_kCariAccountsEnabled');
 
       if (readName != null && readName.isNotEmpty) {
         companyName.value = readName;
@@ -940,21 +995,20 @@ class SettingsService extends GetxService {
         ordiCorner.value = _sanitizeCorner(readCorner);
       }
       if (readOrdiVisible != null && readOrdiVisible.isNotEmpty) {
-        ordiVisible.value = readOrdiVisible != '0' && readOrdiVisible != 'false';
+        ordiVisible.value =
+            readOrdiVisible != '0' && readOrdiVisible != 'false';
       }
       if (readOrdiSize != null && readOrdiSize.isNotEmpty) {
         ordiSize.value = _sanitizeOrdiSize(readOrdiSize);
       }
       if (readOrdiTts != null && readOrdiTts.isNotEmpty) {
-        ordiTtsEnabled.value =
-            readOrdiTts != '0' && readOrdiTts != 'false';
+        ordiTtsEnabled.value = readOrdiTts != '0' && readOrdiTts != 'false';
       }
       if (readOrdiTtsVolume != null && readOrdiTtsVolume.isNotEmpty) {
         ordiTtsVolume.value = _sanitizeIntensity(readOrdiTtsVolume);
       }
       if (readHaptics != null && readHaptics.isNotEmpty) {
-        hapticsEnabled.value =
-            readHaptics != '0' && readHaptics != 'false';
+        hapticsEnabled.value = readHaptics != '0' && readHaptics != 'false';
       }
       if (readHapticIntensity != null && readHapticIntensity.isNotEmpty) {
         hapticIntensity.value = _sanitizeIntensity(readHapticIntensity);
@@ -997,16 +1051,18 @@ class SettingsService extends GetxService {
       if (readIntegrations != null && readIntegrations.isNotEmpty) {
         integrations.value = parseIntegrationsConfig(readIntegrations);
       }
+      if (readCariAccountsEnabled != null &&
+          readCariAccountsEnabled.isNotEmpty) {
+        cariAccountsEnabled.value = readCariAccountsEnabled != '0' &&
+            readCariAccountsEnabled != 'false';
+      }
     } catch (e) {
       if (kDebugMode) print('[SettingsService] prefs load error: $e');
     }
   }
 
-  List<String> _parseNavOrder(String raw) => raw
-      .split(',')
-      .map((e) => e.trim())
-      .where((e) => e.isNotEmpty)
-      .toList();
+  List<String> _parseNavOrder(String raw) =>
+      raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
 
   Future<void> _writePref(String key, String value) async {
     try {
@@ -1030,10 +1086,8 @@ class SettingsService extends GetxService {
     final tenantId = _currentTenantId();
     if (tenantId == null) return;
     try {
-      final rows = await _db
-          .from('app_settings')
-          .select()
-          .eq('tenant_id', tenantId);
+      final rows =
+          await _db.from('app_settings').select().eq('tenant_id', tenantId);
 
       String? ordiFromShared;
       String? ordiFromLegacyDevice;
@@ -1106,10 +1160,9 @@ class SettingsService extends GetxService {
             }
           case _kNotifySoundsEnabled:
             if (rawVal.isNotEmpty) {
-              notifySoundsEnabled.value =
-                  rawVal != '0' && rawVal != 'false';
-              await _writePref(_kNotifySoundsEnabled,
-                  notifySoundsEnabled.value ? '1' : '0');
+              notifySoundsEnabled.value = rawVal != '0' && rawVal != 'false';
+              await _writePref(
+                  _kNotifySoundsEnabled, notifySoundsEnabled.value ? '1' : '0');
             }
           case _kNotifySoundIntensity:
             if (rawVal.isNotEmpty) {
@@ -1160,6 +1213,14 @@ class SettingsService extends GetxService {
               integrations.value = parseIntegrationsConfig(rawVal);
               await _writePref(_kIntegrations, rawVal);
             }
+          case _kCariAccountsEnabled:
+            if (rawVal.isNotEmpty) {
+              cariAccountsEnabled.value = rawVal != '0' && rawVal != 'false';
+              await _writePref(
+                _kCariAccountsEnabled,
+                cariAccountsEnabled.value ? '1' : '0',
+              );
+            }
           default:
             if (rawKey.startsWith('ordi_corner.') && rawVal.isNotEmpty) {
               ordiFromLegacyDevice ??= rawVal;
@@ -1196,9 +1257,7 @@ class SettingsService extends GetxService {
     };
 
     try {
-      await _db
-          .from('app_settings')
-          .upsert(row, onConflict: 'tenant_id,key');
+      await _db.from('app_settings').upsert(row, onConflict: 'tenant_id,key');
       return;
     } catch (e) {
       if (kDebugMode) {
@@ -1228,7 +1287,8 @@ class SettingsService extends GetxService {
         await _db.from('app_settings').insert(row);
       }
     } catch (e) {
-      if (kDebugMode) print('[SettingsService] fallback write error ($key): $e');
+      if (kDebugMode)
+        print('[SettingsService] fallback write error ($key): $e');
       rethrow;
     }
   }

@@ -65,14 +65,27 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
     );
   }
 
-  Future<void> _save() async {
-    final ok = await DigitalMenuService.to.save();
-    if (!mounted) return;
-    if (ok) {
-      AppToast.success('Dijital menü kaydedildi', title: 'success'.tr);
-    } else {
-      AppToast.error('Kaydedilemedi');
+  List<Map<String, dynamic>> _orderedDigitalMenus(
+    List<Map<String, dynamic>> menus,
+    List<int> selectedIds,
+  ) {
+    final byId = <int, Map<String, dynamic>>{
+      for (final menu in menus) menu['id'] as int: menu,
+    };
+    final ordered = <Map<String, dynamic>>[];
+    final added = <int>{};
+    for (final id in selectedIds) {
+      final menu = byId[id];
+      if (menu != null) {
+        ordered.add(menu);
+        added.add(id);
+      }
     }
+    for (final menu in menus) {
+      final id = menu['id'] as int;
+      if (!added.contains(id)) ordered.add(menu);
+    }
+    return ordered;
   }
 
   Future<void> _copyLink() async {
@@ -279,6 +292,8 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
               final tables = TableService.to.tables.toList();
               final menus = MenuService.to.menus;
               final selectedId = dm.selectedTableId.value;
+              final orderedMenus =
+                  _orderedDigitalMenus(menus.toList(), dm.selectedMenuIds);
               if (dm.loading.value) {
                 return const Center(
                   child: CircularProgressIndicator(color: _orange),
@@ -421,6 +436,11 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                       const SizedBox(height: 22),
                       const _SectionLabel('Menüde gösterilecekler'),
                       const SizedBox(height: 10),
+                      Text(
+                        'İşaretli kategoriler yayınlanır. Sürükleyerek yayın sırasını değiştirin.',
+                        style: TextStyle(fontSize: 12, color: _textSec),
+                      ),
+                      const SizedBox(height: 10),
                       if (menus.isEmpty)
                         _Card(
                           child: Padding(
@@ -434,60 +454,110 @@ class _DigitalMenuViewState extends State<DigitalMenuView> {
                         )
                       else
                         _Card(
-                          child: Column(
-                            children: [
-                              for (var i = 0; i < menus.length; i++) ...[
-                                if (i > 0)
-                                  Divider(
-                                    height: 1,
-                                    color: _border,
-                                    indent: 16,
-                                    endIndent: 16,
+                          child: ReorderableListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            buildDefaultDragHandles: false,
+                            itemCount: orderedMenus.length,
+                            onReorder: (oldIndex, newIndex) {
+                              if (newIndex > oldIndex) newIndex -= 1;
+                              final ids = orderedMenus
+                                  .map((menu) => menu['id'] as int)
+                                  .toList();
+                              final moved = ids.removeAt(oldIndex);
+                              ids.insert(newIndex, moved);
+                              dm.setMenuOrder(
+                                ids.where(dm.selectedMenuIds.contains),
+                              );
+                            },
+                            itemBuilder: (_, index) {
+                              final menu = orderedMenus[index];
+                              final id = menu['id'] as int;
+                              final selected =
+                                  dm.selectedMenuIds.contains(id);
+                              final featured =
+                                  (menu['featured'] as bool?) ?? false;
+                              return Column(
+                                key: ValueKey('digital-menu-$id'),
+                                children: [
+                                  if (index > 0)
+                                    Divider(
+                                      height: 1,
+                                      color: _border,
+                                      indent: 16,
+                                      endIndent: 16,
+                                    ),
+                                  _MenuToggleRow(
+                                    name: menu['name'] as String,
+                                    itemCount:
+                                        ((menu['items'] as List?) ?? const [])
+                                            .length,
+                                    selected: selected,
+                                    featured: featured,
+                                    onTap: () {
+                                      dm.toggleMenu(id);
+                                    },
+                                    onFeatured: () =>
+                                        MenuService.to.setMenuFeatured(
+                                      id,
+                                      !featured,
+                                    ),
+                                    dragHandle: selected
+                                        ? ReorderableDragStartListener(
+                                            index: index,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(12),
+                                              child: Icon(
+                                                CupertinoIcons
+                                                    .line_horizontal_3,
+                                                size: 19,
+                                                color: _textSec,
+                                              ),
+                                            ),
+                                          )
+                                        : const SizedBox(
+                                            width: 43,
+                                            height: 44,
+                                            child: Icon(
+                                              CupertinoIcons
+                                                  .line_horizontal_3,
+                                              size: 19,
+                                              color: Colors.transparent,
+                                            ),
+                                          ),
                                   ),
-                                _MenuToggleRow(
-                                  name: menus[i]['name'] as String,
-                                  itemCount:
-                                      ((menus[i]['items'] as List?) ?? const [])
-                                          .length,
-                                  selected: dm.selectedMenuIds
-                                      .contains(menus[i]['id'] as int),
-                                  onTap: () =>
-                                      dm.toggleMenu(menus[i]['id'] as int),
-                                ),
-                              ],
-                            ],
+                                ],
+                              );
+                            },
                           ),
                         ),
                       const SizedBox(height: 16),
-                      SizedBox(
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: dm.saving.value ? null : _save,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _orange,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (dm.saving.value) ...[
+                            const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: _orange,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          Text(
+                            dm.saving.value
+                                ? 'Güncelleniyor…'
+                                : 'Seçim ve sıralama otomatik kaydedilir',
+                            style: TextStyle(
+                              color: _textSec,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                          child: dm.saving.value
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.4,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text(
-                                  'Kaydet',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                        ),
+                        ],
                       ),
                       const SizedBox(height: 28),
                       const _SectionLabel('Masa QR / barkod'),
@@ -821,13 +891,19 @@ class _MenuToggleRow extends StatelessWidget {
     required this.name,
     required this.itemCount,
     required this.selected,
+    required this.featured,
     required this.onTap,
+    required this.onFeatured,
+    required this.dragHandle,
   });
 
   final String name;
   final int itemCount;
   final bool selected;
+  final bool featured;
   final VoidCallback onTap;
+  final VoidCallback onFeatured;
+  final Widget dragHandle;
 
   @override
   Widget build(BuildContext context) {
@@ -865,13 +941,50 @@ class _MenuToggleRow extends StatelessWidget {
                         color: _textPrimary,
                       ),
                     ),
-                    Text(
-                      '$itemCount ürün',
-                      style: TextStyle(fontSize: 12, color: _textSec),
+                    Row(
+                      children: [
+                        Text(
+                          '$itemCount ürün',
+                          style: TextStyle(fontSize: 12, color: _textSec),
+                        ),
+                        if (featured) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _orange.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Öne çıkan',
+                              style: TextStyle(
+                                color: _orange,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
               ),
+              IconButton(
+                tooltip: featured ? 'Öne çıkanı kaldır' : 'Öne çıkan yap',
+                onPressed: onFeatured,
+                icon: Icon(
+                  featured
+                      ? CupertinoIcons.star_fill
+                      : CupertinoIcons.star,
+                  size: 19,
+                  color: featured ? _orange : _textSec,
+                ),
+              ),
+              dragHandle,
             ],
           ),
         ),

@@ -6,6 +6,7 @@ class SalesHistoryService extends GetxService {
   static SalesHistoryService get to => Get.find();
 
   final RxList<Map<String, dynamic>> sales = <Map<String, dynamic>>[].obs;
+  final RxBool loading = false.obs;
 
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
@@ -53,6 +54,7 @@ class SalesHistoryService extends GetxService {
   // ── Load ────────────────────────────────────────────────────
 
   Future<void> _load() async {
+    loading.value = true;
     try {
       // Load all sales with their line-items, newest first.
       // For very high-volume production use, consider paginating by date range.
@@ -64,6 +66,8 @@ class SalesHistoryService extends GetxService {
       sales.assignAll(rows.map(_rowToSale).toList());
     } catch (e) {
       if (kDebugMode) print('[SalesHistoryService] load error: $e');
+    } finally {
+      loading.value = false;
     }
   }
 
@@ -87,7 +91,7 @@ class SalesHistoryService extends GetxService {
 
   // ── Record a completed sale ──────────────────────────────────
 
-  Future<void> recordSale({
+  Future<bool> recordSale({
     required String tableName,
     required List<Map<String, dynamic>> items,
     required double subtotal,
@@ -117,16 +121,16 @@ class SalesHistoryService extends GetxService {
       // Insert line items
       if (items.isNotEmpty) {
         await _db.from('sale_items').insert(
-          items
-              .map((item) => {
-                    'sale_id': saleId,
-                    'name': item['name'] as String,
-                    'quantity': item['quantity'] as int,
-                    'price': (item['price'] as num).toDouble(),
-                    'tenant_id': _tenantId,
-                  })
-              .toList(),
-        );
+              items
+                  .map((item) => {
+                        'sale_id': saleId,
+                        'name': item['name'] as String,
+                        'quantity': item['quantity'] as int,
+                        'price': (item['price'] as num).toDouble(),
+                        'tenant_id': _tenantId,
+                      })
+                  .toList(),
+            );
       }
 
       // Prepend to local cache
@@ -141,8 +145,86 @@ class SalesHistoryService extends GetxService {
         'staffEmail': staffEmail,
         'paymentMethod': paymentMethod,
       });
+      return true;
     } catch (e) {
       if (kDebugMode) print('[SalesHistoryService] recordSale error: $e');
+      return false;
+    }
+  }
+
+  /// Updates a completed payment and replaces its line-item snapshots.
+  ///
+  /// Sale items are snapshots, not references to the current menu. Replacing
+  /// them makes historical corrections predictable and keeps the total in
+  /// sync with the edited products.
+  Future<bool> updateSale({
+    required String saleId,
+    required List<Map<String, dynamic>> items,
+    required String paymentMethod,
+    required double discount,
+  }) async {
+    try {
+      final normalizedItems = items
+          .map(
+            (item) => {
+              'name': (item['name'] as String).trim(),
+              'quantity': (item['quantity'] as num).toInt(),
+              'price': (item['price'] as num).toDouble(),
+            },
+          )
+          .where(
+            (item) =>
+                (item['name'] as String).isNotEmpty &&
+                (item['quantity'] as int) > 0 &&
+                (item['price'] as double) >= 0,
+          )
+          .toList();
+      final subtotal = normalizedItems.fold<double>(
+        0,
+        (sum, item) =>
+            sum + (item['quantity'] as int) * (item['price'] as double),
+      );
+      final safeDiscount = discount.clamp(0, subtotal).toDouble();
+      final total = subtotal - safeDiscount;
+
+      await _db
+          .from('sales')
+          .update({
+            'subtotal': subtotal,
+            'discount': safeDiscount,
+            'total': total,
+            'payment_method': paymentMethod,
+          })
+          .eq('id', saleId)
+          .eq('tenant_id', _tenantId);
+
+      await _db
+          .from('sale_items')
+          .delete()
+          .eq('sale_id', saleId)
+          .eq('tenant_id', _tenantId);
+
+      if (normalizedItems.isNotEmpty) {
+        await _db.from('sale_items').insert(
+              normalizedItems
+                  .map(
+                    (item) => {
+                      'sale_id': saleId,
+                      'name': item['name'],
+                      'quantity': item['quantity'],
+                      'price': item['price'],
+                      'tenant_id': _tenantId,
+                    },
+                  )
+                  .toList(),
+            );
+      }
+
+      await _load();
+      return true;
+    } catch (e) {
+      if (kDebugMode) print('[SalesHistoryService] updateSale error: $e');
+      return false;
     }
   }
 
@@ -151,9 +233,7 @@ class SalesHistoryService extends GetxService {
   List<Map<String, dynamic>> getSalesForDate(DateTime date) {
     return sales.where((s) {
       final d = DateTime.parse(s['date'] as String);
-      return d.year == date.year &&
-          d.month == date.month &&
-          d.day == date.day;
+      return d.year == date.year && d.month == date.month && d.day == date.day;
     }).toList();
   }
 
@@ -226,8 +306,7 @@ class SalesHistoryService extends GetxService {
         counts[name] = (counts[name] ?? 0.0) + qty;
       }
     }
-    return (counts.entries.toList()
-          ..sort((a, b) => b.value.compareTo(a.value)))
+    return (counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value)))
         .take(top)
         .toList();
   }

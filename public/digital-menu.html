@@ -21,6 +21,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Robot
 .tabs{display:flex;gap:8px;width:max-content;padding:10px 16px 12px}
 .tab{border:none;border-radius:999px;padding:8px 14px;background:#F2F2F7;color:var(--t2);font:inherit;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;-webkit-tap-highlight-color:transparent}
 .tab.active{background:var(--or);color:#fff}
+.tab-featured{padding:2px 6px;border-radius:999px;background:rgba(255,149,0,.14);color:var(--or);font-size:9px;font-weight:800;letter-spacing:.1px}
+.tab.active .tab-featured{background:rgba(255,255,255,.22);color:#fff}
 .cnt{padding:1px 6px;border-radius:999px;font-size:10px;font-weight:800;background:rgba(0,0,0,.08)}
 .tab.active .cnt{background:rgba(255,255,255,.25)}
 .content{padding:16px 16px 24px;max-width:640px;margin:0 auto}
@@ -257,7 +259,9 @@ function render(d) {
   $('tabsWrap').hidden = false;
   $('tabs').innerHTML = menus.map((m, i) =>
     '<button class="tab' + (i === 0 ? ' active' : '') + '" data-i="' + i + '">' +
-    esc(m.name) + ' <span class="cnt">' + (m.items || []).length + '</span></button>'
+    '<span class="tab-name">' + esc(m.name) + '</span>' +
+    (m.featured ? '<span class="tab-featured">Öne çıkan</span>' : '') +
+    ' <span class="cnt">' + (m.items || []).length + '</span></button>'
   ).join('');
   $('app').innerHTML = menus.map((m, i) => {
     const items = m.items || [];

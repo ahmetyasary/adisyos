@@ -2,6 +2,8 @@
 
 -ordi'ye iş ile ilgili tahmin özelliği ekle. forecast gelecekte neler olabilir?
 
+-Cari hesaplar olsun (Müşteri için kayıt oluşsun. Ödemeleri oraya aktarılsın. Yada sen fikir ver?) ✅
+
 -Dashboard ekranı güzelliştirilecek (widget mantığı olabilir.drag&drop) ✅ (Yetkili: uzun bas → sürükle, boyut S/M/L, ekle, sıfırla)
 
 -pos entegrasyonu ✅ (Ayarlar > Entegrasyonlar > POS — ayar formu + kayıt; canlı API sonra)
@@ -63,3 +65,17 @@
 -yapay zeka butonunu ayarlardan gizleme olsun. buton boyutunu 3 (küçük, orta,büyük)seçenekte seçebilsin ✅
 
 -ödeme tipleri: nakit, kart, havale var. ama başka ödeme tipleride ekleyebilsin. örnek; yemek kartları ekleyebilsin ve bunlarıda raporlardada görelim. Ödeme tipleri ekleme menüsünü Ayarlar kısmında bir menü olsun. ✅
+
+## IPA sonrası yapılan ana işlemler
+
+- App Store yükleme hatası düzeltildi. `objective_c.framework` simulator mimarisi sorunu için `path_provider_foundation` sürümü sabitlendi ve temiz IPA alındı. ✅
+- Giriş ekranı ve ödeme duvarının koyu mod kontrast sorunları düzeltildi. ✅
+- Dijital menüye sistem/açık/koyu tema seçimi eklendi. ✅
+- Dijital menü kategorileri sürükleyerek sıralanabilir ve kategoriler “Öne çıkan” olarak işaretlenebilir hale getirildi. Seçim, sıralama ve öne çıkan durumu otomatik kaydediliyor. ✅
+- Tamamlanan ödemeler ekranı eklendi. Son 20 ödeme görüntülenebiliyor; ödeme tipi, ürün, adet ve fiyat düzenlenebiliyor, toplam otomatik hesaplanıyor. ✅
+- Cari Hesaplar özelliği eklendi: Ayarlar anahtarı, menü görünürlüğü, müşteri oluşturma/seçme, masayı cariye aktarma, açık hesap badge’i, detay görüntüleme, ödeme tamamlama ve silme. ✅
+- Cari hesap ödemeleri tamamlanan ödemeler ve raporlarda “Cari - Ödeme Tipi” olarak gösteriliyor. ✅
+- “Cari’ye Gönder” işlemi masa aksiyonlarına taşındı ve işlem sırasında “Taşınıyor…” yüklenme durumu eklendi. ✅
+- Mutfak kayıtlarında geçici masa/sipariş kimliği nedeniyle oluşan UUID hatası düzeltildi. ✅
+- Cari Hesaplar ve dijital menü için Supabase tabloları, migration’lar ve canlı menü API güncellemeleri yapıldı. ✅
+- Güncel uygulama iOS simülatörlerine gönderildi. ✅

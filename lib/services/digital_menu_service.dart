@@ -238,12 +238,24 @@ class DigitalMenuService extends GetxService {
     }
   }
 
-  void toggleMenu(int menuId) {
+  Future<bool> toggleMenu(int menuId) async {
     if (selectedMenuIds.contains(menuId)) {
       selectedMenuIds.remove(menuId);
     } else {
       selectedMenuIds.add(menuId);
     }
+    return save();
+  }
+
+  /// Updates the order of the categories that are currently published.
+  /// Unchecked categories are intentionally excluded from this list.
+  Future<bool> setMenuOrder(Iterable<int> ids) async {
+    final selected = selectedMenuIds.toSet();
+    final next = ids.where(selected.contains).toList();
+    // Never let a reorder gesture accidentally uncheck a category.
+    next.addAll(selected.where((id) => !next.contains(id)));
+    selectedMenuIds.assignAll(next);
+    return save();
   }
 
   Future<void> setEnabled(bool value) async {

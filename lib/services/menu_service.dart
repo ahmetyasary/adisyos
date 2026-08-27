@@ -71,7 +71,7 @@ class MenuService extends GetxService {
         rows = await _db
             .from('menus')
             .select(
-              'id, name, icon_key, sort_order, menu_items(id, name, price, image_url, sort_order)',
+              'id, name, icon_key, is_featured, sort_order, menu_items(id, name, price, image_url, sort_order)',
             )
             .order('sort_order')
             .order('sort_order', referencedTable: 'menu_items');
@@ -79,7 +79,9 @@ class MenuService extends GetxService {
         try {
           rows = await _db
               .from('menus')
-              .select('id, name, icon_key, menu_items(id, name, price, image_url)')
+              .select(
+                'id, name, icon_key, is_featured, menu_items(id, name, price, image_url)',
+              )
               .order('id');
         } catch (_) {
           rows = await _db
@@ -110,6 +112,7 @@ class MenuService extends GetxService {
         'id': row['id'] as int,
         'name': row['name'] as String,
         'iconKey': (row['icon_key'] as String?) ?? 'restaurant_menu',
+        'featured': (row['is_featured'] as bool?) ?? false,
         'sortOrder': (row['sort_order'] as num?)?.toInt() ?? 0,
         'items': ((row['menu_items'] ?? []) as List)
             .map((i) => {
@@ -203,6 +206,7 @@ class MenuService extends GetxService {
           .insert({
             'name': name,
             'icon_key': 'restaurant_menu',
+            'is_featured': false,
             'tenant_id': _tenantId,
             'sort_order': menus.length,
           })
@@ -214,6 +218,7 @@ class MenuService extends GetxService {
         'id': id,
         'name': name,
         'iconKey': 'restaurant_menu',
+        'featured': false,
         'sortOrder': menus.length,
         'items': <Map<String, dynamic>>[],
       });
@@ -233,6 +238,18 @@ class MenuService extends GetxService {
         .update({'name': name})
         .eq('id', id)
         .catchError((e) => _err('updateMenu', e));
+  }
+
+  void setMenuFeatured(int menuId, bool featured) {
+    final index = menus.indexWhere((m) => m['id'] == menuId);
+    if (index == -1) return;
+    menus[index]['featured'] = featured;
+    menus.refresh();
+    _db
+        .from('menus')
+        .update({'is_featured': featured})
+        .eq('id', menuId)
+        .catchError((e) => _err('setMenuFeatured', e));
   }
 
   void removeMenu(int index) {

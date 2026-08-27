@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:orderix/navigation/app_sections.dart';
+import 'package:orderix/services/cari_service.dart';
 import 'package:orderix/services/digital_menu_order_service.dart';
 import 'package:orderix/themes/app_colors.dart';
 import 'package:orderix/widgets/brand_assets.dart';
@@ -77,6 +78,9 @@ class AppSidebar extends StatelessWidget {
                 if (Get.isRegistered<DigitalMenuOrderService>()) {
                   DigitalMenuOrderService.to.pending.length;
                 }
+                if (Get.isRegistered<CariService>()) {
+                  CariService.to.accounts.length;
+                }
                 return ListView(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   children: [
@@ -88,7 +92,10 @@ class AppSidebar extends StatelessWidget {
                         collapsed: collapsed,
                         badgeCount: s.id == 'pending_orders'
                             ? DigitalMenuOrderService.to.pendingCount
-                            : 0,
+                            : s.id == 'cari_accounts' &&
+                                    Get.isRegistered<CariService>()
+                                ? CariService.to.openAccountCount
+                                : 0,
                         onTap: () => onSelect(s.id),
                       ),
                   ],
@@ -201,8 +208,7 @@ class _SidebarRow extends StatelessWidget {
               top: -2,
               right: -4,
               child: Container(
-                constraints:
-                    const BoxConstraints(minWidth: 16, minHeight: 16),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 decoration: BoxDecoration(
                   color: _red,
@@ -342,9 +348,7 @@ class _LogoButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final logo = mark
-        ? BrandMark(size: height)
-        : BrandWordmark(height: height);
+    final logo = mark ? BrandMark(size: height) : BrandWordmark(height: height);
     if (onTap == null) return logo;
     return Material(
       color: Colors.transparent,

@@ -6,6 +6,7 @@ class KitchenService extends GetxService {
   static KitchenService get to => Get.find();
 
   final RxList<Map<String, dynamic>> tickets = <Map<String, dynamic>>[].obs;
+  final _pendingQuantities = <String, int>{};
 
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
@@ -36,10 +37,8 @@ class KitchenService extends GetxService {
 
   Future<void> _load() async {
     try {
-      final rows = await _db
-          .from('kitchen_tickets')
-          .select()
-          .order('ordered_at');
+      final rows =
+          await _db.from('kitchen_tickets').select().order('ordered_at');
 
       tickets.assignAll(rows.map(_rowToTicket).toList());
     } catch (e) {
@@ -96,8 +95,16 @@ class KitchenService extends GetxService {
         tickets[existingIdx]['quantity'] = quantity;
         tickets.refresh();
 
+        // The insert may still be resolving. A temporary id is local-only
+        // and must never be sent to a UUID column.
+        if (ticketId.startsWith('tmp_')) {
+          _pendingQuantities[ticketId] = quantity;
+          return;
+        }
+
         // Fire-and-forget DB update.
-        _db.from('kitchen_tickets')
+        _db
+            .from('kitchen_tickets')
             .update({'quantity': quantity})
             .eq('id', ticketId)
             .catchError((e) => _err('addOrUpdateTicket(update)', e));
@@ -115,7 +122,8 @@ class KitchenService extends GetxService {
           'orderedAt': now,
         });
 
-        _db.from('kitchen_tickets')
+        _db
+            .from('kitchen_tickets')
             .insert({
               'table_id': tableId,
               'table_name': tableName,
@@ -129,10 +137,25 @@ class KitchenService extends GetxService {
             .then((row) {
               final idx = tickets.indexWhere((t) => t['id'] == tempId);
               if (idx != -1) {
-                tickets[idx] = _rowToTicket(row);
+                final ticket = _rowToTicket(row);
+                final pendingQuantity = _pendingQuantities.remove(tempId);
+                if (pendingQuantity != null) {
+                  ticket['quantity'] = pendingQuantity;
+                }
+                tickets[idx] = ticket;
                 tickets.refresh();
+                if (pendingQuantity != null) {
+                  _db
+                      .from('kitchen_tickets')
+                      .update({'quantity': pendingQuantity})
+                      .eq('id', row['id'])
+                      .catchError((e) => _err('addOrUpdateTicket(pending)', e));
+                }
               }
-            }, onError: (e) => _err('addOrUpdateTicket(insert)', e));
+            }, onError: (e) {
+              _pendingQuantities.remove(tempId);
+              _err('addOrUpdateTicket(insert)', e);
+            });
       }
     } catch (e) {
       _err('addOrUpdateTicket', e);
@@ -154,7 +177,8 @@ class KitchenService extends GetxService {
     tickets[idx]['status'] = next;
     tickets.refresh();
 
-    _db.from('kitchen_tickets')
+    _db
+        .from('kitchen_tickets')
         .update({'status': next})
         .eq('id', ticketId)
         .catchError((e) => _err('advanceStatus', e));
@@ -162,7 +186,8 @@ class KitchenService extends GetxService {
 
   Future<void> removeTicketsForTable(int tableId) async {
     tickets.removeWhere((t) => t['tableId'] == tableId);
-    _db.from('kitchen_tickets')
+    _db
+        .from('kitchen_tickets')
         .delete()
         .eq('table_id', tableId)
         .catchError((e) => _err('removeTicketsForTable', e));
@@ -175,7 +200,8 @@ class KitchenService extends GetxService {
     tickets.removeWhere(
       (t) => t['tableId'] == tableId && t['itemName'] == itemName,
     );
-    _db.from('kitchen_tickets')
+    _db
+        .from('kitchen_tickets')
         .delete()
         .eq('table_id', tableId)
         .eq('item_name', itemName)
@@ -184,7 +210,8 @@ class KitchenService extends GetxService {
 
   void clearReadyTickets() {
     tickets.removeWhere((t) => t['status'] == 'ready');
-    _db.from('kitchen_tickets')
+    _db
+        .from('kitchen_tickets')
         .delete()
         .eq('status', 'ready')
         .catchError((e) => _err('clearReadyTickets', e));

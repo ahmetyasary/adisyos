@@ -19,6 +19,7 @@ import 'package:orderix/services/digital_menu_service.dart';
 import 'package:orderix/services/digital_menu_order_service.dart';
 import 'package:orderix/services/local_notify_service.dart';
 import 'package:orderix/services/table_service.dart';
+import 'package:orderix/services/cari_service.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/section_service.dart';
@@ -79,6 +80,7 @@ Future<void> main() async {
   Get.put(StaffService());
   Get.put(SectionService());
   Get.put(SalesHistoryService());
+  Get.put(CariService());
   Get.put(KitchenService());
   Get.put(InventoryService());
   Get.put(ShiftService());

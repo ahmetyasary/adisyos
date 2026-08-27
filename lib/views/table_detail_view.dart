@@ -7,6 +7,7 @@ import 'package:orderix/services/table_service.dart';
 import 'package:orderix/services/section_service.dart';
 import 'package:orderix/services/inventory_service.dart';
 import 'package:orderix/services/settings_service.dart';
+import 'package:orderix/services/cari_service.dart';
 import 'package:orderix/themes/app_theme.dart';
 import 'package:orderix/utils/app_haptics.dart';
 import 'package:orderix/views/receipt_print_preview_view.dart';
@@ -77,6 +78,7 @@ class _TableDetailViewState extends State<TableDetailView> {
   bool _isSearching = false;
   String _searchQuery = '';
   bool _isPartialPayMode = false;
+  bool _sendingToCari = false;
   // itemName → how many units the cashier has tapped to pay this round
   final Map<String, int> _partialSelected = {};
   final TextEditingController _searchController = TextEditingController();
@@ -294,16 +296,15 @@ class _TableDetailViewState extends State<TableDetailView> {
                       child: GestureDetector(
                         onTap: () {
                           Get.back();
-                          final orders = TableService
-                                  .to.tables[widget.tableIndex]['orders']
-                              as List<Map<String, dynamic>>;
+                          final orders =
+                              TableService.to.tables[widget.tableIndex]
+                                  ['orders'] as List<Map<String, dynamic>>;
                           if (index < 0 || index >= orders.length) return;
                           final snapshot = Map<String, dynamic>.from(
                             orders[index],
                           );
                           final atIndex = index;
-                          TableService.to
-                              .removeOrder(widget.tableIndex, index);
+                          TableService.to.removeOrder(widget.tableIndex, index);
                           AppHaptics.selection();
                           AppToast.undo(
                             message: snapshot['name'] as String? ?? itemName,
@@ -547,8 +548,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                           size: 44, color: _textSecondary),
                       const SizedBox(height: 12),
                       Text('no_orders_yet'.tr,
-                          style: TextStyle(
-                              color: _textSecondary, fontSize: 14),
+                          style: TextStyle(color: _textSecondary, fontSize: 14),
                           textAlign: TextAlign.center),
                     ],
                   ),
@@ -715,13 +715,13 @@ class _TableDetailViewState extends State<TableDetailView> {
                                         ),
                                       ),
                                     ),
-                              )
-                            : _orderOverflowButton(
-                                name: name,
-                                index: index,
-                                unitPrice: price,
-                                size: 34,
-                              ),
+                                  )
+                                : _orderOverflowButton(
+                                    name: name,
+                                    index: index,
+                                    unitPrice: price,
+                                    size: 34,
+                                  ),
                           ],
                         ),
                       ));
@@ -799,30 +799,39 @@ class _TableDetailViewState extends State<TableDetailView> {
           // ── Action buttons — evenly spread ──
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _ActionBtn(
-                    icon: CupertinoIcons.plus_circle,
-                    label: 'new'.tr,
-                    color: AppTheme.accentColor,
-                    onTap: _handleNewOrder),
-                _ActionBtn(
-                    icon: CupertinoIcons.tag_fill,
-                    label: 'discount'.tr,
-                    color: AppTheme.warningColor,
-                    onTap: _handleDiscount),
-                _ActionBtn(
-                    icon: CupertinoIcons.printer,
-                    label: 'print'.tr,
-                    color: const Color(0xFF616161),
-                    onTap: _handlePrint),
-                _ActionBtn(
-                    icon: CupertinoIcons.arrow_swap,
-                    label: 'move'.tr,
-                    color: AppTheme.accentColor,
-                    onTap: _handleMove),
-              ],
+            child: Obx(
+              () => Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _ActionBtn(
+                      icon: CupertinoIcons.plus_circle,
+                      label: 'new'.tr,
+                      color: AppTheme.accentColor,
+                      onTap: _handleNewOrder),
+                  _ActionBtn(
+                      icon: CupertinoIcons.tag_fill,
+                      label: 'discount'.tr,
+                      color: AppTheme.warningColor,
+                      onTap: _handleDiscount),
+                  _ActionBtn(
+                      icon: CupertinoIcons.printer,
+                      label: 'print'.tr,
+                      color: const Color(0xFF616161),
+                      onTap: _handlePrint),
+                  _ActionBtn(
+                      icon: CupertinoIcons.arrow_swap,
+                      label: 'move'.tr,
+                      color: AppTheme.accentColor,
+                      onTap: _handleMove),
+                  if (SettingsService.to.cariAccountsEnabled.value)
+                    _ActionBtn(
+                        icon: CupertinoIcons.person_crop_circle_badge_minus,
+                        label: _sendingToCari ? 'Taşınıyor…' : 'Cari',
+                        color: const Color(0xFF5856D6),
+                        loading: _sendingToCari,
+                        onTap: _handleSendToCari),
+                ],
+              ),
             ),
           ),
           // ── Payment buttons ──
@@ -1238,8 +1247,8 @@ class _TableDetailViewState extends State<TableDetailView> {
                         controller: searchCtrl,
                         decoration: InputDecoration(
                           hintText: 'search_menu'.tr,
-                          hintStyle: TextStyle(
-                              color: _textSecondary, fontSize: 14),
+                          hintStyle:
+                              TextStyle(color: _textSecondary, fontSize: 14),
                           prefixIcon: Icon(CupertinoIcons.search,
                               color: _textSecondary, size: 20),
                           filled: true,
@@ -2158,33 +2167,43 @@ class _TableDetailViewState extends State<TableDetailView> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _ActionBtn(
-                    icon: CupertinoIcons.plus_circle,
-                    label: 'new'.tr,
-                    color: AppTheme.accentColor,
-                    onTap: _handleNewOrder,
-                  ),
-                  _ActionBtn(
-                    icon: CupertinoIcons.tag_fill,
-                    label: 'discount'.tr,
-                    color: AppTheme.warningColor,
-                    onTap: _handleDiscount,
-                  ),
-                  _ActionBtn(
-                    icon: CupertinoIcons.printer,
-                    label: 'print'.tr,
-                    color: const Color(0xFF616161),
-                    onTap: _handlePrint,
-                  ),
-                  _ActionBtn(
-                    icon: CupertinoIcons.arrow_swap,
-                    label: 'move'.tr,
-                    color: AppTheme.accentColor,
-                    onTap: _handleMove,
-                  ),
-                ],
+              child: Obx(
+                () => Row(
+                  children: [
+                    _ActionBtn(
+                      icon: CupertinoIcons.plus_circle,
+                      label: 'new'.tr,
+                      color: AppTheme.accentColor,
+                      onTap: _handleNewOrder,
+                    ),
+                    _ActionBtn(
+                      icon: CupertinoIcons.tag_fill,
+                      label: 'discount'.tr,
+                      color: AppTheme.warningColor,
+                      onTap: _handleDiscount,
+                    ),
+                    _ActionBtn(
+                      icon: CupertinoIcons.printer,
+                      label: 'print'.tr,
+                      color: const Color(0xFF616161),
+                      onTap: _handlePrint,
+                    ),
+                    _ActionBtn(
+                      icon: CupertinoIcons.arrow_swap,
+                      label: 'move'.tr,
+                      color: AppTheme.accentColor,
+                      onTap: _handleMove,
+                    ),
+                    if (SettingsService.to.cariAccountsEnabled.value)
+                      _ActionBtn(
+                        icon: CupertinoIcons.person_crop_circle_badge_minus,
+                        label: _sendingToCari ? 'Taşınıyor…' : 'Cari',
+                        color: const Color(0xFF5856D6),
+                        onTap: _handleSendToCari,
+                        loading: _sendingToCari,
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -3309,67 +3328,288 @@ class _TableDetailViewState extends State<TableDetailView> {
           TableService.to.getTotalWithDiscount(widget.tableIndex) > 0.005;
       final mutedDark = const Color(0xFF3A3A3C).withValues(alpha: 0.38);
       final mutedOrange = _orange.withValues(alpha: 0.38);
-      return Row(
+      return Column(
         children: [
-          Expanded(
-            child: SizedBox(
-              height: height,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      canPay ? const Color(0xFF3A3A3C) : mutedDark,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: mutedDark,
-                  disabledForegroundColor: Colors.white70,
-                  elevation: 0,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(radius),
-                  ),
-                ),
-                onPressed: canPay
-                    ? () => setState(() => _isPartialPayMode = true)
-                    : null,
-                child: Text(
-                  'Parçalı Ödeme Al',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: fontSize,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: SizedBox(
-              height: height,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: canPay ? _orange : mutedOrange,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: mutedOrange,
-                  disabledForegroundColor: Colors.white70,
-                  elevation: 0,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(radius),
-                  ),
-                ),
-                onPressed: canPay ? _handlePayment : null,
-                child: Text(
-                  'Toplu Ödeme Al',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: fontSize,
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: height,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          canPay ? const Color(0xFF3A3A3C) : mutedDark,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: mutedDark,
+                      disabledForegroundColor: Colors.white70,
+                      elevation: 0,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(radius),
+                      ),
+                    ),
+                    onPressed: canPay
+                        ? () => setState(() => _isPartialPayMode = true)
+                        : null,
+                    child: Text(
+                      'Parçalı Ödeme Al',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: fontSize,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: SizedBox(
+                  height: height,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: canPay ? _orange : mutedOrange,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: mutedOrange,
+                      disabledForegroundColor: Colors.white70,
+                      elevation: 0,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(radius),
+                      ),
+                    ),
+                    onPressed: canPay ? _handlePayment : null,
+                    child: Text(
+                      'Toplu Ödeme Al',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: fontSize,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       );
     });
+  }
+
+  Future<String?> _pickCariAccount() async {
+    final accounts = CariService.to.accounts.toList();
+    final nameController = TextEditingController();
+    final accountId = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: _card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            12,
+            20,
+            MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: _border,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Cari / adisyon adı',
+                style: TextStyle(
+                  color: _textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                'Masanın tüm ürünleri bu adla cari hesaba kaydedilir.',
+                style: TextStyle(color: _textSecondary, fontSize: 12),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: nameController,
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+                style: TextStyle(color: _textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Müşteri adı',
+                  hintText: 'Örn. Ahmet Yılmaz',
+                  prefixIcon: const Icon(CupertinoIcons.person),
+                  suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: nameController,
+                    builder: (_, value, __) => value.text.trim().isEmpty
+                        ? const SizedBox.shrink()
+                        : IconButton(
+                            onPressed: nameController.clear,
+                            icon: const Icon(CupertinoIcons.clear_circled),
+                          ),
+                  ),
+                ),
+                onSubmitted: (value) async {
+                  final name = value.trim();
+                  if (name.isEmpty) return;
+                  final existing = CariService.to.accountByName(name);
+                  if (existing != null) {
+                    Navigator.of(sheetContext).pop(existing['id'] as String);
+                    return;
+                  }
+                  final created = await CariService.to.createAccount(name);
+                  if (created != null && sheetContext.mounted) {
+                    Navigator.of(sheetContext).pop(created['id'] as String);
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: nameController,
+                builder: (_, value, __) {
+                  final query = value.text.trim().toLowerCase();
+                  final matches = accounts.where((account) {
+                    final name =
+                        (account['name'] as String? ?? '').toLowerCase();
+                    return query.isEmpty || name.contains(query);
+                  }).toList();
+                  if (matches.isEmpty) {
+                    return Text(
+                      query.isEmpty
+                          ? 'Kayıtlı cari yok; yazarak yeni cari oluşturabilirsiniz.'
+                          : 'Bu isimle kayıt yok; aşağıdaki butonla yeni cari oluşturulur.',
+                      style: TextStyle(color: _textSecondary, fontSize: 12),
+                    );
+                  }
+                  return ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 220),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: matches.length,
+                      separatorBuilder: (_, __) =>
+                          Divider(height: 1, color: _border),
+                      itemBuilder: (_, index) {
+                        final account = matches[index];
+                        return ListTile(
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 4),
+                          leading: const CircleAvatar(
+                            backgroundColor: Color(0x1FFF9500),
+                            child: Icon(CupertinoIcons.person_fill,
+                                color: _orange, size: 18),
+                          ),
+                          title: Text(
+                            account['name'] as String? ?? 'Cari',
+                            style: TextStyle(
+                              color: _textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          trailing: Icon(CupertinoIcons.chevron_right,
+                              size: 16, color: _textSecondary),
+                          onTap: () => Navigator.of(sheetContext)
+                              .pop(account['id'] as String),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    final name = nameController.text.trim();
+                    if (name.isEmpty) return;
+                    final existing = CariService.to.accountByName(name);
+                    if (existing != null) {
+                      Navigator.of(sheetContext).pop(existing['id'] as String);
+                      return;
+                    }
+                    final created = await CariService.to.createAccount(name);
+                    if (created != null && sheetContext.mounted) {
+                      Navigator.of(sheetContext).pop(created['id'] as String);
+                    }
+                  },
+                  icon: const Icon(CupertinoIcons.arrow_right),
+                  label: const Text("Cari'ye kaydet"),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF5856D6),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    // showModalBottomSheet completes as soon as the route is popped, while
+    // its dismiss animation can still rebuild the TextField for one frame.
+    // Dispose after that animation so Flutter never reads a dead controller.
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    nameController.dispose();
+    return accountId;
+  }
+
+  Future<void> _handleSendToCari() async {
+    final orders = TableService.to.getOrders(widget.tableIndex);
+    final total = TableService.to.getTotalWithDiscount(widget.tableIndex);
+    if (orders.isEmpty || total <= 0) {
+      AppToast.warning('empty_no_pay'.tr, title: 'warning'.tr);
+      return;
+    }
+    final accountId = await _pickCariAccount();
+    if (accountId == null) return;
+
+    final normalizedItems = orders
+        .map((item) => {
+              'name': item['name'],
+              'quantity': item['quantity'],
+              'price': item['price'],
+            })
+        .toList();
+    if (mounted) setState(() => _sendingToCari = true);
+    try {
+      final ok = await CariService.to.sendTableToAccount(
+        accountId: accountId,
+        tableName: widget.tableName,
+        items: normalizedItems,
+        subtotal: TableService.to.getTotal(widget.tableIndex),
+        discount: TableService.to.getDiscount(widget.tableIndex),
+        total: total,
+        staffEmail: TableService.to.tables[widget.tableIndex]['staffEmail']
+                as String? ??
+            '',
+      );
+      if (!ok) {
+        AppToast.error('Masa cari hesaba gönderilemedi');
+        return;
+      }
+      TableService.to.clearTable(widget.tableIndex);
+      _isPartialPayMode = false;
+      AppHaptics.success();
+      AppToast.success('Masa cari hesaba gönderildi');
+    } finally {
+      if (mounted) setState(() => _sendingToCari = false);
+    }
   }
 
   void _handlePayment() {
@@ -3694,8 +3934,7 @@ class _TableDetailViewState extends State<TableDetailView> {
                         label: t.name,
                         icon: paymentTypeVisual(t.id).$1,
                         selected: selectedMethod == t.id,
-                        onTap: () =>
-                            setState(() => selectedMethod = t.id),
+                        onTap: () => setState(() => selectedMethod = t.id),
                       ),
                   ],
                 ),
@@ -3773,18 +4012,20 @@ class _ActionBtn extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
+  final bool loading;
 
   const _ActionBtn({
     required this.icon,
     required this.label,
     required this.color,
     required this.onTap,
+    this.loading = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: loading ? null : onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -3798,7 +4039,16 @@ class _ActionBtn extends StatelessWidget {
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(icon, size: 24, color: color),
+              child: loading
+                  ? SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
+                      ),
+                    )
+                  : Icon(icon, size: 24, color: color),
             ),
             const SizedBox(height: 6),
             Text(
@@ -3849,8 +4099,7 @@ class _PartialPayMethodBtn extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon,
-                size: 22,
-                color: selected ? Colors.white : _textSecondary),
+                size: 22, color: selected ? Colors.white : _textSecondary),
             const SizedBox(height: 4),
             Text(
               label,
