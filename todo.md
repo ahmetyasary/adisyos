@@ -80,7 +80,7 @@
 - Cari Hesaplar ve dijital menü için Supabase tabloları, migration’lar ve canlı menü API güncellemeleri yapıldı. ✅
 - Güncel uygulama iOS simülatörlerine gönderildi. ✅
 
-## IPA 2.0.0+25 — bu sürümde yapılanlar
+## IPA 1.0.13+25 — bu sürümde yapılanlar
 
 ### Türkçe
 - Ayarlar > Görünüm: yazı/arayüz boyutu (Küçük / Varsayılan / Büyük), varsayılan Varsayılan.
