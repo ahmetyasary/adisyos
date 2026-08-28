@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -78,6 +79,9 @@ class SettingsService extends GetxService {
   /// Appearance: `system` | `light` | `dark`.
   final RxString themeMode = 'system'.obs;
 
+  /// App UI scale: `sm` | `md` | `lg` (default md).
+  final RxString uiScale = 'md'.obs;
+
   /// Bumped on every theme apply so shells/pages that read [AppColors]
   /// getters rebuild immediately (ThemeInheritedWidget alone is not enough).
   final RxInt themeEpoch = 0.obs;
@@ -101,6 +105,18 @@ class SettingsService extends GetxService {
 
   /// Cari hesaplar (veresiye) feature flag (tenant-wide).
   final RxBool cariAccountsEnabled = false.obs;
+
+  /// 4-digit PIN for admin entry when staff profiles exist.
+  final RxString adminPin = ''.obs;
+
+  /// When true, admin must set a new PIN after successful admin login.
+  final RxBool adminPinMustChange = false.obs;
+
+  /// Display name shown on the account card / profile.
+  final RxString profileDisplayName = ''.obs;
+
+  /// Public avatar URL for the account owner profile.
+  final RxString profileAvatarUrl = ''.obs;
 
   final _db = Supabase.instance.client;
   RealtimeChannel? _channel;
@@ -129,14 +145,29 @@ class SettingsService extends GetxService {
   static const _kNotifySoundIntensity = 'notify_sound_intensity';
   static const _kLanguage = 'language';
   static const _kThemeMode = 'theme_mode';
+  static const _kUiScale = 'ui_scale';
   static const _kPaymentTypes = 'payment_types';
   static const _kReceiptLayout = 'receipt_layout';
   static const _kDiscountMode = 'discount_mode';
   static const _kDashboardLayout = 'dashboard_layout';
   static const _kIntegrations = 'integrations';
   static const _kCariAccountsEnabled = 'cari_accounts_enabled';
+  static const _kAdminPin = 'admin_pin';
+  static const _kAdminPinMustChange = 'admin_pin_must_change';
+  static const _kProfileDisplayName = 'profile_display_name';
+  static const _kProfileAvatarUrl = 'profile_avatar_url';
 
-  /// Pixel diameter of the Ordi badge for the current [ordiSize].
+  /// True when a 4-digit admin PIN is configured.
+  bool get hasAdminPin => RegExp(r'^\d{4}$').hasMatch(adminPin.value);
+
+  /// Label for the account card (falls back to email local-part).
+  String profileLabelFor(String email) {
+    final name = profileDisplayName.value.trim();
+    if (name.isNotEmpty) return name;
+    if (email.isEmpty) return 'Hesap';
+    return email.split('@').first;
+  }
+
   double get ordiFabSize {
     switch (ordiSize.value) {
       case 'sm':
@@ -145,6 +176,18 @@ class SettingsService extends GetxService {
         return 70;
       default:
         return 58;
+    }
+  }
+
+  /// Text / layout scale factor for the current [uiScale].
+  double get uiScaleFactor {
+    switch (uiScale.value) {
+      case 'sm':
+        return 0.90;
+      case 'lg':
+        return 1.15;
+      default:
+        return 1.0;
     }
   }
 
@@ -225,6 +268,10 @@ class SettingsService extends GetxService {
         dashboardLayout.assignAll(defaultDashboardLayout());
         integrations.value = IntegrationsConfig.defaults();
         cariAccountsEnabled.value = false;
+        adminPin.value = '';
+        adminPinMustChange.value = false;
+        profileDisplayName.value = '';
+        profileAvatarUrl.value = '';
       }
     });
 
@@ -355,6 +402,13 @@ class SettingsService extends GetxService {
           _applyThemeMode(next);
           _writePref(_kThemeMode, next);
         }
+      case _kUiScale:
+        final next = _sanitizeUiScale(rawVal);
+        if (uiScale.value != next) {
+          uiScale.value = next;
+          _writePref(_kUiScale, next);
+          themeEpoch.value++;
+        }
       case _kDiscountMode:
         final next = _sanitizeDiscountMode(rawVal);
         if (discountMode.value != next) {
@@ -373,6 +427,25 @@ class SettingsService extends GetxService {
           cariAccountsEnabled.value = next;
         }
         _writePref(_kCariAccountsEnabled, next ? '1' : '0');
+      case _kAdminPin:
+        if (adminPin.value != rawVal) adminPin.value = rawVal;
+        _writePref(_kAdminPin, rawVal);
+      case _kAdminPinMustChange:
+        final next = rawVal == '1' || rawVal == 'true';
+        if (adminPinMustChange.value != next) {
+          adminPinMustChange.value = next;
+        }
+        _writePref(_kAdminPinMustChange, next ? '1' : '0');
+      case _kProfileDisplayName:
+        if (profileDisplayName.value != rawVal) {
+          profileDisplayName.value = rawVal;
+        }
+        _writePref(_kProfileDisplayName, rawVal);
+      case _kProfileAvatarUrl:
+        if (profileAvatarUrl.value != rawVal) {
+          profileAvatarUrl.value = rawVal;
+        }
+        _writePref(_kProfileAvatarUrl, rawVal);
       default:
         break;
     }
@@ -478,6 +551,91 @@ class SettingsService extends GetxService {
       if (kDebugMode) {
         print('[SettingsService] setCariAccountsEnabled DB error: $e');
       }
+    }
+  }
+
+  bool verifyAdminPin(String pin) =>
+      hasAdminPin && adminPin.value == pin.trim();
+
+  /// Sets or clears the admin PIN. Pass [mustChange] to require a later update.
+  Future<void> setAdminPin(String pin, {bool mustChange = false}) async {
+    final next = pin.trim();
+    adminPin.value = next;
+    adminPinMustChange.value = mustChange;
+    await _writePref(_kAdminPin, next);
+    await _writePref(_kAdminPinMustChange, mustChange ? '1' : '0');
+    try {
+      await _writeValue(_kAdminPin, next);
+      await _writeValue(_kAdminPinMustChange, mustChange ? '1' : '0');
+    } catch (e) {
+      if (kDebugMode) print('[SettingsService] setAdminPin DB error: $e');
+    }
+  }
+
+  Future<void> setAdminPinMustChange(bool mustChange) async {
+    adminPinMustChange.value = mustChange;
+    final value = mustChange ? '1' : '0';
+    await _writePref(_kAdminPinMustChange, value);
+    try {
+      await _writeValue(_kAdminPinMustChange, value);
+    } catch (e) {
+      if (kDebugMode) {
+        print('[SettingsService] setAdminPinMustChange DB error: $e');
+      }
+    }
+  }
+
+  Future<void> setProfileDisplayName(String name) async {
+    final next = name.trim();
+    profileDisplayName.value = next;
+    await _writePref(_kProfileDisplayName, next);
+    try {
+      await _writeValue(_kProfileDisplayName, next);
+    } catch (e) {
+      if (kDebugMode) {
+        print('[SettingsService] setProfileDisplayName DB error: $e');
+      }
+    }
+  }
+
+  Future<void> setProfileAvatarUrl(String url) async {
+    profileAvatarUrl.value = url;
+    await _writePref(_kProfileAvatarUrl, url);
+    try {
+      await _writeValue(_kProfileAvatarUrl, url);
+    } catch (e) {
+      if (kDebugMode) {
+        print('[SettingsService] setProfileAvatarUrl DB error: $e');
+      }
+    }
+  }
+
+  Future<String?> uploadProfileAvatar(Uint8List bytes) async {
+    final tenantId = _currentTenantId();
+    if (tenantId == null) return null;
+    final filename = 'avatar_$tenantId.jpg';
+    await _db.storage.from('menu-images').uploadBinary(
+          filename,
+          bytes,
+          fileOptions:
+              const FileOptions(contentType: 'image/jpeg', upsert: true),
+        );
+    final url = _db.storage.from('menu-images').getPublicUrl(filename);
+    final stamped = '$url?t=${DateTime.now().millisecondsSinceEpoch}';
+    await setProfileAvatarUrl(stamped);
+    return stamped;
+  }
+
+  /// Existing installs with staff but no admin PIN get temporary `1234`.
+  bool _legacyPinMigrating = false;
+
+  Future<void> ensureLegacyAdminPinIfNeeded({required bool hasStaff}) async {
+    if (!hasStaff || hasAdminPin || _legacyPinMigrating) return;
+    _legacyPinMigrating = true;
+    try {
+      await setAdminPin('1234', mustChange: true);
+    } finally {
+      _legacyPinMigrating = false;
     }
   }
 
@@ -656,6 +814,20 @@ class SettingsService extends GetxService {
     }
   }
 
+  Future<void> setUiScale(String scale) async {
+    final next = _sanitizeUiScale(scale);
+    if (uiScale.value == next) return;
+    uiScale.value = next;
+    themeEpoch.value++;
+    await _writePref(_kUiScale, next);
+    try {
+      await _writeValue(_kUiScale, next);
+    } catch (e) {
+      if (kDebugMode) print('[SettingsService] setUiScale DB error: $e');
+    }
+    Get.forceAppUpdate();
+  }
+
   void _applyThemeMode(String mode) {
     final themeModeEnum = AppTheme.themeModeFrom(mode);
     final brightness = _resolveBrightness(themeModeEnum);
@@ -711,6 +883,16 @@ class SettingsService extends GetxService {
         return raw;
       default:
         return 'system';
+    }
+  }
+
+  String _sanitizeUiScale(String raw) {
+    switch (raw) {
+      case 'sm':
+      case 'lg':
+        return raw;
+      default:
+        return 'md';
     }
   }
 
@@ -906,12 +1088,17 @@ class SettingsService extends GetxService {
       String? readNotifySoundIntensity;
       String? readLanguage;
       String? readThemeMode;
+      String? readUiScale;
       String? readPayTypes;
       String? readReceipt;
       String? readDiscountMode;
       String? readDashboardLayout;
       String? readIntegrations;
       String? readCariAccountsEnabled;
+      String? readAdminPin;
+      String? readAdminPinMustChange;
+      String? readProfileDisplayName;
+      String? readProfileAvatarUrl;
 
       if (tenantId != null) {
         readName = prefs.getString(_tenantPrefKey(tenantId, _kCompanyName));
@@ -939,6 +1126,7 @@ class SettingsService extends GetxService {
             prefs.getString(_tenantPrefKey(tenantId, _kNotifySoundIntensity));
         readLanguage = prefs.getString(_tenantPrefKey(tenantId, _kLanguage));
         readThemeMode = prefs.getString(_tenantPrefKey(tenantId, _kThemeMode));
+        readUiScale = prefs.getString(_tenantPrefKey(tenantId, _kUiScale));
         readPayTypes =
             prefs.getString(_tenantPrefKey(tenantId, _kPaymentTypes));
         readReceipt =
@@ -951,6 +1139,13 @@ class SettingsService extends GetxService {
             prefs.getString(_tenantPrefKey(tenantId, _kIntegrations));
         readCariAccountsEnabled =
             prefs.getString(_tenantPrefKey(tenantId, _kCariAccountsEnabled));
+        readAdminPin = prefs.getString(_tenantPrefKey(tenantId, _kAdminPin));
+        readAdminPinMustChange =
+            prefs.getString(_tenantPrefKey(tenantId, _kAdminPinMustChange));
+        readProfileDisplayName =
+            prefs.getString(_tenantPrefKey(tenantId, _kProfileDisplayName));
+        readProfileAvatarUrl =
+            prefs.getString(_tenantPrefKey(tenantId, _kProfileAvatarUrl));
       }
 
       // Legacy fallback — pre-tenant-scoping installs stored flat keys.
@@ -974,6 +1169,7 @@ class SettingsService extends GetxService {
       readLanguage ??= prefs.getString('language');
       readThemeMode ??= prefs.getString('settings.$_kThemeMode');
       readThemeMode ??= prefs.getString('theme_mode');
+      readUiScale ??= prefs.getString('settings.$_kUiScale');
       readPayTypes ??= prefs.getString('settings.$_kPaymentTypes');
       readReceipt ??= prefs.getString('settings.$_kReceiptLayout');
       readDiscountMode ??= prefs.getString('settings.$_kDiscountMode');
@@ -981,6 +1177,12 @@ class SettingsService extends GetxService {
       readIntegrations ??= prefs.getString('settings.$_kIntegrations');
       readCariAccountsEnabled ??=
           prefs.getString('settings.$_kCariAccountsEnabled');
+      readAdminPin ??= prefs.getString('settings.$_kAdminPin');
+      readAdminPinMustChange ??=
+          prefs.getString('settings.$_kAdminPinMustChange');
+      readProfileDisplayName ??=
+          prefs.getString('settings.$_kProfileDisplayName');
+      readProfileAvatarUrl ??= prefs.getString('settings.$_kProfileAvatarUrl');
 
       if (readName != null && readName.isNotEmpty) {
         companyName.value = readName;
@@ -1036,6 +1238,9 @@ class SettingsService extends GetxService {
         themeMode.value = _sanitizeThemeMode(readThemeMode);
         _applyThemeMode(themeMode.value);
       }
+      if (readUiScale != null && readUiScale.isNotEmpty) {
+        uiScale.value = _sanitizeUiScale(readUiScale);
+      }
       if (readPayTypes != null && readPayTypes.isNotEmpty) {
         paymentTypes.assignAll(parsePaymentTypesJson(readPayTypes));
       }
@@ -1055,6 +1260,19 @@ class SettingsService extends GetxService {
           readCariAccountsEnabled.isNotEmpty) {
         cariAccountsEnabled.value = readCariAccountsEnabled != '0' &&
             readCariAccountsEnabled != 'false';
+      }
+      if (readAdminPin != null) {
+        adminPin.value = readAdminPin;
+      }
+      if (readAdminPinMustChange != null && readAdminPinMustChange.isNotEmpty) {
+        adminPinMustChange.value =
+            readAdminPinMustChange == '1' || readAdminPinMustChange == 'true';
+      }
+      if (readProfileDisplayName != null) {
+        profileDisplayName.value = readProfileDisplayName;
+      }
+      if (readProfileAvatarUrl != null) {
+        profileAvatarUrl.value = readProfileAvatarUrl;
       }
     } catch (e) {
       if (kDebugMode) print('[SettingsService] prefs load error: $e');
@@ -1188,6 +1406,15 @@ class SettingsService extends GetxService {
               }
               await _writePref(_kThemeMode, next);
             }
+          case _kUiScale:
+            if (rawVal.isNotEmpty) {
+              final next = _sanitizeUiScale(rawVal);
+              if (uiScale.value != next) {
+                uiScale.value = next;
+                themeEpoch.value++;
+              }
+              await _writePref(_kUiScale, next);
+            }
           case _kPaymentTypes:
             if (rawVal.isNotEmpty) {
               paymentTypes.assignAll(parsePaymentTypesJson(rawVal));
@@ -1221,6 +1448,23 @@ class SettingsService extends GetxService {
                 cariAccountsEnabled.value ? '1' : '0',
               );
             }
+          case _kAdminPin:
+            adminPin.value = rawVal;
+            await _writePref(_kAdminPin, rawVal);
+          case _kAdminPinMustChange:
+            if (rawVal.isNotEmpty) {
+              adminPinMustChange.value = rawVal == '1' || rawVal == 'true';
+              await _writePref(
+                _kAdminPinMustChange,
+                adminPinMustChange.value ? '1' : '0',
+              );
+            }
+          case _kProfileDisplayName:
+            profileDisplayName.value = rawVal;
+            await _writePref(_kProfileDisplayName, rawVal);
+          case _kProfileAvatarUrl:
+            profileAvatarUrl.value = rawVal;
+            await _writePref(_kProfileAvatarUrl, rawVal);
           default:
             if (rawKey.startsWith('ordi_corner.') && rawVal.isNotEmpty) {
               ordiFromLegacyDevice ??= rawVal;

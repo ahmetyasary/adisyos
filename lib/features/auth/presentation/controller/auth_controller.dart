@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 // Hide Supabase's AuthUser so our domain entity wins.
 import 'package:supabase_flutter/supabase_flutter.dart'
@@ -9,7 +11,10 @@ import 'package:orderix/features/auth/domain/usecases/login_usecase.dart';
 import 'package:orderix/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:orderix/features/auth/domain/usecases/get_current_user_usecase.dart';
 import 'package:orderix/features/auth/domain/usecases/get_user_role_usecase.dart';
+import 'package:orderix/features/auth/domain/usecases/reset_password_usecase.dart';
 import 'package:orderix/features/auth/domain/usecases/signup_usecase.dart';
+import 'package:orderix/features/auth/domain/usecases/update_password_usecase.dart';
+import 'package:orderix/features/auth/domain/usecases/change_password_usecase.dart';
 import 'package:orderix/models/app_role.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/subscription_service.dart';
@@ -26,12 +31,18 @@ class AuthController extends GetxService {
     required GetUserRoleUseCase getUserRoleUseCase,
     required SignUpUseCase signUpUseCase,
     required DeleteAccountUseCase deleteAccountUseCase,
+    required ResetPasswordUseCase resetPasswordUseCase,
+    required UpdatePasswordUseCase updatePasswordUseCase,
+    required ChangePasswordUseCase changePasswordUseCase,
   })  : _login = loginUseCase,
         _logout = logoutUseCase,
         _getCurrentUser = getCurrentUserUseCase,
         _getUserRole = getUserRoleUseCase,
         _signUp = signUpUseCase,
-        _deleteAccount = deleteAccountUseCase;
+        _deleteAccount = deleteAccountUseCase,
+        _resetPassword = resetPasswordUseCase,
+        _updatePassword = updatePasswordUseCase,
+        _changePassword = changePasswordUseCase;
 
   final LoginUseCase _login;
   final LogoutUseCase _logout;
@@ -39,6 +50,9 @@ class AuthController extends GetxService {
   final GetUserRoleUseCase _getUserRole;
   final SignUpUseCase _signUp;
   final DeleteAccountUseCase _deleteAccount;
+  final ResetPasswordUseCase _resetPassword;
+  final UpdatePasswordUseCase _updatePassword;
+  final ChangePasswordUseCase _changePassword;
 
   // ── Reactive state ────────────────────────────────────────
   final Rx<AuthUser?> user = Rx(null);
@@ -46,6 +60,11 @@ class AuthController extends GetxService {
   final RxBool isSigningUp = false.obs;
   final RxBool isRestoringSession = true.obs;
   final RxBool isDeletingAccount = false.obs;
+  final RxBool isResettingPassword = false.obs;
+  final RxBool isUpdatingPassword = false.obs;
+  final RxBool pendingPasswordRecovery = false.obs;
+
+  StreamSubscription<AuthState>? _authSub;
 
   // ── Convenience getters ───────────────────────────────────
   bool get isAuthenticated => user.value != null;
@@ -69,7 +88,18 @@ class AuthController extends GetxService {
   @override
   void onInit() {
     super.onInit();
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        pendingPasswordRecovery.value = true;
+      }
+    });
     _restoreSession();
+  }
+
+  @override
+  void onClose() {
+    _authSub?.cancel();
+    super.onClose();
   }
 
   Future<void> _restoreSession() async {
@@ -125,11 +155,49 @@ class AuthController extends GetxService {
     }
   }
 
+  /// Sends a password-reset email.
+  Future<void> resetPasswordForEmail({required String email}) async {
+    isResettingPassword.value = true;
+    try {
+      await _resetPassword(email: email);
+    } finally {
+      isResettingPassword.value = false;
+    }
+  }
+
+  /// Completes password recovery / change for the current session.
+  Future<void> updatePassword({required String password}) async {
+    isUpdatingPassword.value = true;
+    try {
+      await _updatePassword(password: password);
+      pendingPasswordRecovery.value = false;
+    } finally {
+      isUpdatingPassword.value = false;
+    }
+  }
+
+  /// Changes the account login password after verifying the current one.
+  Future<void> changeLoginPassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    isUpdatingPassword.value = true;
+    try {
+      await _changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+    } finally {
+      isUpdatingPassword.value = false;
+    }
+  }
+
   /// Signs out and clears [user].
   Future<void> logout() async {
     await _logout();
     await SubscriptionService.to.logoutCustomer();
     user.value = null;
+    pendingPasswordRecovery.value = false;
   }
 
   /// Permanently deletes the current user's account (Apple 5.1.1(v)).

@@ -9,6 +9,8 @@ import 'package:orderix/services/shift_service.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/widgets/app_dialog.dart';
+import 'package:orderix/widgets/admin_pin_setup_sheet.dart';
+import 'package:orderix/widgets/app_toast.dart';
 import 'package:orderix/widgets/shell_leading.dart';
 import 'package:orderix/themes/app_colors.dart';
 
@@ -211,6 +213,26 @@ class StaffReportView extends StatelessWidget {
 
   // ── Staff management (moved here from Settings) ──────────────
 
+  Future<void> _handleFirstStaffAdded() async {
+    AppToast.info(
+      'Bundan sonra yönetici girişi PIN ile korunacak.',
+      title: 'Personel eklendi',
+      duration: const Duration(seconds: 4),
+    );
+    if (!SettingsService.to.hasAdminPin ||
+        SettingsService.to.adminPinMustChange.value ||
+        SettingsService.to.adminPin.value == '1234') {
+      await showAdminPinSetup(
+        forced: true,
+        isCreate: !SettingsService.to.hasAdminPin ||
+            SettingsService.to.adminPin.value == '1234',
+        title: 'Yönetici PIN’i Oluştur',
+        message:
+            'İlk personel eklendi. Yönetici hesabınız için 4 haneli bir PIN oluşturun. Sonraki girişlerde bu PIN istenecek.',
+      );
+    }
+  }
+
   void _showAddStaffDialog(BuildContext context) {
     final nameCtrl = TextEditingController();
     final pinCtrl = TextEditingController();
@@ -222,8 +244,12 @@ class StaffReportView extends StatelessWidget {
         final name = nameCtrl.text.trim();
         final pin = pinCtrl.text.trim();
         if (name.isEmpty || pin.length != 4) return;
-        await StaffService.to.addStaff(name, pin, role: selectedRole);
+        final firstStaff =
+            await StaffService.to.addStaff(name, pin, role: selectedRole);
         Get.back();
+        if (firstStaff) {
+          await _handleFirstStaffAdded();
+        }
       },
       body: StatefulBuilder(
         builder: (context, setLocal) => Column(
@@ -564,8 +590,7 @@ class _StaffCard extends StatelessWidget {
                 style: const TextStyle(
                     fontWeight: FontWeight.bold, fontSize: 16, color: _orange),
               ),
-              Text('toplam',
-                  style: TextStyle(fontSize: 11, color: _textSec)),
+              Text('toplam', style: TextStyle(fontSize: 11, color: _textSec)),
             ],
           ),
         ],
@@ -615,9 +640,8 @@ class _StaffRolePicker extends StatelessWidget {
                   color: value == role ? _orange : _textSec,
                 ),
                 side: BorderSide(
-                  color: value == role
-                      ? _orange.withValues(alpha: 0.45)
-                      : _border,
+                  color:
+                      value == role ? _orange.withValues(alpha: 0.45) : _border,
                 ),
                 backgroundColor: _bg,
                 showCheckmark: false,

@@ -21,6 +21,18 @@ abstract interface class AuthRepository {
   /// Throws a typed [AuthException] on failure.
   Future<void> deleteAccount();
 
+  /// Sends a password-reset email for [email].
+  Future<void> resetPasswordForEmail({required String email});
+
+  /// Updates the current user's password (recovery / authenticated session).
+  Future<void> updatePassword({required String password});
+
+  /// Changes the login password after verifying [currentPassword].
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  });
+
   /// Returns the cached [AuthUser] without a network call.
   /// Returns `null` if no session is active.
   AuthUser? getCurrentUser();

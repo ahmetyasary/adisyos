@@ -46,7 +46,25 @@ class _CariAccountsViewState extends State<CariAccountsView> {
           autofocus: true,
           textCapitalization: TextCapitalization.words,
           style: TextStyle(color: _textPrimary),
-          decoration: const InputDecoration(labelText: 'Müşteri / cari adı'),
+          cursorColor: _orange,
+          decoration: InputDecoration(
+            labelText: 'Müşteri / cari adı',
+            labelStyle: TextStyle(color: _textSecondary),
+            filled: true,
+            fillColor: AppColors.chipBg,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: _orange, width: 1.5),
+            ),
+          ),
           onSubmitted: (value) => Navigator.pop(context, value),
         ),
         actions: [
@@ -257,7 +275,8 @@ class _EmptyCariState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(CupertinoIcons.person_2, size: 52, color: _textSecondary),
+            Icon(CupertinoIcons.person_crop_circle_badge_checkmark,
+                size: 52, color: _textSecondary),
             const SizedBox(height: 14),
             Text(
               'Henüz cari hesap yok',

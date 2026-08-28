@@ -126,7 +126,7 @@ final List<AppSection> appSections = [
   AppSection(
     id: 'cari_accounts',
     title: () => 'Cari Hesaplar',
-    icon: CupertinoIcons.person_2_fill,
+    icon: CupertinoIcons.person_crop_circle_badge_checkmark,
     roles: const [AppRole.admin, AppRole.staff],
     builder: () => const CariAccountsView(embedded: true),
   ),

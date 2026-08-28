@@ -169,16 +169,17 @@ class MenuService extends GetxService {
   // ── Seed defaults (first run) ────────────────────────────────
 
   Future<void> _seedDefaults() async {
-    await addMenu('İçecekler');
+    // Prepend order: last added ends up first — seed bottom-up.
     await addMenu('Tatlılar');
+    await addMenu('İçecekler');
 
     final icIdx = menus.indexWhere((m) => m['name'] == 'İçecekler');
     if (icIdx != -1) {
       for (final item in [
-        ('Americano', 30.0),
-        ('Caffe Latte', 36.0),
-        ('Caramel Latte', 40.0),
         ('Espresso', 25.0),
+        ('Caramel Latte', 40.0),
+        ('Caffe Latte', 36.0),
+        ('Americano', 30.0),
       ]) {
         await addMenuItem(icIdx, item.$1, item.$2);
       }
@@ -187,9 +188,9 @@ class MenuService extends GetxService {
     final ttIdx = menus.indexWhere((m) => m['name'] == 'Tatlılar');
     if (ttIdx != -1) {
       for (final item in [
-        ('Cookie', 25.0),
-        ('Tiramisu', 45.0),
         ('Banana Bread', 35.0),
+        ('Tiramisu', 45.0),
+        ('Cookie', 25.0),
       ]) {
         await addMenuItem(ttIdx, item.$1, item.$2);
       }
@@ -198,7 +199,7 @@ class MenuService extends GetxService {
 
   // ── Mutations ────────────────────────────────────────────────
 
-  /// Inserts a new menu with a default icon. Returns the new id or null.
+  /// Inserts a new menu at the top of the list. Returns the new id or null.
   Future<int?> addMenu(String name) async {
     try {
       final row = await _db
@@ -208,21 +209,22 @@ class MenuService extends GetxService {
             'icon_key': 'restaurant_menu',
             'is_featured': false,
             'tenant_id': _tenantId,
-            'sort_order': menus.length,
+            'sort_order': 0,
           })
           .select()
           .single();
 
       final id = row['id'] as int;
-      menus.add({
+      menus.insert(0, {
         'id': id,
         'name': name,
         'iconKey': 'restaurant_menu',
         'featured': false,
-        'sortOrder': menus.length,
+        'sortOrder': 0,
         'items': <Map<String, dynamic>>[],
       });
       menuIcons[id] = 'restaurant_menu';
+      _persistMenuOrder();
       return id;
     } catch (e) {
       _err('addMenu', e);
@@ -280,7 +282,6 @@ class MenuService extends GetxService {
     Uint8List? imageBytes,
   }) async {
     final menuId = menus[menuIndex]['id'] as int;
-    final items = menus[menuIndex]['items'] as List;
     final row = await _db
         .from('menu_items')
         .insert({
@@ -288,7 +289,7 @@ class MenuService extends GetxService {
           'name': name,
           'price': price,
           'tenant_id': _tenantId,
-          'sort_order': items.length,
+          'sort_order': 0,
         })
         .select()
         .single();
@@ -298,20 +299,22 @@ class MenuService extends GetxService {
 
     if (imageBytes != null) {
       imageUrl = await uploadItemImage(imageBytes, itemId);
-      _db.from('menu_items')
+      _db
+          .from('menu_items')
           .update({'image_url': imageUrl})
           .eq('id', itemId)
           .catchError((e) => _err('addMenuItem(image)', e));
     }
 
-    (menus[menuIndex]['items'] as List).add({
+    (menus[menuIndex]['items'] as List).insert(0, {
       'id': itemId,
       'name': name,
       'price': price,
       'imageUrl': imageUrl,
-      'sortOrder': items.length,
+      'sortOrder': 0,
     });
     menus.refresh();
+    _persistItemOrder(menuIndex);
   }
 
   Future<void> updateMenuItem(

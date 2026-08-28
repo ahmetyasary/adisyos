@@ -32,6 +32,63 @@ Color get _tableFreeBg => AppColors.card;
 Color get _tableOccupiedBg =>
     AppColors.isDark ? const Color(0xFF2A1F1A) : const Color(0xFFFFF4EC);
 
+/// Occupied tables first (newest occupation first), then free tables by
+/// natural name (İç Mekan 1, 2, 3…).
+int _compareTablesForGrid(Map<String, dynamic> a, Map<String, dynamic> b) {
+  final aOccupied = a['isOccupied'] == true;
+  final bOccupied = b['isOccupied'] == true;
+  if (aOccupied != bOccupied) return aOccupied ? -1 : 1;
+
+  if (aOccupied) {
+    final aAt = _occupiedAtOf(a);
+    final bAt = _occupiedAtOf(b);
+    if (aAt != null && bAt != null) {
+      final byTime = bAt.compareTo(aAt); // newest first
+      if (byTime != 0) return byTime;
+    } else if (aAt != null) {
+      return -1;
+    } else if (bAt != null) {
+      return 1;
+    }
+  }
+
+  return _naturalTableNameCompare(
+    a['name'] as String? ?? '',
+    b['name'] as String? ?? '',
+  );
+}
+
+DateTime? _occupiedAtOf(Map<String, dynamic> table) {
+  final value = table['occupiedAt'];
+  if (value is DateTime) return value;
+  if (value is String) return DateTime.tryParse(value);
+  return null;
+}
+
+final _tableNameChunk = RegExp(r'(\d+)|(\D+)');
+
+int _naturalTableNameCompare(String a, String b) {
+  final aa = a.toLowerCase();
+  final bb = b.toLowerCase();
+  final ma = _tableNameChunk.allMatches(aa).toList();
+  final mb = _tableNameChunk.allMatches(bb).toList();
+  final n = ma.length < mb.length ? ma.length : mb.length;
+  for (var i = 0; i < n; i++) {
+    final ca = ma[i].group(0)!;
+    final cb = mb[i].group(0)!;
+    final na = int.tryParse(ca);
+    final nb = int.tryParse(cb);
+    if (na != null && nb != null) {
+      final cmp = na.compareTo(nb);
+      if (cmp != 0) return cmp;
+    } else {
+      final cmp = ca.compareTo(cb);
+      if (cmp != 0) return cmp;
+    }
+  }
+  return ma.length.compareTo(mb.length);
+}
+
 class TablesView extends StatefulWidget {
   const TablesView({super.key, this.embedded = false});
 
@@ -41,8 +98,11 @@ class TablesView extends StatefulWidget {
   State<TablesView> createState() => _TablesViewState();
 }
 
+enum _TableStatusFilter { all, occupied, free }
+
 class _TablesViewState extends State<TablesView> {
   final _selectedSectionId = Rx<String?>(null);
+  final _statusFilter = _TableStatusFilter.all.obs;
 
   // ── Day not started dialog ──────────────────────────────────
 
@@ -298,8 +358,7 @@ class _TablesViewState extends State<TablesView> {
                     child: Text(
                       'Vazgeç',
                       style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          color: _textSecondary),
+                          fontWeight: FontWeight.w500, color: _textSecondary),
                     ),
                   ),
                 ),
@@ -817,8 +876,8 @@ class _TablesViewState extends State<TablesView> {
                       return Padding(
                         padding: const EdgeInsets.only(left: 8),
                         child: Text(name,
-                            style: TextStyle(
-                                fontSize: 12, color: _textSecondary)),
+                            style:
+                                TextStyle(fontSize: 12, color: _textSecondary)),
                       );
                     }),
                     const Spacer(),
@@ -854,6 +913,7 @@ class _TablesViewState extends State<TablesView> {
                   tables.where((t) => t['isOccupied'] as bool).length;
               final free = total - occupied;
               final sections = SectionService.to.sections;
+              final statusFilter = _statusFilter.value;
 
               return ResponsiveContent(
                 width: ContentWidth.wide,
@@ -868,19 +928,31 @@ class _TablesViewState extends State<TablesView> {
                               child: _StatBox(
                                   label: 'TOPLAM',
                                   value: '$total',
-                                  valueColor: _textPrimary)),
+                                  valueColor: _textPrimary,
+                                  selected:
+                                      statusFilter == _TableStatusFilter.all,
+                                  onTap: () => _statusFilter.value =
+                                      _TableStatusFilter.all)),
                           const SizedBox(width: 8),
                           Expanded(
                               child: _StatBox(
                                   label: 'DOLU',
                                   value: '$occupied',
-                                  valueColor: _occupied)),
+                                  valueColor: _occupied,
+                                  selected: statusFilter ==
+                                      _TableStatusFilter.occupied,
+                                  onTap: () => _statusFilter.value =
+                                      _TableStatusFilter.occupied)),
                           const SizedBox(width: 8),
                           Expanded(
                               child: _StatBox(
                                   label: 'BOŞ',
                                   value: '$free',
-                                  valueColor: _available)),
+                                  valueColor: _available,
+                                  selected:
+                                      statusFilter == _TableStatusFilter.free,
+                                  onTap: () => _statusFilter.value =
+                                      _TableStatusFilter.free)),
                         ],
                       ),
                     ),
@@ -940,6 +1012,7 @@ class _TablesViewState extends State<TablesView> {
                 child: Obx(() {
                   final allTables = TableService.to.tables;
                   final sectionId = _selectedSectionId.value;
+                  final statusFilter = _statusFilter.value;
 
                   List<Map<String, dynamic>> tables;
 
@@ -962,15 +1035,18 @@ class _TablesViewState extends State<TablesView> {
                               tName.contains(sectionName));
                     }).toList();
                   } else {
-                    // "Tümü" view: occupied tables first, available tables after
-                    tables = List<Map<String, dynamic>>.from(allTables)
-                      ..sort((a, b) {
-                        final aOccupied = a['isOccupied'] as bool;
-                        final bOccupied = b['isOccupied'] as bool;
-                        if (aOccupied == bOccupied) return 0;
-                        return aOccupied ? -1 : 1;
-                      });
+                    tables = List<Map<String, dynamic>>.from(allTables);
                   }
+
+                  if (statusFilter == _TableStatusFilter.occupied) {
+                    tables =
+                        tables.where((t) => t['isOccupied'] == true).toList();
+                  } else if (statusFilter == _TableStatusFilter.free) {
+                    tables =
+                        tables.where((t) => t['isOccupied'] != true).toList();
+                  }
+
+                  tables.sort(_compareTablesForGrid);
 
                   if (allTables.isEmpty) {
                     return Center(
@@ -989,6 +1065,11 @@ class _TablesViewState extends State<TablesView> {
                   }
 
                   if (tables.isEmpty) {
+                    final emptyLabel = switch (statusFilter) {
+                      _TableStatusFilter.occupied => 'Dolu masa yok',
+                      _TableStatusFilter.free => 'Boş masa yok',
+                      _TableStatusFilter.all => 'Bu bölümde masa yok',
+                    };
                     return Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -996,7 +1077,7 @@ class _TablesViewState extends State<TablesView> {
                           Icon(Icons.table_bar_rounded,
                               size: 48, color: _textSecondary),
                           const SizedBox(height: 12),
-                          Text('Bu bölümde masa yok',
+                          Text(emptyLabel,
                               style: TextStyle(
                                   fontSize: 15, color: _textSecondary)),
                         ],
@@ -1074,40 +1155,61 @@ class _StatBox extends StatelessWidget {
   final String label;
   final String value;
   final Color valueColor;
-  const _StatBox(
-      {required this.label, required this.value, required this.valueColor});
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _StatBox({
+    required this.label,
+    required this.value,
+    required this.valueColor,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: _card,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: valueColor,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected
+                ? valueColor.withValues(alpha: AppColors.isDark ? 0.18 : 0.10)
+                : _card,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? valueColor : _border,
+              width: selected ? 1.5 : 1,
             ),
           ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: _textSecondary,
-              letterSpacing: 0.2,
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: valueColor,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? valueColor : _textSecondary,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

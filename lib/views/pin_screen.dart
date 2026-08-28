@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
+import 'package:orderix/services/settings_service.dart';
 import 'package:orderix/services/staff_service.dart';
 import 'package:orderix/services/day_service.dart';
 import 'package:orderix/models/app_role.dart';
@@ -10,6 +11,7 @@ import 'package:orderix/navigation/app_shell.dart';
 import 'package:orderix/navigation/app_sections.dart';
 import 'package:orderix/themes/app_colors.dart';
 import 'package:orderix/widgets/brand_assets.dart';
+import 'package:orderix/widgets/admin_pin_setup_sheet.dart';
 
 Color get _bg => AppColors.scaffold;
 Color get _card => AppColors.card;
@@ -28,19 +30,49 @@ class PinScreen extends StatefulWidget {
 
 class _PinScreenState extends State<PinScreen> {
   Map<String, dynamic>? _selectedStaff;
+  bool _adminMode = false;
   String _enteredPin = '';
   bool _hasError = false;
+  bool _entering = false;
 
   void _onStaffTap(Map<String, dynamic> staff) {
     setState(() {
       _selectedStaff = staff;
+      _adminMode = false;
+      _enteredPin = '';
+      _hasError = false;
+    });
+  }
+
+  Future<void> _onAdminTap() async {
+    await SettingsService.to.ensureLegacyAdminPinIfNeeded(
+      hasStaff: StaffService.to.staffList.isNotEmpty,
+    );
+    if (!SettingsService.to.hasAdminPin) {
+      final created = await showAdminPinSetup(
+        forced: true,
+        isCreate: true,
+        title: 'Yönetici PIN’i Oluştur',
+        message:
+            'Yönetici girişi için 4 haneli bir PIN oluşturmanız gerekiyor.',
+      );
+      if (!created) return;
+    }
+    if (!mounted) return;
+    setState(() {
+      _adminMode = true;
+      _selectedStaff = {
+        'id': '__admin__',
+        'name': 'Yönetici',
+        'role': 'yetkili',
+      };
       _enteredPin = '';
       _hasError = false;
     });
   }
 
   void _onDigit(String d) {
-    if (_enteredPin.length >= 4) return;
+    if (_entering || _enteredPin.length >= 4) return;
     setState(() {
       _enteredPin += d;
       _hasError = false;
@@ -49,14 +81,49 @@ class _PinScreenState extends State<PinScreen> {
   }
 
   void _onDelete() {
-    if (_enteredPin.isEmpty) return;
+    if (_entering || _enteredPin.isEmpty) return;
     setState(() {
       _enteredPin = _enteredPin.substring(0, _enteredPin.length - 1);
       _hasError = false;
     });
   }
 
-  void _submitPin() {
+  Future<void> _submitPin() async {
+    if (_entering) return;
+    if (_adminMode) {
+      if (!SettingsService.to.verifyAdminPin(_enteredPin)) {
+        setState(() {
+          _hasError = true;
+          _enteredPin = '';
+        });
+        return;
+      }
+      setState(() => _entering = true);
+      StaffService.to.clearCurrentStaff();
+      if (SettingsService.to.adminPinMustChange.value ||
+          SettingsService.to.adminPin.value == '1234') {
+        final changed = await showAdminPinSetup(
+          forced: true,
+          isCreate: false,
+          title: 'Yönetici PIN’ini Değiştir',
+          message:
+              'Geçici PIN (1234) ile giriş yaptınız. Devam etmek için yeni bir PIN belirleyin.',
+        );
+        if (!changed) {
+          if (mounted) {
+            setState(() {
+              _entering = false;
+              _enteredPin = '';
+              _hasError = false;
+            });
+          }
+          return;
+        }
+      }
+      Get.offAll(() => const AppShell());
+      return;
+    }
+
     final staff = _selectedStaff;
     if (staff == null) return;
     if (StaffService.to.verifyPin(staff['id'] as String, _enteredPin)) {
@@ -75,8 +142,10 @@ class _PinScreenState extends State<PinScreen> {
   void _goBack() {
     setState(() {
       _selectedStaff = null;
+      _adminMode = false;
       _enteredPin = '';
       _hasError = false;
+      _entering = false;
     });
   }
 
@@ -86,9 +155,13 @@ class _PinScreenState extends State<PinScreen> {
       backgroundColor: _bg,
       body: SafeArea(
         child: _selectedStaff == null
-            ? _StaffPicker(onStaffTap: _onStaffTap)
+            ? _StaffPicker(
+                onStaffTap: _onStaffTap,
+                onAdminTap: _onAdminTap,
+              )
             : _PinPad(
                 staff: _selectedStaff!,
+                isAdmin: _adminMode,
                 pin: _enteredPin,
                 hasError: _hasError,
                 onDigit: _onDigit,
@@ -103,8 +176,12 @@ class _PinScreenState extends State<PinScreen> {
 // ── Staff Picker ───────────────────────────────────────────────
 
 class _StaffPicker extends StatelessWidget {
-  const _StaffPicker({required this.onStaffTap});
+  const _StaffPicker({
+    required this.onStaffTap,
+    required this.onAdminTap,
+  });
   final void Function(Map<String, dynamic>) onStaffTap;
+  final VoidCallback onAdminTap;
 
   @override
   Widget build(BuildContext context) {
@@ -171,12 +248,22 @@ class _StaffPicker extends StatelessWidget {
               );
             }
 
-            // Admin with no staff → auto-navigate to the app shell
+            // Touch settings so Obx rebuilds after legacy pin migration.
+            SettingsService.to.adminPin.value;
+            SettingsService.to.adminPinMustChange.value;
+
+            // Admin with no staff → dashboard (no PIN gate).
             if (staff.isEmpty && AuthController.to.isAdmin) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 Get.offAll(() => const AppShell());
               });
               return const SizedBox.shrink();
+            }
+
+            if (staff.isNotEmpty) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                SettingsService.to.ensureLegacyAdminPinIfNeeded(hasStaff: true);
+              });
             }
 
             if (staff.isEmpty) {
@@ -228,13 +315,14 @@ class _StaffPicker extends StatelessWidget {
           }),
         ),
 
-        // Manager button — only visible for admin accounts
+        // Manager button — PIN required when staff exists
         Obx(() {
           if (!AuthController.to.isAdmin) return const SizedBox.shrink();
+          if (StaffService.to.staffList.isEmpty) return const SizedBox.shrink();
           return Padding(
             padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
             child: GestureDetector(
-              onTap: () => Get.offAll(() => const AppShell()),
+              onTap: onAdminTap,
               child: Container(
                 height: 52,
                 decoration: BoxDecoration(
@@ -373,8 +461,7 @@ class _StaffCardState extends State<_StaffCard> {
               ),
               const SizedBox(height: 4),
               Text(
-                AppRoleX.fromString(
-                        widget.staff['role'] as String? ?? 'garson')
+                AppRoleX.fromString(widget.staff['role'] as String? ?? 'garson')
                     .labelTr,
                 style: TextStyle(
                   fontSize: 11,
@@ -395,6 +482,7 @@ class _StaffCardState extends State<_StaffCard> {
 class _PinPad extends StatelessWidget {
   const _PinPad({
     required this.staff,
+    required this.isAdmin,
     required this.pin,
     required this.hasError,
     required this.onDigit,
@@ -403,6 +491,7 @@ class _PinPad extends StatelessWidget {
   });
 
   final Map<String, dynamic> staff;
+  final bool isAdmin;
   final String pin;
   final bool hasError;
   final void Function(String) onDigit;
@@ -422,8 +511,9 @@ class _PinPad extends StatelessWidget {
       const Color(0xFF30B0C7),
       const Color(0xFF5856D6),
     ];
-    final color =
-        colors[name.codeUnits.fold(0, (a, b) => a + b) % colors.length];
+    final color = isAdmin
+        ? _orange
+        : colors[name.codeUnits.fold(0, (a, b) => a + b) % colors.length];
 
     return Column(
       children: [
@@ -466,14 +556,17 @@ class _PinPad extends StatelessWidget {
             ],
           ),
           child: Center(
-            child: Text(
-              initial,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                fontSize: 30,
-              ),
-            ),
+            child: isAdmin
+                ? const Icon(CupertinoIcons.lock_shield_fill,
+                    color: Colors.white, size: 32)
+                : Text(
+                    initial,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 30,
+                    ),
+                  ),
           ),
         ),
         const SizedBox(height: 12),
@@ -489,7 +582,11 @@ class _PinPad extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          hasError ? 'Yanlış PIN, tekrar deneyin' : 'PIN kodunuzu girin',
+          hasError
+              ? 'Yanlış PIN, tekrar deneyin'
+              : (isAdmin
+                  ? 'Yönetici PIN kodunuzu girin'
+                  : 'PIN kodunuzu girin'),
           style: TextStyle(
             fontSize: 13,
             color: hasError ? _red : _textSec,

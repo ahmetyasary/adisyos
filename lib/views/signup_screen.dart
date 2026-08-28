@@ -768,7 +768,8 @@ class _SignUpTextFieldState extends State<_SignUpTextField> {
         prefixIconConstraints: const BoxConstraints(),
         suffixIcon: widget.suffixIcon,
         filled: true,
-        fillColor: const Color(0xFFF9F9FB),
+        fillColor:
+            AppColors.isDark ? AppColors.chipBg : const Color(0xFFF9F9FB),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(

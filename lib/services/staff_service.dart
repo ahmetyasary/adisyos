@@ -108,11 +108,13 @@ class StaffService extends GetxService {
   }
 
   // addStaff must await: caller needs the real DB id immediately.
-  Future<void> addStaff(
+  /// Returns `true` when this was the first active staff profile.
+  Future<bool> addStaff(
     String name,
     String pin, {
     AppRole role = AppRole.staff,
   }) async {
+    final wasEmpty = staffList.isEmpty;
     try {
       final row = await _db
           .from('staff_profiles')
@@ -126,6 +128,7 @@ class StaffService extends GetxService {
           .select()
           .single();
       staffList.add(_rowToStaff(row));
+      return wasEmpty;
     } catch (e) {
       _err('addStaff', e);
       rethrow;
@@ -140,9 +143,7 @@ class StaffService extends GetxService {
   }) async {
     final idx = staffList.indexWhere((s) => s['id'] == id);
     final roleValue = role?.staffDbValue ??
-        (idx >= 0
-            ? staffList[idx]['role'] as String? ?? 'garson'
-            : 'garson');
+        (idx >= 0 ? staffList[idx]['role'] as String? ?? 'garson' : 'garson');
     if (idx >= 0) {
       staffList[idx] = {
         ...staffList[idx],

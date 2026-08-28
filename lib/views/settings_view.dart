@@ -19,6 +19,7 @@ import 'package:orderix/utils/app_haptics.dart';
 import 'package:orderix/utils/app_info.dart';
 import 'package:orderix/views/paywall_sheet.dart';
 import 'package:orderix/views/auth_screen.dart';
+import 'package:orderix/views/account_profile_view.dart';
 import 'package:orderix/views/integrations/integration_views.dart';
 import 'package:orderix/widgets/app_toast.dart';
 import 'package:orderix/widgets/app_dialog.dart';
@@ -226,7 +227,14 @@ class _SettingsViewState extends State<SettingsView> {
 
                       _SectionLabel('Genel'),
                       const SizedBox(height: 10),
-                      const _Card(child: _FeedbackSettingsCard()),
+                      _Card(
+                        child: _SettingsLinkRow(
+                          icon: CupertinoIcons.speaker_2_fill,
+                          title: 'Ses ve Bildirimler',
+                          subtitle: 'Titreşim, ses ve bildirim ayarları',
+                          onTap: () => openSoundAndNotifications(context),
+                        ),
+                      ),
                       const SizedBox(height: 28),
 
                       _SectionLabel('Ordi'),
@@ -267,12 +275,28 @@ class _SettingsViewState extends State<SettingsView> {
                       _Card(
                         child: Obx(() {
                           final mode = SettingsService.to.themeMode.value;
-                          return _ThemeModeRow(
-                            value: mode,
-                            onChanged: (val) {
-                              if (val == null) return;
-                              SettingsService.to.setThemeMode(val);
-                            },
+                          final scale = SettingsService.to.uiScale.value;
+                          return Column(
+                            children: [
+                              _ThemeModeRow(
+                                value: mode,
+                                onChanged: (val) {
+                                  if (val == null) return;
+                                  SettingsService.to.setThemeMode(val);
+                                },
+                              ),
+                              Divider(
+                                  height: 1,
+                                  color: _border,
+                                  indent: 16,
+                                  endIndent: 16),
+                              _UiScaleRow(
+                                value: scale,
+                                onChanged: (val) {
+                                  SettingsService.to.setUiScale(val);
+                                },
+                              ),
+                            ],
                           );
                         }),
                       ),
@@ -391,97 +415,123 @@ class _AccountCard extends StatelessWidget {
       final user = AuthController.to.user.value;
       final email = user?.email ?? '';
       final roleLabel = user?.role.name ?? '';
-      final initial = email.isNotEmpty ? email[0].toUpperCase() : 'U';
+      final displayName = SettingsService.to.profileLabelFor(email);
+      final avatarUrl = SettingsService.to.profileAvatarUrl.value;
+      final initial =
+          displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
 
-      return Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: _card,
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => openAccountProfile(context),
           borderRadius: BorderRadius.circular(18),
-          border: Border.fromBorderSide(BorderSide(color: _border, width: 1)),
-          boxShadow: const [
-            BoxShadow(
-                color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Avatar
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFFFB340), Color(0xFFFF9500)],
-                ),
-                shape: BoxShape.circle,
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x3DFF9500),
-                    blurRadius: 10,
-                    offset: Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 20,
-                  ),
-                ),
-              ),
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: _card,
+              borderRadius: BorderRadius.circular(18),
+              border:
+                  Border.fromBorderSide(BorderSide(color: _border, width: 1)),
+              boxShadow: const [
+                BoxShadow(
+                    color: Color(0x08000000),
+                    blurRadius: 12,
+                    offset: Offset(0, 4)),
+              ],
             ),
-            const SizedBox(width: 14),
-
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    email.split('@').first,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: _textPrimary,
-                      letterSpacing: -0.2,
-                    ),
+            child: Row(
+              children: [
+                // Avatar
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    gradient: avatarUrl.isEmpty
+                        ? const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFFFFB340), Color(0xFFFF9500)],
+                          )
+                        : null,
+                    shape: BoxShape.circle,
+                    image: avatarUrl.isNotEmpty
+                        ? DecorationImage(
+                            image: NetworkImage(avatarUrl),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x3DFF9500),
+                        blurRadius: 10,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    email,
-                    style: TextStyle(
+                  child: avatarUrl.isEmpty
+                      ? Center(
+                          child: Text(
+                            initial,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 20,
+                            ),
+                          ),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 14),
+
+                // Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayName,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: _textPrimary,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        email,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _textSec,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Role badge
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _orange.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    roleLabel,
+                    style: const TextStyle(
                       fontSize: 12,
-                      color: _textSec,
+                      fontWeight: FontWeight.w600,
+                      color: _orange,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ],
-              ),
-            ),
-
-            // Role badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: _orange.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                roleLabel,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: _orange,
                 ),
-              ),
+                const SizedBox(width: 6),
+                Icon(CupertinoIcons.chevron_right, size: 16, color: _textSec),
+              ],
             ),
-          ],
+          ),
         ),
       );
     });
@@ -874,6 +924,102 @@ class _ThemeModeRow extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── UI scale row ───────────────────────────────────────────────
+
+class _UiScaleRow extends StatelessWidget {
+  const _UiScaleRow({required this.value, required this.onChanged});
+
+  final String value;
+  final void Function(String) onChanged;
+
+  static const _options = [
+    ('sm', 'Küçük'),
+    ('md', 'Varsayılan'),
+    ('lg', 'Büyük'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: _orange.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(CupertinoIcons.textformat_size,
+                    size: 17, color: _orange),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ui_scale'.tr,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: _textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'ui_scale_hint'.tr,
+                      style: TextStyle(fontSize: 12, color: _textSec),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: _options.map((opt) {
+              final id = opt.$1;
+              final label = opt.$2;
+              final selected = id == value;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: GestureDetector(
+                  onTap: () => onChanged(id),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: selected ? _orange : _bg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: selected ? _orange : _border,
+                      ),
+                    ),
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: selected ? Colors.white : _textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -1468,6 +1614,155 @@ class _NavOrderSheetState extends State<_NavOrderSheet> {
 }
 
 // ── Haptics + sounds ──────────────────────────────────────────
+
+Future<void> openSoundAndNotifications(BuildContext context) {
+  return Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => const SoundAndNotificationsView(),
+    ),
+  );
+}
+
+class SoundAndNotificationsView extends StatelessWidget {
+  const SoundAndNotificationsView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final top = MediaQuery.of(context).padding.top;
+    return Scaffold(
+      backgroundColor: _bg,
+      body: Column(
+        children: [
+          _SettingsSubHeader(
+            topPad: top,
+            title: 'Ses ve Bildirimler',
+            onBack: () => Navigator.pop(context),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+              children: [
+                ResponsiveContent(
+                  width: ContentWidth.form,
+                  child: const _Card(child: _FeedbackSettingsCard()),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsSubHeader extends StatelessWidget {
+  const _SettingsSubHeader({
+    required this.topPad,
+    required this.title,
+    required this.onBack,
+  });
+
+  final double topPad;
+  final String title;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(top: topPad, left: 4, right: 8),
+      decoration: BoxDecoration(
+        color: _card,
+        border: Border(bottom: BorderSide(color: _border)),
+      ),
+      child: SizedBox(
+        height: 52,
+        child: Row(
+          children: [
+            IconButton(
+              onPressed: onBack,
+              icon: Icon(CupertinoIcons.back, color: _textPrimary),
+            ),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: _textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsLinkRow extends StatelessWidget {
+  const _SettingsLinkRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: _orange.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(icon, size: 17, color: _orange),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: _textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12, color: _textSec),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(CupertinoIcons.chevron_right, size: 16, color: _textSec),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _FeedbackSettingsCard extends StatelessWidget {
   const _FeedbackSettingsCard();
@@ -2194,24 +2489,42 @@ class _PaymentTypesSheet extends StatelessWidget {
     final ctrl = TextEditingController();
     final ok = await Get.dialog<bool>(
       AlertDialog(
-        title: const Text('Ödeme tipi ekle'),
+        backgroundColor: _card,
+        title: Text('Ödeme tipi ekle', style: TextStyle(color: _textPrimary)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(
+          style: TextStyle(color: _textPrimary),
+          cursorColor: _orange,
+          decoration: InputDecoration(
             hintText: 'Örn. Multinet, Sodexo…',
+            hintStyle: TextStyle(color: _textSec),
+            filled: true,
+            fillColor: AppColors.chipBg,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: _orange, width: 1.5),
+            ),
           ),
           onSubmitted: (_) => Get.back(result: true),
         ),
         actions: [
           TextButton(
             onPressed: () => Get.back(result: false),
-            child: Text('cancel'.tr),
+            child: Text('cancel'.tr, style: TextStyle(color: _textSec)),
           ),
           TextButton(
             onPressed: () => Get.back(result: true),
-            child: const Text('Ekle'),
+            child: const Text('Ekle', style: TextStyle(color: _orange)),
           ),
         ],
       ),

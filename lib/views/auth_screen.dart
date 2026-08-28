@@ -8,8 +8,10 @@ import 'package:orderix/features/auth/domain/entities/auth_user.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/guards/auth_middleware.dart';
 import 'package:orderix/views/pin_screen.dart';
+import 'package:orderix/views/update_password_screen.dart';
 import 'package:orderix/utils/app_info.dart';
 import 'package:orderix/themes/app_colors.dart';
+import 'package:orderix/widgets/app_toast.dart';
 import 'package:orderix/widgets/brand_assets.dart';
 
 // ── Apple-inspired design tokens ──────────────────────────────
@@ -42,6 +44,7 @@ class _AuthScreenState extends State<AuthScreen>
   String? _errorMessage;
   bool _navigated = false;
   Worker? _sessionWorker;
+  Worker? _recoveryWorker;
 
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
@@ -67,11 +70,24 @@ class _AuthScreenState extends State<AuthScreen>
 
     // Listen for session restore (async) so the app remembers credentials.
     _sessionWorker = ever(AuthController.to.user, (AuthUser? u) {
-      if (u != null) _navigateByRole(u.role);
+      if (u != null && !AuthController.to.pendingPasswordRecovery.value) {
+        _navigateByRole(u.role);
+      }
+    });
+
+    _recoveryWorker =
+        ever(AuthController.to.pendingPasswordRecovery, (bool pending) {
+      if (pending && mounted) {
+        Get.offAll(() => const UpdatePasswordScreen());
+      }
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = AuthController.to;
+      if (auth.pendingPasswordRecovery.value) {
+        Get.offAll(() => const UpdatePasswordScreen());
+        return;
+      }
       if (auth.isAuthenticated) _navigateByRole(auth.currentRole!);
     });
   }
@@ -79,6 +95,7 @@ class _AuthScreenState extends State<AuthScreen>
   @override
   void dispose() {
     _sessionWorker?.dispose();
+    _recoveryWorker?.dispose();
     _fadeCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
@@ -123,11 +140,168 @@ class _AuthScreenState extends State<AuthScreen>
 
   void _navigateByRole(_) {
     if (_navigated) return;
+    if (AuthController.to.pendingPasswordRecovery.value) return;
     _navigated = true;
     // After any successful login the device goes to the PIN screen.
     // Staff pick their profile and enter their PIN there.
     // Admins can tap "Yönetici Girişi" on the PIN screen to reach HomeView.
     Get.offAll(() => const PinScreen());
+  }
+
+  Future<void> _showForgotPassword() async {
+    final emailCtrl = TextEditingController(text: _emailCtrl.text.trim());
+    final formKey = GlobalKey<FormState>();
+
+    final sent = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: _card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 12,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 28,
+          ),
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: _border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'auth_forgot_title'.tr,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: _textPrimary,
+                    letterSpacing: -0.4,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'auth_forgot_subtitle'.tr,
+                  style: TextStyle(fontSize: 13, color: _textSec, height: 1.4),
+                ),
+                const SizedBox(height: 20),
+                _FieldLabel(label: 'auth_email'.tr),
+                const SizedBox(height: 6),
+                _AuthTextField(
+                  controller: emailCtrl,
+                  hint: 'auth_email_hint'.tr,
+                  prefixIcon: CupertinoIcons.mail,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.done,
+                  autofillHints: const [
+                    AutofillHints.username,
+                    AutofillHints.email
+                  ],
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return 'auth_email_required'.tr;
+                    }
+                    if (!v.contains('@') || !v.contains('.')) {
+                      return 'auth_email_invalid'.tr;
+                    }
+                    return null;
+                  },
+                  onFieldSubmitted: (_) async {
+                    if (!formKey.currentState!.validate()) return;
+                    final ok = await _sendResetEmail(emailCtrl.text.trim());
+                    if (ok && ctx.mounted) Navigator.pop(ctx, true);
+                  },
+                ),
+                const SizedBox(height: 24),
+                Obx(() {
+                  final loading = AuthController.to.isResettingPassword.value;
+                  return SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: loading
+                          ? null
+                          : () async {
+                              if (!formKey.currentState!.validate()) return;
+                              final ok =
+                                  await _sendResetEmail(emailCtrl.text.trim());
+                              if (ok && ctx.mounted) Navigator.pop(ctx, true);
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _orange,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: _orange.withValues(alpha: 0.5),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: loading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              'auth_forgot_send'.tr,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    Future<void>.delayed(const Duration(milliseconds: 350), emailCtrl.dispose);
+
+    if (sent == true && mounted) {
+      AppToast.success(
+        'auth_forgot_sent_body'.tr,
+        title: 'auth_forgot_sent_title'.tr,
+        duration: const Duration(seconds: 5),
+      );
+    }
+  }
+
+  Future<bool> _sendResetEmail(String email) async {
+    try {
+      await AuthController.to.resetPasswordForEmail(email: email);
+      await _saveEmail(email);
+      if (mounted && _emailCtrl.text.trim().isEmpty) {
+        _emailCtrl.text = email;
+      }
+      return true;
+    } on AuthException catch (e) {
+      AppToast.error(e.messageKey.tr);
+      return false;
+    } catch (_) {
+      AppToast.error('auth_error_generic'.tr);
+      return false;
+    }
   }
 
   String _friendlyError(String raw) {
@@ -191,6 +365,7 @@ class _AuthScreenState extends State<AuthScreen>
                               onTogglePassword: () => setState(
                                   () => _obscurePassword = !_obscurePassword),
                               onLoginPressed: _onLoginPressed,
+                              onForgotPassword: _showForgotPassword,
                             ),
 
                             if (!kIsWeb) ...[
@@ -386,6 +561,7 @@ class _LoginCard extends StatelessWidget {
     required this.errorMessage,
     required this.onTogglePassword,
     required this.onLoginPressed,
+    required this.onForgotPassword,
   });
 
   final GlobalKey<FormState> formKey;
@@ -395,6 +571,7 @@ class _LoginCard extends StatelessWidget {
   final String? errorMessage;
   final VoidCallback onTogglePassword;
   final VoidCallback onLoginPressed;
+  final VoidCallback onForgotPassword;
 
   @override
   Widget build(BuildContext context) {
@@ -482,13 +659,34 @@ class _LoginCard extends StatelessWidget {
               onFieldSubmitted: (_) => onLoginPressed(),
             ),
 
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: onForgotPassword,
+                style: TextButton.styleFrom(
+                  foregroundColor: _orange,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'auth_forgot_password'.tr,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+
             // Error banner
             if (errorMessage != null) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               _ErrorBanner(message: errorMessage!),
             ],
 
-            const SizedBox(height: 28),
+            const SizedBox(height: 20),
 
             // Login button
             _LoginButton(onPressed: onLoginPressed),
@@ -608,9 +806,8 @@ class _AuthTextFieldState extends State<_AuthTextField> {
         prefixIconConstraints: const BoxConstraints(),
         suffixIcon: widget.suffixIcon,
         filled: true,
-        fillColor: AppColors.isDark
-            ? AppColors.chipBg
-            : const Color(0xFFF9F9FB),
+        fillColor:
+            AppColors.isDark ? AppColors.chipBg : const Color(0xFFF9F9FB),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(

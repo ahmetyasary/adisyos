@@ -3447,17 +3447,36 @@ class _TableDetailViewState extends State<TableDetailView> {
                 autofocus: true,
                 textCapitalization: TextCapitalization.words,
                 style: TextStyle(color: _textPrimary),
+                cursorColor: _orange,
                 decoration: InputDecoration(
                   labelText: 'Müşteri adı',
                   hintText: 'Örn. Ahmet Yılmaz',
-                  prefixIcon: const Icon(CupertinoIcons.person),
+                  labelStyle: TextStyle(color: _textSecondary),
+                  hintStyle: TextStyle(color: _textSecondary),
+                  filled: true,
+                  fillColor: AppColors.chipBg,
+                  prefixIcon:
+                      Icon(CupertinoIcons.person, color: _textSecondary),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: _border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: _border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: _orange, width: 1.5),
+                  ),
                   suffixIcon: ValueListenableBuilder<TextEditingValue>(
                     valueListenable: nameController,
                     builder: (_, value, __) => value.text.trim().isEmpty
                         ? const SizedBox.shrink()
                         : IconButton(
                             onPressed: nameController.clear,
-                            icon: const Icon(CupertinoIcons.clear_circled),
+                            icon: Icon(CupertinoIcons.clear_circled,
+                                color: _textSecondary),
                           ),
                   ),
                 ),

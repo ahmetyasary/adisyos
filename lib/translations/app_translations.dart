@@ -90,7 +90,8 @@ class AppTranslations extends Translations {
           'no_orders_yet': 'Henüz sipariş yok',
           'table_already_empty': 'Masa zaten boş',
           'clear_table': 'Masayı Temizle',
-          'clear_table_confirm': 'Mevcut siparişler silinecek. Onaylıyor musunuz?',
+          'clear_table_confirm':
+              'Mevcut siparişler silinecek. Onaylıyor musunuz?',
           'table_cleared': 'Masa temizlendi',
           'empty_no_print': 'Masa boş. Yazdırılacak sipariş yok.',
           'empty_no_move': 'Masa boş. Taşınacak sipariş yok.',
@@ -152,9 +153,12 @@ class AppTranslations extends Translations {
           'theme_system': 'Sistem',
           'theme_light': 'Açık',
           'theme_dark': 'Koyu',
+          'ui_scale': 'Boyut',
+          'ui_scale_hint': 'Yazı ve arayüz ölçeği',
           'save_settings': 'Kaydet',
           'nav_order': 'Menü sırası',
-          'nav_order_hint': 'Kenar menü ve alt çubuktaki bölüm sırasını düzenleyin',
+          'nav_order_hint':
+              'Kenar menü ve alt çubuktaki bölüm sırasını düzenleyin',
           'nav_order_reset': 'Varsayılan',
 
           // Danger zone / Account deletion (App Store 5.1.1(v))
@@ -200,6 +204,22 @@ class AppTranslations extends Translations {
           'auth_password': 'Şifre',
           'auth_password_required': 'Şifre gerekli',
           'auth_password_short': 'Şifre en az 6 karakter olmalı',
+          'auth_forgot_password': 'Şifremi unuttum',
+          'auth_forgot_title': 'Şifre Sıfırlama',
+          'auth_forgot_subtitle':
+              'Kayıtlı e-posta adresinizi girin. Şifre sıfırlama bağlantısı göndereceğiz.',
+          'auth_forgot_send': 'Bağlantı Gönder',
+          'auth_forgot_sent_title': 'E-posta gönderildi',
+          'auth_forgot_sent_body':
+              'Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Gelen kutunuzu kontrol edin.',
+          'auth_new_password_title': 'Yeni Şifre Belirle',
+          'auth_new_password_subtitle':
+              'Hesabınız için yeni bir şifre oluşturun.',
+          'auth_new_password': 'Yeni şifre',
+          'auth_new_password_confirm': 'Yeni şifre tekrar',
+          'auth_new_password_save': 'Şifreyi Kaydet',
+          'auth_new_password_success':
+              'Şifreniz güncellendi. Giriş yapabilirsiniz.',
           'auth_login': 'Giriş Yap',
           'auth_login_title': 'Giriş Yap',
           'auth_login_subtitle': 'Hesabınıza erişmek için giriş yapın',
@@ -207,7 +227,8 @@ class AppTranslations extends Translations {
           'auth_error_unconfirmed': 'E-posta adresiniz henüz doğrulanmamış.',
           'auth_error_network': 'Bağlantı hatası. İnternetinizi kontrol edin.',
           'auth_error_generic': 'Giriş yapılamadı. Lütfen tekrar deneyin.',
-          'auth_error_role_not_found': 'Kullanıcı rolü bulunamadı. Yöneticinizle iletişime geçin.',
+          'auth_error_role_not_found':
+              'Kullanıcı rolü bulunamadı. Yöneticinizle iletişime geçin.',
           'auth_error_email_taken': 'Bu e-posta adresi zaten kayıtlı.',
           'auth_signup': 'Kayıt Ol',
           'auth_signup_title': 'Hesap Oluştur',
@@ -219,8 +240,10 @@ class AppTranslations extends Translations {
           'auth_have_account': 'Zaten hesabınız var mı?',
           'auth_signup_link': 'Kayıt Olun',
           'auth_login_link': 'Giriş Yapın',
-          'auth_signup_success': 'Hesabınız oluşturuldu! E-postanızı doğrulayın.',
-          'auth_signup_success_body': 'Lütfen e-posta kutunuzu kontrol edin ve hesabınızı doğruladıktan sonra giriş yapın.',
+          'auth_signup_success':
+              'Hesabınız oluşturuldu! E-postanızı doğrulayın.',
+          'auth_signup_success_body':
+              'Lütfen e-posta kutunuzu kontrol edin ve hesabınızı doğruladıktan sonra giriş yapın.',
           'auth_back_to_login': 'Giriş Sayfasına Dön',
 
           // Notifications
@@ -383,7 +406,8 @@ class AppTranslations extends Translations {
           'discount_mode_amount': 'Amount',
           'discount_applied': 'Discount applied',
           'valid_discount': 'Enter a valid discount percentage (1-100)',
-          'valid_discount_amount': 'Enter a valid amount that does not exceed the total',
+          'valid_discount_amount':
+              'Enter a valid amount that does not exceed the total',
 
           // Print
           'printing': 'Printing receipt...',
@@ -423,9 +447,12 @@ class AppTranslations extends Translations {
           'theme_system': 'System',
           'theme_light': 'Light',
           'theme_dark': 'Dark',
+          'ui_scale': 'Size',
+          'ui_scale_hint': 'Text and interface scale',
           'save_settings': 'Save',
           'nav_order': 'Menu order',
-          'nav_order_hint': 'Customize section order in the sidebar and tab bar',
+          'nav_order_hint':
+              'Customize section order in the sidebar and tab bar',
           'nav_order_reset': 'Default',
 
           // Danger zone / Account deletion (App Store 5.1.1(v))
@@ -471,14 +498,32 @@ class AppTranslations extends Translations {
           'auth_password': 'Password',
           'auth_password_required': 'Password is required',
           'auth_password_short': 'Password must be at least 6 characters',
+          'auth_forgot_password': 'Forgot password',
+          'auth_forgot_title': 'Reset Password',
+          'auth_forgot_subtitle':
+              'Enter your registered email address. We will send a password reset link.',
+          'auth_forgot_send': 'Send Link',
+          'auth_forgot_sent_title': 'Email sent',
+          'auth_forgot_sent_body':
+              'A password reset link has been sent to your email. Please check your inbox.',
+          'auth_new_password_title': 'Set New Password',
+          'auth_new_password_subtitle':
+              'Create a new password for your account.',
+          'auth_new_password': 'New password',
+          'auth_new_password_confirm': 'Confirm new password',
+          'auth_new_password_save': 'Save Password',
+          'auth_new_password_success':
+              'Your password has been updated. You can sign in now.',
           'auth_login': 'Sign In',
           'auth_login_title': 'Sign In',
           'auth_login_subtitle': 'Sign in to access your account',
           'auth_error_invalid': 'Incorrect email or password.',
-          'auth_error_unconfirmed': 'Your email address has not been confirmed.',
+          'auth_error_unconfirmed':
+              'Your email address has not been confirmed.',
           'auth_error_network': 'Connection error. Check your internet.',
           'auth_error_generic': 'Sign in failed. Please try again.',
-          'auth_error_role_not_found': 'User role not found. Contact your administrator.',
+          'auth_error_role_not_found':
+              'User role not found. Contact your administrator.',
           'auth_error_email_taken': 'This email address is already registered.',
           'auth_signup': 'Sign Up',
           'auth_signup_title': 'Create Account',
@@ -491,7 +536,8 @@ class AppTranslations extends Translations {
           'auth_signup_link': 'Sign Up',
           'auth_login_link': 'Sign In',
           'auth_signup_success': 'Account created! Verify your email.',
-          'auth_signup_success_body': 'Please check your inbox and verify your email address, then sign in.',
+          'auth_signup_success_body':
+              'Please check your inbox and verify your email address, then sign in.',
           'auth_back_to_login': 'Back to Sign In',
 
           // Notifications

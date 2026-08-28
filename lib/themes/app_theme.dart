@@ -52,6 +52,23 @@ class AppTheme {
         borderRadius: BorderRadius.all(Radius.circular(16)),
       ),
     ),
+    inputDecorationTheme: InputDecorationTheme(
+      fillColor: const Color(0xFFF2F2F7),
+      hintStyle: const TextStyle(color: labelSecondary),
+      labelStyle: const TextStyle(color: labelSecondary),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: separator),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: separator),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: primaryColor, width: 1.5),
+      ),
+    ),
     extensions: const [AppPalette.light],
   );
 
@@ -84,6 +101,23 @@ class AppTheme {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(16)),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      fillColor: const Color(0xFF2C2C2E),
+      hintStyle: const TextStyle(color: Color(0xFF8E8E93)),
+      labelStyle: const TextStyle(color: Color(0xFF8E8E93)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF38383A)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF38383A)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: primaryColor, width: 1.5),
       ),
     ),
     extensions: const [AppPalette.dark],

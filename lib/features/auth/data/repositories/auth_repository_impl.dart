@@ -28,7 +28,7 @@ class AuthRepositoryImpl implements AuthRepository {
       try {
         await _dataSource.ensureUserProfile(
           userId: supaUser.id,
-          email:  supaUser.email ?? email,
+          email: supaUser.email ?? email,
         );
       } catch (_) {
         // ensureUserProfile can fail if the DB trigger already created the
@@ -40,9 +40,9 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     _cachedUser = AuthUser(
-      id:    supaUser.id,
+      id: supaUser.id,
       email: supaUser.email ?? email,
-      role:  role,
+      role: role,
     );
     return _cachedUser!;
   }
@@ -71,6 +71,28 @@ class AuthRepositoryImpl implements AuthRepository {
     await _dataSource.deleteAccount();
     _cachedUser = null;
   }
+
+  // ── resetPasswordForEmail ─────────────────────────────────
+
+  @override
+  Future<void> resetPasswordForEmail({required String email}) =>
+      _dataSource.resetPasswordForEmail(email);
+
+  // ── updatePassword ────────────────────────────────────────
+
+  @override
+  Future<void> updatePassword({required String password}) =>
+      _dataSource.updatePassword(password);
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) =>
+      _dataSource.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
 
   // ── getCurrentUser ────────────────────────────────────────
 

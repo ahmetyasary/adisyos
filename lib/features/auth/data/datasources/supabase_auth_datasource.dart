@@ -32,7 +32,9 @@ class SupabaseAuthDataSource {
       throw UnknownAuthException(e.message);
     } catch (e) {
       final msg = e.toString().toLowerCase();
-      if (msg.contains('socket') || msg.contains('network') || msg.contains('connection')) {
+      if (msg.contains('socket') ||
+          msg.contains('network') ||
+          msg.contains('connection')) {
         throw const NetworkException();
       }
       throw const UnknownAuthException();
@@ -48,7 +50,7 @@ class SupabaseAuthDataSource {
   Future<bool> signUp(String email, String password) async {
     try {
       final response = await _client.auth.signUp(
-        email:    email,
+        email: email,
         password: password,
         emailRedirectTo: 'orderix://login-callback/',
       );
@@ -66,13 +68,16 @@ class SupabaseAuthDataSource {
       rethrow;
     } on AuthApiException catch (e) {
       final msg = e.message.toLowerCase();
-      if (msg.contains('already registered') || msg.contains('user already registered')) {
+      if (msg.contains('already registered') ||
+          msg.contains('user already registered')) {
         throw const EmailAlreadyInUseException();
       }
       throw UnknownAuthException(e.message);
     } catch (e) {
       final msg = e.toString().toLowerCase();
-      if (msg.contains('socket') || msg.contains('network') || msg.contains('connection')) {
+      if (msg.contains('socket') ||
+          msg.contains('network') ||
+          msg.contains('connection')) {
         throw const NetworkException();
       }
       throw const UnknownAuthException();
@@ -86,16 +91,13 @@ class SupabaseAuthDataSource {
     required String userId,
     required String email,
   }) async {
-    final roleRow = await _client
-        .from('roles')
-        .select('id')
-        .eq('name', 'admin')
-        .single();
+    final roleRow =
+        await _client.from('roles').select('id').eq('name', 'admin').single();
 
     await _client.from('users').upsert(
       {
-        'id':      userId,
-        'email':   email,
+        'id': userId,
+        'email': email,
         'role_id': roleRow['id'],
       },
       onConflict: 'id',
@@ -103,6 +105,83 @@ class SupabaseAuthDataSource {
   }
 
   Future<void> signOut() => _client.auth.signOut();
+
+  /// Sends a password-reset email. Always succeeds from the client POV when
+  /// the request reaches Supabase (email enumeration is prevented server-side).
+  Future<void> resetPasswordForEmail(String email) async {
+    try {
+      await _client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: 'orderix://login-callback/',
+      );
+    } on AuthException {
+      rethrow;
+    } on AuthApiException catch (e) {
+      throw UnknownAuthException(e.message);
+    } catch (e) {
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('socket') ||
+          msg.contains('network') ||
+          msg.contains('connection')) {
+        throw const NetworkException();
+      }
+      throw const UnknownAuthException();
+    }
+  }
+
+  /// Sets a new password for the current (recovery) session.
+  Future<void> updatePassword(String password) async {
+    try {
+      final response = await _client.auth.updateUser(
+        UserAttributes(password: password),
+      );
+      if (response.user == null) throw const UnknownAuthException();
+    } on AuthException {
+      rethrow;
+    } on AuthApiException catch (e) {
+      throw UnknownAuthException(e.message);
+    } catch (e) {
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('socket') ||
+          msg.contains('network') ||
+          msg.contains('connection')) {
+        throw const NetworkException();
+      }
+      throw const UnknownAuthException();
+    }
+  }
+
+  /// Verifies [currentPassword] then sets [newPassword] for the signed-in user.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final email = _client.auth.currentUser?.email;
+    if (email == null || email.isEmpty) throw const UnknownAuthException();
+    try {
+      await _client.auth.signInWithPassword(
+        email: email,
+        password: currentPassword,
+      );
+      await updatePassword(newPassword);
+    } on AuthException {
+      rethrow;
+    } on AuthApiException catch (e) {
+      if (e.statusCode == '400' || e.message.contains('Invalid login')) {
+        throw const InvalidCredentialsException();
+      }
+      throw UnknownAuthException(e.message);
+    } catch (e) {
+      if (e is AuthException) rethrow;
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('socket') ||
+          msg.contains('network') ||
+          msg.contains('connection')) {
+        throw const NetworkException();
+      }
+      throw const UnknownAuthException();
+    }
+  }
 
   /// Permanently deletes the current user via the `delete-account` Edge
   /// Function (requires service role on the server). Signs out locally
@@ -155,8 +234,7 @@ class SupabaseAuthDataSource {
           .single();
 
       // Shape: { "roles": { "name": "admin" } }
-      final roleName =
-          (row['roles'] as Map<String, dynamic>)['name'] as String;
+      final roleName = (row['roles'] as Map<String, dynamic>)['name'] as String;
       return AppRoleX.fromString(roleName);
     } catch (_) {
       throw const RoleNotFoundException();

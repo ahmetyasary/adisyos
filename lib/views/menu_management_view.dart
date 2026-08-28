@@ -17,9 +17,11 @@ Color get _bg => AppColors.bg;
 Color get _chip => AppColors.chipBg;
 Color get _card => AppColors.card;
 const _orange = Color(0xFFFF9500);
+
 /// Soft orange wash for chips — readable in light and dark.
-Color get _orangeSoft =>
-    AppColors.isDark ? _orange.withValues(alpha: 0.22) : const Color(0xFFFFF4E0);
+Color get _orangeSoft => AppColors.isDark
+    ? _orange.withValues(alpha: 0.22)
+    : const Color(0xFFFFF4E0);
 Color get _textPrimary => AppColors.textPrimary;
 Color get _textSec => AppColors.textSec;
 Color get _border => AppColors.border;
@@ -154,19 +156,16 @@ class _MenuManagementViewState extends State<MenuManagementView> {
       menu: menu,
       menuIndex: menuIndex,
       sortMode: _sortMode,
-      onEditMenu: () =>
-          _showEditMenuDialog(menuIndex, menu['name'] as String),
+      onEditMenu: () => _showEditMenuDialog(menuIndex, menu['name'] as String),
       onDeleteMenu: () =>
           _showDeleteMenuConfirmation(menuIndex, menu['name'] as String),
       onEditItem: (itemIndex, name, price, imageUrl) =>
           _showEditItemDialog(menuIndex, itemIndex, name, price, imageUrl),
       onDeleteItem: (itemIndex) {
-        final items =
-            MenuService.to.menus[menuIndex]['items'] as List;
+        final items = MenuService.to.menus[menuIndex]['items'] as List;
         if (itemIndex < 0 || itemIndex >= items.length) return;
         final name =
-            (items[itemIndex] as Map<String, dynamic>)['name'] as String? ??
-                '';
+            (items[itemIndex] as Map<String, dynamic>)['name'] as String? ?? '';
         MenuService.to.removeMenuItem(menuIndex, itemIndex);
         AppToast.undo(
           title: 'Ürün silindi',
@@ -497,10 +496,19 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
                 controller: _nameCtrl,
                 autofocus: true,
                 textCapitalization: TextCapitalization.words,
+                style: TextStyle(color: _textPrimary),
+                cursorColor: _orange,
                 decoration: InputDecoration(
                   labelText: 'menu_name'.tr,
+                  labelStyle: TextStyle(color: _textSec),
+                  filled: true,
+                  fillColor: AppColors.chipBg,
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: _border)),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: _border)),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: _orange, width: 1.5),
@@ -730,10 +738,19 @@ class _ItemFormDialogState extends State<_ItemFormDialog> {
                 controller: _nameCtrl,
                 autofocus: isAdd,
                 textCapitalization: TextCapitalization.words,
+                style: TextStyle(color: _textPrimary),
+                cursorColor: _orange,
                 decoration: InputDecoration(
                   labelText: 'item_name'.tr,
+                  labelStyle: TextStyle(color: _textSec),
+                  filled: true,
+                  fillColor: AppColors.chipBg,
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: _border)),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: _border)),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: _orange, width: 1.5),
@@ -747,11 +764,21 @@ class _ItemFormDialogState extends State<_ItemFormDialog> {
                     controller: _priceCtrl,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
+                    style: TextStyle(color: _textPrimary),
+                    cursorColor: _orange,
                     decoration: InputDecoration(
                       labelText: 'price'.tr,
+                      labelStyle: TextStyle(color: _textSec),
                       prefixText: SettingsService.cs,
+                      prefixStyle: TextStyle(color: _textPrimary),
+                      filled: true,
+                      fillColor: AppColors.chipBg,
                       border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: _border)),
+                      enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: _border)),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide:
@@ -1130,9 +1157,8 @@ class _MenuCardState extends State<_MenuCard> {
                   icon: _quickAdd
                       ? CupertinoIcons.xmark_circle
                       : CupertinoIcons.plus_circle,
-                  color: _quickAdd
-                      ? AppTheme.errorColor
-                      : AppTheme.successColor,
+                  color:
+                      _quickAdd ? AppTheme.errorColor : AppTheme.successColor,
                   tooltip: _quickAdd ? 'cancel'.tr : 'add_item'.tr,
                   onTap: _quickAdd ? _closeQuickAdd : _openQuickAdd,
                 ),
@@ -1180,8 +1206,7 @@ class _MenuCardState extends State<_MenuCard> {
                 physics: const NeverScrollableScrollPhysics(),
                 padding: EdgeInsets.zero,
                 itemCount: items.length,
-                separatorBuilder: (_, __) =>
-                    Divider(height: 1, color: _border),
+                separatorBuilder: (_, __) => Divider(height: 1, color: _border),
                 itemBuilder: (_, itemIndex) => _itemTile(items, itemIndex),
               ),
           ],

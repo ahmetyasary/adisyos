@@ -96,7 +96,9 @@ class TableService extends GetxService {
     try {
       final rows = await _db.from('tables').select('*, orders(*)').order('id');
       if (seq != _loadSeq) return;
-      final mapped = rows.map((r) => _rowToTable(Map<String, dynamic>.from(r as Map))).toList();
+      final mapped = rows
+          .map((r) => _rowToTable(Map<String, dynamic>.from(r as Map)))
+          .toList();
       if (seq != _loadSeq) return;
       tables.assignAll(mapped);
       for (var i = 0; i < mapped.length; i++) {
@@ -108,16 +110,17 @@ class TableService extends GetxService {
   }
 
   Map<String, dynamic> _rowToTable(Map<String, dynamic> row) {
-    final orders = ((row['orders'] as List)
-            .map((o) => <String, dynamic>{
-                  'id': o['id'] as int,
-                  'name': o['name'] as String,
-                  'quantity': o['quantity'] as int,
-                  'price': (o['price'] as num).toDouble(),
-                })
-            .toList()
-          ..sort(
-              (a, b) => (a['name'] as String).compareTo(b['name'] as String)));
+    final orders = ((row['orders'] as List).map((o) {
+      final createdAt = _parseTs(o['created_at']);
+      return <String, dynamic>{
+        'id': o['id'] as int,
+        'name': o['name'] as String,
+        'quantity': o['quantity'] as int,
+        'price': (o['price'] as num).toDouble(),
+        if (createdAt != null) 'createdAt': createdAt,
+      };
+    }).toList()
+      ..sort((a, b) => (a['name'] as String).compareTo(b['name'] as String)));
     var subtotal = 0.0;
     for (final o in orders) {
       subtotal += (o['price'] as double) * (o['quantity'] as int);
@@ -133,12 +136,29 @@ class TableService extends GetxService {
       'id': row['id'] as int,
       'name': row['name'] as String,
       'isOccupied': orders.isNotEmpty,
+      'occupiedAt': _earliestOrderAt(orders),
       'total': subtotal,
       'discount': discount,
       'staffEmail': (row['staff_email'] as String?) ?? '',
       'sectionId': row['section_id'] as String?,
       'orders': orders,
     };
+  }
+
+  static DateTime? _parseTs(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    return DateTime.tryParse(value.toString());
+  }
+
+  static DateTime? _earliestOrderAt(List<Map<String, dynamic>> orders) {
+    DateTime? earliest;
+    for (final o in orders) {
+      final at = o['createdAt'];
+      if (at is! DateTime) continue;
+      if (earliest == null || at.isBefore(earliest)) earliest = at;
+    }
+    return earliest;
   }
 
   // ── Partial payments — DB-backed realtime ────────────────────
@@ -257,6 +277,7 @@ class TableService extends GetxService {
         'id': row['id'] as int,
         'name': name,
         'isOccupied': false,
+        'occupiedAt': null,
         'total': 0.0,
         'discount': 0.0,
         'staffEmail': '',
@@ -342,7 +363,16 @@ class TableService extends GetxService {
         tables[tableIndex]['discount'] = 0.0;
       }
     }
-    tables[tableIndex]['isOccupied'] = orders.isNotEmpty;
+    final wasOccupied = tables[tableIndex]['isOccupied'] == true;
+    final isOccupied = orders.isNotEmpty;
+    tables[tableIndex]['isOccupied'] = isOccupied;
+    if (!isOccupied) {
+      tables[tableIndex]['occupiedAt'] = null;
+    } else if (!wasOccupied || tables[tableIndex]['occupiedAt'] == null) {
+      tables[tableIndex]['occupiedAt'] =
+          _earliestOrderAt(orders.cast<Map<String, dynamic>>()) ??
+              DateTime.now();
+    }
     tables.refresh();
   }
 
@@ -354,8 +384,7 @@ class TableService extends GetxService {
     if ((dbTotal - (t['total'] as double)).abs() > 0.009 ||
         (dbDisc - (t['discount'] as double)).abs() > 0.009 ||
         dbOcc != t['isOccupied']) {
-      _syncTableHeader(tableIndex)
-          .catchError((e) => _err('repairHeader', e));
+      _syncTableHeader(tableIndex).catchError((e) => _err('repairHeader', e));
     }
   }
 
@@ -406,6 +435,7 @@ class TableService extends GetxService {
         'name': name,
         'quantity': 1,
         'price': price,
+        'createdAt': DateTime.now(),
       };
       // Insert at the correct alphabetical position so the list never jumps.
       final insertIdx =
@@ -584,14 +614,16 @@ class TableService extends GetxService {
       'name': name,
       'quantity': qty,
       'price': price,
+      'createdAt': DateTime.now(),
     };
-    final insertAt = (atIndex != null && atIndex >= 0 && atIndex <= orders.length)
-        ? atIndex
-        : (() {
-            final i = orders
-                .indexWhere((o) => (o['name'] as String).compareTo(name) > 0);
-            return i == -1 ? orders.length : i;
-          })();
+    final insertAt =
+        (atIndex != null && atIndex >= 0 && atIndex <= orders.length)
+            ? atIndex
+            : (() {
+                final i = orders.indexWhere(
+                    (o) => (o['name'] as String).compareTo(name) > 0);
+                return i == -1 ? orders.length : i;
+              })();
     orders.insert(insertAt, newOrder);
     tables[tableIndex]['total'] =
         (tables[tableIndex]['total'] as double) + price * qty;

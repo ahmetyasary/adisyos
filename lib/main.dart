@@ -33,7 +33,10 @@ import 'package:orderix/features/auth/domain/usecases/login_usecase.dart';
 import 'package:orderix/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:orderix/features/auth/domain/usecases/get_current_user_usecase.dart';
 import 'package:orderix/features/auth/domain/usecases/get_user_role_usecase.dart';
+import 'package:orderix/features/auth/domain/usecases/reset_password_usecase.dart';
 import 'package:orderix/features/auth/domain/usecases/signup_usecase.dart';
+import 'package:orderix/features/auth/domain/usecases/update_password_usecase.dart';
+import 'package:orderix/features/auth/domain/usecases/change_password_usecase.dart';
 import 'package:orderix/features/auth/presentation/controller/auth_controller.dart';
 import 'package:orderix/features/ordi/presentation/ordi_controller.dart';
 import 'package:orderix/features/ordi/presentation/ordi_voice_service.dart';
@@ -124,6 +127,9 @@ void _registerAuth() {
     getUserRoleUseCase: GetUserRoleUseCase(repository),
     signUpUseCase: SignUpUseCase(repository),
     deleteAccountUseCase: DeleteAccountUseCase(repository),
+    resetPasswordUseCase: ResetPasswordUseCase(repository),
+    updatePasswordUseCase: UpdatePasswordUseCase(repository),
+    changePasswordUseCase: ChangePasswordUseCase(repository),
   ));
 }
 
@@ -195,6 +201,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           // Depend on preference + epoch so AppColors stays correct.
           final mode = SettingsService.to.themeMode.value;
           final _ = SettingsService.to.themeEpoch.value;
+          final scale = SettingsService.to.uiScaleFactor;
           final preferred = AppTheme.themeModeFrom(mode);
           // Resolve from preference + platform — never copy lagging Theme.
           final brightness = switch (preferred) {
@@ -212,18 +219,24 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   AppColors.isDark ? Brightness.dark : Brightness.light,
             ),
           );
-          return ResponsiveBreakpoints.builder(
-            child: child!,
-            breakpoints: [
-              const Breakpoint(start: 0, end: 450, name: MOBILE),
-              const Breakpoint(start: 451, end: 800, name: TABLET),
-              const Breakpoint(start: 801, end: 1920, name: DESKTOP),
-              const Breakpoint(
-                start: 1921,
-                end: double.infinity,
-                name: '4K',
-              ),
-            ],
+          final media = MediaQuery.of(context);
+          return MediaQuery(
+            data: media.copyWith(
+              textScaler: TextScaler.linear(scale),
+            ),
+            child: ResponsiveBreakpoints.builder(
+              child: child!,
+              breakpoints: [
+                const Breakpoint(start: 0, end: 450, name: MOBILE),
+                const Breakpoint(start: 451, end: 800, name: TABLET),
+                const Breakpoint(start: 801, end: 1920, name: DESKTOP),
+                const Breakpoint(
+                  start: 1921,
+                  end: double.infinity,
+                  name: '4K',
+                ),
+              ],
+            ),
           );
         });
       },

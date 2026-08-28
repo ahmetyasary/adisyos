@@ -79,3 +79,29 @@
 - Mutfak kayıtlarında geçici masa/sipariş kimliği nedeniyle oluşan UUID hatası düzeltildi. ✅
 - Cari Hesaplar ve dijital menü için Supabase tabloları, migration’lar ve canlı menü API güncellemeleri yapıldı. ✅
 - Güncel uygulama iOS simülatörlerine gönderildi. ✅
+
+## IPA 2.0.0+25 — bu sürümde yapılanlar
+
+### Türkçe
+- Ayarlar > Görünüm: yazı/arayüz boyutu (Küçük / Varsayılan / Büyük), varsayılan Varsayılan.
+- Ayarlar > Genel: Titreşim/Ses/Bildirim → “Ses ve Bildirimler” alt sayfası.
+- Giriş: “Şifremi unuttum”, e-posta ile sıfırlama, “Yeni Şifre Belirle” ekranı.
+- Hesap profili: isim, avatar, giriş şifresi, yönetici PIN.
+- Yönetici PIN: personel yoksa atlanır; personel varsa zorunlu; varsayılan 1234’ten zorla değiştirme; ilk personelde PIN oluşturma.
+- Masalar: dolu önce (en yeni üstte), boş doğal sıra; TOPLAM / DOLU / BOŞ filtreleri.
+- Menü: yeni kategori/ürün listenin başına eklenir.
+- Koyu mod form/input kontrast iyileştirmeleri.
+- Cari hesaplar menü ikonu güncellendi.
+- Tamamlanan ödemelerde son 20 kayıt.
+
+### English
+- Settings > Appearance: UI scale (Small / Default / Large); default is Default.
+- Settings: Vibration/Sound/Notifications moved to “Sound & Notifications” subpage.
+- Login: Forgot password, reset email, set-new-password screen.
+- Account profile: name, avatar, login password, admin PIN.
+- Admin PIN: skipped with no staff; required with staff; force change from legacy 1234; create PIN when first staff is added.
+- Tables: occupied first (newest on top), empty natural sort; TOTAL / OCCUPIED / EMPTY filters.
+- Menu: new categories/items prepend to the list.
+- Dark-mode form/input contrast fixes.
+- Current accounts nav icon updated.
+- Completed payments show the last 20 records.

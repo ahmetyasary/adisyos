@@ -8,8 +8,8 @@ Color get _card => AppColors.card;
 Color get _labelPrimary => AppColors.textPrimary;
 Color get _labelSecondary => AppColors.textSec;
 Color get _separator => AppColors.border;
-const _orange         = Color(0xFFFF9500);
-const _red            = Color(0xFFFF3B30);
+const _orange = Color(0xFFFF9500);
+const _red = Color(0xFFFF3B30);
 
 /// iOS-style modal helpers used across the app. Replaces Material `AlertDialog`
 /// so dialogs match the rest of the screens (64×64 icon badge, 20 radius,
@@ -372,7 +372,7 @@ class AppDialogTextField extends StatelessWidget {
             counterText: '',
             hintStyle: TextStyle(color: _labelSecondary, fontSize: 14),
             filled: true,
-            fillColor: const Color(0xFFF2F2F7),
+            fillColor: AppColors.chipBg,
             isDense: true,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 14),

@@ -185,10 +185,9 @@ class OrdiActionRunner {
         '“${_str(a['section'])}” bölümünün adı “${_str(a['newName'])}” olsun',
       'rename_menu_category' =>
         '“${_str(a['category'])}” kategorisi “${_str(a['newName'])}” olsun',
-      'update_menu_item' =>
-        '“${_str(a['name'])}” ürünü güncellensin'
-            '${_str(a['newName']).isEmpty ? '' : ' (yeni ad: ${_str(a['newName'])})'}'
-            '${a['price'] == null ? '' : ' (fiyat: ${a['price']})'}',
+      'update_menu_item' => '“${_str(a['name'])}” ürünü güncellensin'
+          '${_str(a['newName']).isEmpty ? '' : ' (yeni ad: ${_str(a['newName'])})'}'
+          '${a['price'] == null ? '' : ' (fiyat: ${a['price']})'}',
       'set_stock' =>
         '“${_str(a['item'] ?? a['name'])}” stoğu ${a['count'] ?? a['stock']} olsun',
       'apply_discount' =>
@@ -204,8 +203,9 @@ class OrdiActionRunner {
       'clock_out' => '${_str(a['staff'])} vardiyadan çıksın',
       'end_break' => '${_str(a['staff'])} molası bitsin',
       'set_company_name' => 'İşletme adı “${_str(a['name'])}” olsun',
-      'set_currency' => 'Para birimi ${ _str(a['symbol'])} olsun',
-      'update_staff' => '${_str(a['staff'] ?? a['name'])} personeli güncellensin',
+      'set_currency' => 'Para birimi ${_str(a['symbol'])} olsun',
+      'update_staff' =>
+        '${_str(a['staff'] ?? a['name'])} personeli güncellensin',
       'advance_kitchen' =>
         '${_str(a['table'])} / ${_str(a['item'])} mutfak durumu ilerlesin',
       _ => c.name,
@@ -285,7 +285,8 @@ class OrdiActionRunner {
     final sectionName = _str(args['sectionName'] ?? args['section']);
     if (sectionName.isNotEmpty) {
       sectionId = _sectionId(sectionName);
-      if (sectionId == null) return '“$sectionName” bölümü yok. Masa eklenmedi.';
+      if (sectionId == null)
+        return '“$sectionName” bölümü yok. Masa eklenmedi.';
     }
     final err = await TableService.to.addTable(name, sectionId: sectionId);
     return err ?? '“$name” masası oluşturuldu.';
@@ -342,7 +343,14 @@ class OrdiActionRunner {
     if (!RegExp(r'^\d{4}$').hasMatch(pin)) {
       return '4 haneli PIN gerekli (ör. “Ali 4821 ekle”).';
     }
-    await StaffService.to.addStaff(name, pin);
+    final first = await StaffService.to.addStaff(name, pin);
+    if (first && Get.isRegistered<SettingsService>()) {
+      if (!SettingsService.to.hasAdminPin ||
+          SettingsService.to.adminPin.value == '1234') {
+        await SettingsService.to.setAdminPinMustChange(true);
+      }
+      return '“$name” personeli eklendi. İlk personel olduğu için yönetici PIN’i oluşturmanız gerekiyor (Personel ekranından veya sonraki yönetici girişinde).';
+    }
     return '“$name” personeli eklendi.';
   }
 
@@ -381,7 +389,8 @@ class OrdiActionRunner {
     return ok ? 'Gün başlatıldı.' : 'Gün başlatılamadı.';
   }
 
-  static Future<String> _clock(Map<String, dynamic> args, {required bool inShift}) async {
+  static Future<String> _clock(Map<String, dynamic> args,
+      {required bool inShift}) async {
     if (!Get.isRegistered<ShiftService>()) return 'Vardiya servisi yok.';
     final staff = _staffName(args);
     if (staff.isEmpty) return 'Personel adı gerekli.';
@@ -393,7 +402,8 @@ class OrdiActionRunner {
     return '$staff vardiyadan çıktı.';
   }
 
-  static Future<String> _break(Map<String, dynamic> args, {required bool start}) async {
+  static Future<String> _break(Map<String, dynamic> args,
+      {required bool start}) async {
     if (!Get.isRegistered<ShiftService>()) return 'Vardiya servisi yok.';
     final staff = _staffName(args);
     if (staff.isEmpty) return 'Personel adı gerekli.';
@@ -416,7 +426,8 @@ class OrdiActionRunner {
     if (sectionName.isNotEmpty) {
       final sid = _sectionId(sectionName);
       if (sid == null) return '“$sectionName” bölümü yok.';
-      TableService.to.updateTable(ti, newName, sectionId: sid, sectionChanged: true);
+      TableService.to
+          .updateTable(ti, newName, sectionId: sid, sectionChanged: true);
     } else {
       TableService.to.updateTableName(ti, newName);
     }
@@ -460,7 +471,8 @@ class OrdiActionRunner {
     final ti = _tableIndex(_str(args['table']));
     if (ti == -1) return 'Masa bulunamadı.';
     final pct = _price(args['percent'] ?? args['percentage']);
-    if (pct == null || pct < 0 || pct > 100) return 'Geçerli bir yüzde gerekli.';
+    if (pct == null || pct < 0 || pct > 100)
+      return 'Geçerli bir yüzde gerekli.';
     TableService.to.applyDiscount(ti, pct);
     return '${_str(args['table'])} masasına %${pct.toStringAsFixed(0)} indirim uygulandı.';
   }
@@ -573,7 +585,8 @@ class OrdiActionRunner {
     var i = tables.indexWhere((t) => (t['name'] as String).toLowerCase() == n);
     if (i != -1) return i;
     i = tables.indexWhere(
-      (t) => (t['name'] as String).toLowerCase().replaceAll('masa ', '') ==
+      (t) =>
+          (t['name'] as String).toLowerCase().replaceAll('masa ', '') ==
           n.replaceAll('masa ', ''),
     );
     return i;
@@ -587,9 +600,7 @@ class OrdiActionRunner {
   }
 
   static (int, int)? _itemIndex(String category, String name) {
-    final mi = category.isEmpty
-        ? -2
-        : _menuIndex(category);
+    final mi = category.isEmpty ? -2 : _menuIndex(category);
     final n = name.toLowerCase();
     if (mi >= 0) {
       final items = MenuService.to.menus[mi]['items'] as List;
@@ -607,17 +618,15 @@ class OrdiActionRunner {
   static (String, double)? _menuItem(String name) {
     final loc = _itemIndex('', name);
     if (loc == null) return null;
-    final item =
-        (MenuService.to.menus[loc.$1]['items'] as List)[loc.$2] as Map;
+    final item = (MenuService.to.menus[loc.$1]['items'] as List)[loc.$2] as Map;
     return (item['name'] as String, (item['price'] as num).toDouble());
   }
 
   static String? _sectionId(String name) {
     if (!Get.isRegistered<SectionService>() || name.isEmpty) return null;
     final n = name.toLowerCase();
-    return SectionService.to.sections
-        .firstWhereOrNull((s) => (s['name'] as String).toLowerCase() == n)
-        ?['id'] as String?;
+    return SectionService.to.sections.firstWhereOrNull(
+        (s) => (s['name'] as String).toLowerCase() == n)?['id'] as String?;
   }
 
   static Map<String, dynamic>? _findStaff(String name) {
@@ -675,7 +684,8 @@ class OrdiActionRunner {
 
 /// Offline parse of the most common write commands.
 class OrdiIntentParser {
-  static List<OrdiToolCall> parse(String question, Map<String, dynamic> snapshot) {
+  static List<OrdiToolCall> parse(
+      String question, Map<String, dynamic> snapshot) {
     final q = question.trim();
     if (q.isEmpty) return const [];
     final lower = q.toLowerCase();
@@ -704,7 +714,9 @@ class OrdiIntentParser {
                   as String? ??
               '')
           : name;
-      return [OrdiToolCall('create_table', {'name': name})];
+      return [
+        OrdiToolCall('create_table', {'name': name})
+      ];
     }
     return const [];
   }
