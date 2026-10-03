@@ -110,8 +110,6 @@ IconData _layoutIcon(_TableLayout layout) {
     _TableLayout.grid => CupertinoIcons.square_grid_2x2,
     _TableLayout.gridSmall => CupertinoIcons.circle_grid_3x3,
     _TableLayout.list => CupertinoIcons.list_bullet,
-    _TableLayout.grouped2 => CupertinoIcons.rectangle_split_3x1,
-    _TableLayout.grouped4 => CupertinoIcons.square_grid_3x2,
   };
 }
 
@@ -167,7 +165,7 @@ class TablesView extends StatefulWidget {
 
 enum _TableStatusFilter { all, occupied, free }
 
-enum _TableLayout { grid, gridSmall, list, grouped2, grouped4 }
+enum _TableLayout { grid, gridSmall, list }
 
 const _kTableLayoutPref = 'tables_layout';
 
@@ -974,26 +972,10 @@ class _TablesViewState extends State<TablesView> {
     switch (layout) {
       case _TableLayout.list:
         return _buildTableList(context, tables, allTables, bottom);
-      case _TableLayout.grouped2:
-        return _buildGroupedTables(context, tables, allTables, bottom);
-      case _TableLayout.grouped4:
-        return _buildGroupedTables(
-          context,
-          tables,
-          allTables,
-          bottom,
-          columns: 4,
-        );
       case _TableLayout.grid:
         return _buildCurrentGrid(context, tables, allTables, bottom);
       case _TableLayout.gridSmall:
-        return _buildGroupedTables(
-          context,
-          tables,
-          allTables,
-          bottom,
-          small: true,
-        );
+        return _buildGroupedTables(context, tables, allTables, bottom);
     }
   }
 
@@ -1034,19 +1016,31 @@ class _TablesViewState extends State<TablesView> {
     List<Map<String, dynamic>> allTables,
     double bottom,
   ) {
-    return ListView.separated(
+    final groups = _groupTables(tables);
+    return ListView(
       padding: EdgeInsets.fromLTRB(16, 0, 16, bottom),
-      itemCount: tables.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, i) {
-        final table = tables[i];
-        final actualIndex = allTables.indexOf(table);
-        return _TableListTile(
-          table: table,
-          onTap: () => _openTable(table, actualIndex),
-          onMenu: (pos) => _showTableContextMenu(context, actualIndex, pos),
-        );
-      },
+      children: [
+        for (final group in groups) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, 6, 0, 8),
+            child: _GroupHeader(name: group.name, tables: group.tables),
+          ),
+          for (var i = 0; i < group.tables.length; i++) ...[
+            if (i > 0) const SizedBox(height: 8),
+            Builder(builder: (context) {
+              final table = group.tables[i];
+              final actualIndex = allTables.indexOf(table);
+              return _TableListTile(
+                table: table,
+                onTap: () => _openTable(table, actualIndex),
+                onMenu: (pos) =>
+                    _showTableContextMenu(context, actualIndex, pos),
+              );
+            }),
+          ],
+          const SizedBox(height: 10),
+        ],
+      ],
     );
   }
 
@@ -1054,24 +1048,20 @@ class _TablesViewState extends State<TablesView> {
     BuildContext context,
     List<Map<String, dynamic>> tables,
     List<Map<String, dynamic>> allTables,
-    double bottom, {
-    int columns = 2,
-    bool small = false,
-  }) {
+    double bottom,
+  ) {
     final groups = _groupTables(tables);
     return LayoutBuilder(builder: (context, constraints) {
       final width = constraints.maxWidth;
-      final cols = small
-          ? (width < 500
-              ? 4
-              : width < 820
-                  ? 6
-                  : width < 1100
-                      ? 8
-                      : 10)
-          : (columns == 4 && width < 720 ? 2 : columns);
-      final gap = small ? 8.0 : 10.0;
-      final ratio = small ? 0.9 : (cols <= 2 ? 2.15 : 1.2);
+      final cols = width < 500
+          ? 4
+          : width < 820
+              ? 6
+              : width < 1100
+                  ? 8
+                  : 10;
+      const gap = 8.0;
+      const ratio = 1.28;
       return CustomScrollView(
         slivers: [
           for (final group in groups) ...[
@@ -1096,6 +1086,7 @@ class _TablesViewState extends State<TablesView> {
                     group.tables[i],
                     allTables,
                     compact: true,
+                    dense: true,
                   ),
                   childCount: group.tables.length,
                 ),
@@ -1113,12 +1104,14 @@ class _TablesViewState extends State<TablesView> {
     Map<String, dynamic> table,
     List<Map<String, dynamic>> allTables, {
     required bool compact,
+    bool dense = false,
   }) {
     final actualIndex = allTables.indexOf(table);
     return _TableCard(
       table: table,
       index: actualIndex,
       compact: compact,
+      dense: dense,
       onTap: () => _openTable(table, actualIndex),
       onLongPress: (pos) => _showTableContextMenu(context, actualIndex, pos),
     );
@@ -1647,6 +1640,10 @@ class _TableCard extends StatelessWidget {
   final Map<String, dynamic> table;
   final int index;
   final bool compact;
+
+  /// Small-grid tile: section is already in the group header, so the card
+  /// keeps only the number and the price.
+  final bool dense;
   final VoidCallback onTap;
   final void Function(Offset) onLongPress;
 
@@ -1656,6 +1653,7 @@ class _TableCard extends StatelessWidget {
     required this.onTap,
     required this.onLongPress,
     this.compact = false,
+    this.dense = false,
   });
 
   @override
@@ -1682,6 +1680,15 @@ class _TableCard extends StatelessWidget {
     } else {
       section = 'MASA';
       number = name;
+    }
+
+    if (dense) {
+      return _denseTile(
+        number: number,
+        isOccupied: isOccupied,
+        total: total,
+        accentColor: accentColor,
+      );
     }
 
     final double pad = compact ? 10.0 : 14.0;
@@ -1779,10 +1786,12 @@ class _TableCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                isOccupied
-                    ? _PriceBadge(total: total, compact: compact)
-                    : _EmptyBadge(compact: compact),
-                const Spacer(),
+                Flexible(
+                  child: isOccupied
+                      ? _PriceBadge(total: total, compact: compact)
+                      : _EmptyBadge(compact: compact),
+                ),
+                SizedBox(width: compact ? 2 : 4),
                 GestureDetector(
                   onTapDown: (d) => onLongPress(d.globalPosition),
                   child: isOccupied
@@ -1805,6 +1814,62 @@ class _TableCard extends StatelessWidget {
       ),
     );
   }
+
+  Widget _denseTile({
+    required String number,
+    required bool isOccupied,
+    required double total,
+    required Color accentColor,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      onLongPressStart: (d) => onLongPress(d.globalPosition),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isOccupied ? _tableOccupiedBg : _tableFreeBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border(
+            left: BorderSide(color: accentColor, width: 3),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(8, 6, 6, 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    number,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: _textPrimary,
+                      height: 1.0,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                GestureDetector(
+                  onTapDown: (d) => onLongPress(d.globalPosition),
+                  child: Icon(
+                    isOccupied ? CupertinoIcons.ellipsis : CupertinoIcons.add,
+                    size: 14,
+                    color: isOccupied ? _textSecondary : _available,
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            isOccupied
+                ? _PriceBadge(total: total, compact: true)
+                : const _EmptyBadge(compact: true),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Orange price badge shown on occupied tables.
@@ -1822,16 +1887,24 @@ class _PriceBadge extends StatelessWidget {
         color: _orange.withOpacity(0.12),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Obx(() => Text(
-            '${SettingsService.cs}${total.toStringAsFixed(2)}',
-            style: TextStyle(
-              fontSize: compact ? 12 : 14,
-              fontWeight: FontWeight.w800,
-              color: _orange,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          )),
+      child: Obx(() {
+        final text = Text(
+          '${SettingsService.cs}${total.toStringAsFixed(2)}',
+          style: TextStyle(
+            fontSize: compact ? 12 : 14,
+            fontWeight: FontWeight.w800,
+            color: _orange,
+          ),
+          maxLines: 1,
+          softWrap: false,
+        );
+        if (!compact) return text;
+        return FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: text,
+        );
+      }),
     );
   }
 }
@@ -1937,8 +2010,7 @@ class _TableListTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            SizedBox(
-              width: 42,
+            Expanded(
               child: Text(
                 label.number,
                 style: TextStyle(
@@ -1946,21 +2018,11 @@ class _TableListTile extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                   color: _textPrimary,
                 ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                label.section,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: _sectionColorFor(label.section),
-                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+            const SizedBox(width: 8),
             if (isOccupied)
               _PriceBadge(total: total, compact: true)
             else
@@ -1999,12 +2061,10 @@ class _LayoutPopup extends StatelessWidget {
     var left = anchor.right - width;
     if (left < 12) left = 12;
     if (left + width > size.width - 12) left = size.width - width - 12;
-    final top = (anchor.bottom + 8).clamp(12.0, size.height - 390);
+    final top = (anchor.bottom + 8).clamp(12.0, size.height - 280);
 
     const options = <_TableLayout, (String, String)>{
-      _TableLayout.list: ('Liste', 'Satır satır'),
-      _TableLayout.grouped2: ('2 kolon', 'Küçük kutular, bölümlere ayrılır'),
-      _TableLayout.grouped4: ('4 kolon', 'Küçük kutular, bölümlere ayrılır'),
+      _TableLayout.list: ('Liste', 'Satır satır, bölümlere ayrılır'),
       _TableLayout.grid: ('Izgara', 'Şu anki görünüm'),
       _TableLayout.gridSmall: ('Küçük ızgara', 'Küçük kutular, bölümlere ayrılır'),
     };
@@ -2133,12 +2193,13 @@ class _LayoutSketch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fill = selected ? _orange.withValues(alpha: 0.85) : _chip;
+    final cell = selected ? _orange : const Color(0xFF8E8E93);
+    final section = selected ? _orange : const Color(0xFF636366);
     final line = selected ? _orange : _border;
     return Container(
       width: 46,
       height: 34,
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
         color: AppColors.isDark
             ? const Color(0xFF1C1C1E)
@@ -2148,124 +2209,73 @@ class _LayoutSketch extends StatelessWidget {
       ),
       child: switch (layout) {
         _TableLayout.list => Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              for (var i = 0; i < 3; i++) ...[
-                if (i > 0) const SizedBox(height: 3),
-                Expanded(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: fill,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        _TableLayout.grouped2 => Row(
-            children: [
-              for (var c = 0; c < 2; c++) ...[
-                if (c > 0) const SizedBox(width: 3),
-                Expanded(
-                  child: Column(
-                    children: [
-                      for (var r = 0; r < 2; r++) ...[
-                        if (r > 0) const SizedBox(height: 3),
-                        Expanded(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: fill,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ),
-        _TableLayout.grouped4 => Column(
-            children: [
-              Container(height: 3, color: line),
-              const SizedBox(height: 3),
-              Expanded(
-                child: Row(
-                  children: [
-                    for (var c = 0; c < 4; c++) ...[
-                      if (c > 0) const SizedBox(width: 2),
-                      Expanded(
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: fill,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+              _sketchSection(section),
+              for (var i = 0; i < 3; i++) _sketchBar(cell),
             ],
           ),
         _TableLayout.grid => Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              for (var r = 0; r < 2; r++) ...[
-                if (r > 0) const SizedBox(height: 3),
-                Expanded(
-                  child: Row(
-                    children: [
-                      for (var c = 0; c < 3; c++) ...[
-                        if (c > 0) const SizedBox(width: 2),
-                        Expanded(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: fill,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+              for (var r = 0; r < 2; r++)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    for (var c = 0; c < 3; c++) _sketchCell(cell, 9),
+                  ],
                 ),
-              ],
             ],
           ),
         _TableLayout.gridSmall => Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(height: 3, color: line),
-              const SizedBox(height: 3),
-              Expanded(
-                child: Column(
+              _sketchSection(section),
+              for (var r = 0; r < 2; r++)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    for (var r = 0; r < 2; r++) ...[
-                      if (r > 0) const SizedBox(height: 2),
-                      Expanded(
-                        child: Row(
-                          children: [
-                            for (var c = 0; c < 4; c++) ...[
-                              if (c > 0) const SizedBox(width: 2),
-                              Expanded(
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    color: fill,
-                                    borderRadius: BorderRadius.circular(1.5),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
+                    for (var c = 0; c < 4; c++) _sketchCell(cell, 6),
                   ],
                 ),
-              ),
             ],
           ),
       },
+    );
+  }
+
+  Widget _sketchSection(Color color) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        width: 16,
+        height: 3,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _sketchBar(Color color) {
+    return Container(
+      height: 4,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(1.5),
+      ),
+    );
+  }
+
+  Widget _sketchCell(Color color, double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(1.5),
+      ),
     );
   }
 }

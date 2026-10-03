@@ -7,6 +7,7 @@ import 'package:orderix/features/ordi/presentation/ordi_launcher.dart';
 import 'package:orderix/models/app_role.dart';
 import 'package:orderix/navigation/app_bottom_bar.dart';
 import 'package:orderix/navigation/app_sections.dart';
+import 'package:orderix/navigation/shell_nav.dart';
 import 'package:orderix/navigation/app_sidebar.dart';
 import 'package:orderix/services/day_service.dart';
 import 'package:orderix/services/sales_history_service.dart';
@@ -49,6 +50,7 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late Timer _timer;
   Worker? _entitlementWorker;
+  Worker? _navWorker;
   bool _paywallShown = false;
 
   /// Receipt restore can hang on the simulator. After one wait we still show
@@ -64,7 +66,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _selectedId = widget.initialSectionId;
+    _selectedId = ShellNav.consume() ?? widget.initialSectionId;
+    _navWorker = ever<String?>(ShellNav.request, (id) {
+      if (!mounted || id == null) return;
+      ShellNav.consume();
+      _select(id);
+    });
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
@@ -83,6 +90,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _entitlementWorker?.dispose();
+    _navWorker?.dispose();
     _timer.cancel();
     super.dispose();
   }

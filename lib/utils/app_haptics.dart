@@ -1,3 +1,5 @@
+import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:orderix/services/settings_service.dart';
@@ -6,6 +8,9 @@ import 'package:orderix/services/settings_service.dart';
 /// Settings toggles / intensity (`Titreşim` / `Ses` / `Bildirim sesi`).
 class AppHaptics {
   AppHaptics._();
+
+  static AudioPlayer? _alertPlayer;
+  static bool _audioReady = false;
 
   static bool get _hapticsOn {
     if (!Get.isRegistered<SettingsService>()) return true;
@@ -148,10 +153,13 @@ class AppHaptics {
     await _impactStrong();
   }
 
-  /// In-app + stronger alert when a digital-menu order arrives.
-  static Future<void> orderArrived() async {
+  /// In-app pulse when a digital-menu order arrives.
+  ///
+  /// The chime is a real audio file. Simulator system sounds and notification
+  /// sounds stay silent, so the order alert cannot rely on them.
+  static Future<void> orderArrived({bool withSound = true}) async {
     if (_hapticsOn) await _impactStrong();
-    await _playNotifySounds();
+    if (withSound) await _playNotifySounds();
     if (_hapticLevel == 'high' && _hapticsOn) {
       await Future<void>.delayed(const Duration(milliseconds: 70));
       await _impactMid();
@@ -170,16 +178,45 @@ class AppHaptics {
             ? SettingsService.to.notifySoundIntensity.value
             : 'high')
         : _notifyLevel;
-    final count = switch (level) {
-      'low' => 1,
-      'medium' => 2,
-      _ => 3,
+    final volume = switch (level) {
+      'low' => 0.45,
+      'medium' => 0.75,
+      _ => 1.0,
     };
-    for (var i = 0; i < count; i++) {
-      await SystemSound.play(SystemSoundType.alert);
-      if (i < count - 1) {
-        await Future<void>.delayed(Duration(milliseconds: 90 + i * 30));
+    final played = await _playOrderChime(volume);
+    if (played) return;
+    await SystemSound.play(SystemSoundType.alert);
+  }
+
+  static Future<bool> _playOrderChime(double volume) async {
+    try {
+      final player = _alertPlayer ??= AudioPlayer();
+      if (!_audioReady) {
+        await AudioPlayer.global.setAudioContext(
+          AudioContext(
+            android: const AudioContextAndroid(
+              contentType: AndroidContentType.sonification,
+              usageType: AndroidUsageType.alarm,
+              audioFocus: AndroidAudioFocus.gainTransientMayDuck,
+            ),
+            iOS: AudioContextIOS(
+              category: AVAudioSessionCategory.playback,
+              options: const {AVAudioSessionOptions.mixWithOthers},
+            ),
+          ),
+        );
+        await player.setPlayerMode(PlayerMode.lowLatency);
+        await player.setReleaseMode(ReleaseMode.stop);
+        _audioReady = true;
       }
+      await player.setVolume(volume);
+      await player.stop();
+      await player.play(AssetSource('sounds/order_alert.wav'));
+      return true;
+    } catch (e) {
+      if (kDebugMode) print('[AppHaptics] chime: $e');
+      _audioReady = false;
+      return false;
     }
   }
 

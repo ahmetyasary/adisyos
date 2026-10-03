@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
-import 'package:flutter/material.dart' show Color;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:orderix/services/local_notify_service.dart';
@@ -138,11 +138,22 @@ class DigitalMenuOrderService extends GetxService {
             : 'new_order_message'.tr)
         : '$n ${'new_orders_plural'.tr}';
 
-    AppToast.warning(body, title: title);
-    await AppHaptics.orderArrived();
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    final foreground = lifecycle == null ||
+        lifecycle == AppLifecycleState.resumed;
+    if (foreground) {
+      AppToast.warning(body, title: title);
+      await AppHaptics.orderArrived();
+    }
 
     if (Get.isRegistered<LocalNotifyService>()) {
-      await LocalNotifyService.to.showOrderAlert(title: title, body: body);
+      await LocalNotifyService.to.showOrderAlert(
+        title: title,
+        body: body,
+        // Foreground sound is the in-app chime. The system sound is silent
+        // on the simulator and would double the chime on a device.
+        systemSound: !foreground,
+      );
     }
   }
 
