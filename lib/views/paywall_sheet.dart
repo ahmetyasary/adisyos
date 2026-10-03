@@ -36,14 +36,47 @@ Future<void> showPaywallSheet(
   BuildContext context, {
   bool dismissible = true,
 }) {
+  final size = MediaQuery.sizeOf(context);
+  // iPad / wide windows: a bottom sheet is easy to miss or collapses to an
+  // empty barrier. A sized dialog stays on the admin screen.
+  if (size.shortestSide >= 600) {
+    return showDialog<void>(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: dismissible,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
+      builder: (ctx) {
+        final height = MediaQuery.sizeOf(ctx).height;
+        return Dialog(
+          backgroundColor: AppColors.card,
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 48, vertical: 28),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: SizedBox(
+            width: 560,
+            height: height * 0.86,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: _PaywallSheet(dismissible: dismissible),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     isDismissible: dismissible,
     enableDrag: dismissible,
     useSafeArea: true,
     backgroundColor: AppColors.card,
     barrierColor: Colors.black.withValues(alpha: 0.45),
+    constraints: BoxConstraints(maxHeight: size.height * 0.92),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
@@ -602,9 +635,9 @@ class _PlanCard extends StatelessWidget {
                     ]
                   : [
                       BoxShadow(
-                      color: AppColors.isDark
-                          ? Colors.transparent
-                          : const Color(0x08000000),
+                        color: AppColors.isDark
+                            ? Colors.transparent
+                            : const Color(0x08000000),
                         blurRadius: 10,
                         offset: const Offset(0, 3),
                       ),
@@ -743,11 +776,10 @@ class _CtaButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-      return Obx(() {
+    return Obx(() {
       final loading = SubscriptionService.to.isPurchasing.value;
       final enabled = package != null && !loading;
-        final foreground =
-            enabled ? Colors.white : AppColors.textSec;
+      final foreground = enabled ? Colors.white : AppColors.textSec;
 
       return GestureDetector(
         onTap: enabled ? onPurchase : null,

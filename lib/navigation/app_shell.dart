@@ -51,6 +51,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   Worker? _entitlementWorker;
   bool _paywallShown = false;
 
+  /// Receipt restore can hang on the simulator. After one wait we still show
+  /// the purchase sheet so the admin screen is not left locked with no UI.
+  bool _paywallWaitedForReceipt = false;
+
   /// The user-selected section. Null until first selection — until then the
   /// content resolves to the deep-link target or the role's landing section.
   String? _selectedId;
@@ -96,12 +100,27 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   /// Centralised gate. Idempotent — the `_paywallShown` flag prevents
   /// stacking sheets when multiple triggers fire in quick succession.
   void _enforcePaywall() {
-    if (!mounted || _paywallShown) return;
+    if (!mounted) return;
     if (!AuthController.to.isAuthenticated) return;
-    if (SubscriptionService.to.hasAccess) return;
+    if (SubscriptionService.to.hasAccess) {
+      if (_paywallShown) {
+        final nav = Navigator.of(context, rootNavigator: true);
+        if (nav.canPop()) nav.pop();
+      }
+      return;
+    }
+    if (_paywallShown) return;
 
-    if (!SubscriptionService.to.receiptSyncSettled) {
-      SubscriptionService.to.syncFromReceipt().then((_) {
+    if (!SubscriptionService.to.receiptSyncSettled &&
+        !_paywallWaitedForReceipt) {
+      _paywallWaitedForReceipt = true;
+      SubscriptionService.to
+          .syncFromReceipt()
+          .timeout(
+            const Duration(seconds: 4),
+            onTimeout: () {},
+          )
+          .whenComplete(() {
         if (mounted) _enforcePaywall();
       });
       return;

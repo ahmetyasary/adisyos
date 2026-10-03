@@ -99,6 +99,10 @@ class _PinScreenState extends State<PinScreen> {
         return;
       }
       setState(() => _entering = true);
+      // Let the keypad gesture finish. Opening a dialog or replacing the
+      // route inside onTap leaves a modal barrier that swallows all taps.
+      await Future<void>.delayed(Duration.zero);
+      if (!mounted) return;
       StaffService.to.clearCurrentStaff();
       if (SettingsService.to.adminPinMustChange.value ||
           SettingsService.to.adminPin.value == '1234') {
@@ -109,17 +113,17 @@ class _PinScreenState extends State<PinScreen> {
           message:
               'Geçici PIN (1234) ile giriş yaptınız. Devam etmek için yeni bir PIN belirleyin.',
         );
+        if (!mounted) return;
         if (!changed) {
-          if (mounted) {
-            setState(() {
-              _entering = false;
-              _enteredPin = '';
-              _hasError = false;
-            });
-          }
+          setState(() {
+            _entering = false;
+            _enteredPin = '';
+            _hasError = false;
+          });
           return;
         }
       }
+      if (!mounted) return;
       Get.offAll(() => const AppShell());
       return;
     }
@@ -127,6 +131,9 @@ class _PinScreenState extends State<PinScreen> {
     final staff = _selectedStaff;
     if (staff == null) return;
     if (StaffService.to.verifyPin(staff['id'] as String, _enteredPin)) {
+      setState(() => _entering = true);
+      await Future<void>.delayed(Duration.zero);
+      if (!mounted) return;
       StaffService.to.setCurrentStaff(staff);
       final role = StaffService.to.currentStaffAppRole;
       final landing = landingSectionFor(role) ?? 'tables';

@@ -87,7 +87,11 @@ class _AdminPinSetupDialogState extends State<_AdminPinSetupDialog> {
       _saving = true;
     });
     try {
-      await SettingsService.to.setAdminPin(pin, mustChange: false);
+      // Local PIN is saved first. A hung Supabase write must not trap the
+      // forced dialog (it cannot be dismissed).
+      await SettingsService.to
+          .setAdminPin(pin, mustChange: false)
+          .timeout(const Duration(seconds: 8), onTimeout: () {});
       if (!mounted) return;
       AppToast.success('Yönetici PIN’i kaydedildi');
       Get.back(result: true);
@@ -111,13 +115,18 @@ class _AdminPinSetupDialogState extends State<_AdminPinSetupDialog> {
             ? 'Personel eklendiği için yönetici girişi artık PIN ile korunacak. 4 haneli bir PIN oluşturun.'
             : 'Güvenlik için geçici PIN’i değiştirmeniz gerekiyor.');
 
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     return Dialog(
       backgroundColor: _card,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+        constraints: BoxConstraints(
+          maxWidth: 420,
+          maxHeight: MediaQuery.sizeOf(context).height - bottomInset - 48,
+        ),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomInset),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

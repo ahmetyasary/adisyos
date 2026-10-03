@@ -41,11 +41,9 @@ class SubscriptionService extends GetxService {
       debugPrint('[RC] configure() skipped on web');
       return;
     }
-    final key = defaultTargetPlatform == TargetPlatform.iOS
-        ? _kAppleKey
-        : _kGoogleKey;
-    debugPrint(
-        '[RC] configure() platform=$defaultTargetPlatform '
+    final key =
+        defaultTargetPlatform == TargetPlatform.iOS ? _kAppleKey : _kGoogleKey;
+    debugPrint('[RC] configure() platform=$defaultTargetPlatform '
         'keyPresent=${key.trim().isNotEmpty} '
         'keyPrefix=${key.isEmpty ? "<empty>" : key.substring(0, key.length.clamp(0, 5))}');
     if (key.trim().isEmpty) {
@@ -77,16 +75,12 @@ class SubscriptionService extends GetxService {
   /// is a free trial, an introductory price, or a full paid subscription.
   ///
   /// We never fall back to allowing access just because RC hasn't synced yet —
-  /// no entitlement means no access.
-  ///
-  /// In debug builds we always grant access so the paywall never appears
-  /// during local development. `kDebugMode` is a compile-time constant that is
-  /// `false` in profile/release builds, so the production App Store build is
-  /// completely unaffected.
+  /// no entitlement means no access. Debug builds included: the admin screen
+  /// must be able to show the purchase sheet on the simulator.
   ///
   /// Web has no App Store / Play Billing — RevenueCat is skipped there, so
   /// the lockout paywall must not block the browser panel.
-  bool get hasAccess => kDebugMode || kIsWeb || isSubscribed;
+  bool get hasAccess => kIsWeb || isSubscribed;
 
   bool get isSubscribed => _entitlement != null;
 

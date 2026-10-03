@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:orderix/views/pin_screen.dart';
 import 'package:orderix/views/table_detail_view.dart';
 import 'package:orderix/services/table_service.dart';
@@ -32,37 +33,103 @@ Color get _tableFreeBg => AppColors.card;
 Color get _tableOccupiedBg =>
     AppColors.isDark ? const Color(0xFF2A1F1A) : const Color(0xFFFFF4EC);
 
-/// Occupied tables first (newest occupation first), then free tables by
-/// natural name (İç Mekan 1, 2, 3…).
+/// Grid order follows the table name (1, 2, 3…), regardless of whether the
+/// table is open.
 int _compareTablesForGrid(Map<String, dynamic> a, Map<String, dynamic> b) {
-  final aOccupied = a['isOccupied'] == true;
-  final bOccupied = b['isOccupied'] == true;
-  if (aOccupied != bOccupied) return aOccupied ? -1 : 1;
-
-  if (aOccupied) {
-    final aAt = _occupiedAtOf(a);
-    final bAt = _occupiedAtOf(b);
-    if (aAt != null && bAt != null) {
-      final byTime = bAt.compareTo(aAt); // newest first
-      if (byTime != 0) return byTime;
-    } else if (aAt != null) {
-      return -1;
-    } else if (bAt != null) {
-      return 1;
-    }
-  }
-
   return _naturalTableNameCompare(
     a['name'] as String? ?? '',
     b['name'] as String? ?? '',
   );
 }
 
-DateTime? _occupiedAtOf(Map<String, dynamic> table) {
-  final value = table['occupiedAt'];
-  if (value is DateTime) return value;
-  if (value is String) return DateTime.tryParse(value);
-  return null;
+bool _tableInSection(Map<String, dynamic> table, Map<String, dynamic> section) {
+  final sectionId = section['id'];
+  final sectionName = (section['name'] as String? ?? '').toLowerCase();
+  final tableSectionId = table['sectionId'];
+  final tableName = (table['name'] as String? ?? '').toLowerCase();
+  return tableSectionId == sectionId ||
+      (sectionName.isNotEmpty && tableName.contains(sectionName));
+}
+
+int _openTableCount(
+  List<Map<String, dynamic>> tables, {
+  Map<String, dynamic>? section,
+}) {
+  return tables.where((t) {
+    if (t['isOccupied'] != true) return false;
+    if (section == null) return true;
+    return _tableInSection(t, section);
+  }).length;
+}
+
+class _TableGroup {
+  const _TableGroup(this.name, this.tables);
+  final String name;
+  final List<Map<String, dynamic>> tables;
+}
+
+List<_TableGroup> _groupTables(List<Map<String, dynamic>> tables) {
+  final sections = SectionService.to.sections;
+  final buckets = <String, List<Map<String, dynamic>>>{
+    for (final section in sections) section['id'] as String: [],
+  };
+  final loose = <Map<String, dynamic>>[];
+  for (final table in tables) {
+    final sectionId = table['sectionId'] as String?;
+    if (sectionId != null && buckets.containsKey(sectionId)) {
+      buckets[sectionId]!.add(table);
+      continue;
+    }
+    Map<String, dynamic>? byName;
+    final tableName = (table['name'] as String? ?? '').toLowerCase();
+    for (final section in sections) {
+      final sectionName = (section['name'] as String? ?? '').toLowerCase();
+      if (sectionName.isNotEmpty && tableName.contains(sectionName)) {
+        byName = section;
+        break;
+      }
+    }
+    if (byName != null) {
+      buckets[byName['id'] as String]!.add(table);
+    } else {
+      loose.add(table);
+    }
+  }
+  final groups = <_TableGroup>[];
+  for (final section in sections) {
+    final items = buckets[section['id'] as String]!;
+    if (items.isEmpty) continue;
+    groups.add(_TableGroup(section['name'] as String, items));
+  }
+  if (loose.isNotEmpty) groups.add(_TableGroup('Bölümsüz', loose));
+  return groups;
+}
+
+IconData _layoutIcon(_TableLayout layout) {
+  return switch (layout) {
+    _TableLayout.grid => CupertinoIcons.square_grid_2x2,
+    _TableLayout.gridSmall => CupertinoIcons.circle_grid_3x3,
+    _TableLayout.list => CupertinoIcons.list_bullet,
+    _TableLayout.grouped2 => CupertinoIcons.rectangle_split_3x1,
+    _TableLayout.grouped4 => CupertinoIcons.square_grid_3x2,
+  };
+}
+
+({String section, String number}) _tableLabel(Map<String, dynamic> table) {
+  final name = table['name'] as String? ?? '';
+  final sectionId = table['sectionId'] as String?;
+  final sectionFromService = SectionService.to.nameById(sectionId);
+  final parts = name.trim().split(' ');
+  if (sectionFromService != null && sectionFromService.isNotEmpty) {
+    return (section: sectionFromService, number: parts.last);
+  }
+  if (parts.length > 1) {
+    return (
+      section: parts.sublist(0, parts.length - 1).join(' '),
+      number: parts.last,
+    );
+  }
+  return (section: 'Masa', number: name);
 }
 
 final _tableNameChunk = RegExp(r'(\d+)|(\D+)');
@@ -100,9 +167,37 @@ class TablesView extends StatefulWidget {
 
 enum _TableStatusFilter { all, occupied, free }
 
+enum _TableLayout { grid, gridSmall, list, grouped2, grouped4 }
+
+const _kTableLayoutPref = 'tables_layout';
+
 class _TablesViewState extends State<TablesView> {
   final _selectedSectionId = Rx<String?>(null);
   final _statusFilter = _TableStatusFilter.all.obs;
+  final _layout = _TableLayout.grid.obs;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLayout();
+  }
+
+  Future<void> _loadLayout() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_kTableLayoutPref);
+    for (final mode in _TableLayout.values) {
+      if (mode.name == raw) {
+        _layout.value = mode;
+        return;
+      }
+    }
+  }
+
+  Future<void> _setLayout(_TableLayout mode) async {
+    _layout.value = mode;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kTableLayoutPref, mode.name);
+  }
 
   // ── Day not started dialog ──────────────────────────────────
 
@@ -822,6 +917,213 @@ class _TablesViewState extends State<TablesView> {
 
   IconData _getSectionIcon(String name) => _sectionIconFor(name);
 
+  void _openTable(Map<String, dynamic> table, int actualIndex) {
+    final staffName = StaffService.to.currentStaffIdentifier;
+    final id = staffName.isNotEmpty
+        ? staffName
+        : (AuthController.to.user.value?.email ?? '');
+    if (!DayService.to.isDayStartedBy(id)) {
+      _showDayNotStartedDialog(
+        tableNumber: actualIndex + 1,
+        tableName: table['name'] as String,
+        isOccupied: table['isOccupied'] as bool,
+        tableIndex: actualIndex,
+      );
+      return;
+    }
+    Get.to(() => TableDetailView(
+          tableNumber: actualIndex + 1,
+          tableName: table['name'] as String,
+          isOccupied: table['isOccupied'] as bool,
+          tableIndex: actualIndex,
+        ));
+  }
+
+  void _showLayoutPicker(BuildContext anchor) {
+    final box = anchor.findRenderObject() as RenderBox?;
+    final overlay = Navigator.of(anchor).overlay?.context.findRenderObject();
+    if (box == null || overlay is! RenderBox) return;
+    final origin = box.localToGlobal(Offset.zero, ancestor: overlay);
+    final rect = origin & box.size;
+    showGeneralDialog<void>(
+      context: anchor,
+      barrierDismissible: true,
+      barrierLabel: 'Görünüm',
+      barrierColor: Colors.black26,
+      transitionDuration: const Duration(milliseconds: 140),
+      pageBuilder: (ctx, _, __) {
+        return _LayoutPopup(
+          anchor: rect,
+          current: _layout.value,
+          onPick: (mode) {
+            Navigator.of(ctx).pop();
+            _setLayout(mode);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildTableBody(
+    BuildContext context,
+    List<Map<String, dynamic>> tables,
+    List<Map<String, dynamic>> allTables,
+    _TableLayout layout,
+  ) {
+    final bottom = MediaQuery.of(context).padding.bottom + 88;
+    switch (layout) {
+      case _TableLayout.list:
+        return _buildTableList(context, tables, allTables, bottom);
+      case _TableLayout.grouped2:
+        return _buildGroupedTables(context, tables, allTables, bottom);
+      case _TableLayout.grouped4:
+        return _buildGroupedTables(
+          context,
+          tables,
+          allTables,
+          bottom,
+          columns: 4,
+        );
+      case _TableLayout.grid:
+        return _buildCurrentGrid(context, tables, allTables, bottom);
+      case _TableLayout.gridSmall:
+        return _buildGroupedTables(
+          context,
+          tables,
+          allTables,
+          bottom,
+          small: true,
+        );
+    }
+  }
+
+  Widget _buildCurrentGrid(
+    BuildContext context,
+    List<Map<String, dynamic>> tables,
+    List<Map<String, dynamic>> allTables,
+    double bottom,
+  ) {
+    return LayoutBuilder(builder: (context, constraints) {
+      final width = constraints.maxWidth;
+      final cols = width < 500
+          ? 3
+          : width < 820
+              ? 4
+              : width < 1040
+                  ? 5
+                  : 6;
+      final compact = width < 500;
+      return GridView.builder(
+        padding: EdgeInsets.fromLTRB(16, 0, 16, bottom),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: cols,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: compact ? 0.85 : 0.95,
+        ),
+        itemCount: tables.length,
+        itemBuilder: (context, i) =>
+            _gridCard(context, tables[i], allTables, compact: compact),
+      );
+    });
+  }
+
+  Widget _buildTableList(
+    BuildContext context,
+    List<Map<String, dynamic>> tables,
+    List<Map<String, dynamic>> allTables,
+    double bottom,
+  ) {
+    return ListView.separated(
+      padding: EdgeInsets.fromLTRB(16, 0, 16, bottom),
+      itemCount: tables.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, i) {
+        final table = tables[i];
+        final actualIndex = allTables.indexOf(table);
+        return _TableListTile(
+          table: table,
+          onTap: () => _openTable(table, actualIndex),
+          onMenu: (pos) => _showTableContextMenu(context, actualIndex, pos),
+        );
+      },
+    );
+  }
+
+  Widget _buildGroupedTables(
+    BuildContext context,
+    List<Map<String, dynamic>> tables,
+    List<Map<String, dynamic>> allTables,
+    double bottom, {
+    int columns = 2,
+    bool small = false,
+  }) {
+    final groups = _groupTables(tables);
+    return LayoutBuilder(builder: (context, constraints) {
+      final width = constraints.maxWidth;
+      final cols = small
+          ? (width < 500
+              ? 4
+              : width < 820
+                  ? 6
+                  : width < 1100
+                      ? 8
+                      : 10)
+          : (columns == 4 && width < 720 ? 2 : columns);
+      final gap = small ? 8.0 : 10.0;
+      final ratio = small ? 0.9 : (cols <= 2 ? 2.15 : 1.2);
+      return CustomScrollView(
+        slivers: [
+          for (final group in groups) ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+                child: _GroupHeader(name: group.name, tables: group.tables),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: cols,
+                  crossAxisSpacing: gap,
+                  mainAxisSpacing: gap,
+                  childAspectRatio: ratio,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, i) => _gridCard(
+                    context,
+                    group.tables[i],
+                    allTables,
+                    compact: true,
+                  ),
+                  childCount: group.tables.length,
+                ),
+              ),
+            ),
+          ],
+          SliverToBoxAdapter(child: SizedBox(height: bottom)),
+        ],
+      );
+    });
+  }
+
+  Widget _gridCard(
+    BuildContext context,
+    Map<String, dynamic> table,
+    List<Map<String, dynamic>> allTables, {
+    required bool compact,
+  }) {
+    final actualIndex = allTables.indexOf(table);
+    return _TableCard(
+      table: table,
+      index: actualIndex,
+      compact: compact,
+      onTap: () => _openTable(table, actualIndex),
+      onLongPress: (pos) => _showTableContextMenu(context, actualIndex, pos),
+    );
+  }
+
   // ── Build ────────────────────────────────────────────────────
 
   @override
@@ -881,6 +1183,20 @@ class _TablesViewState extends State<TablesView> {
                       );
                     }),
                     const Spacer(),
+                    Builder(
+                      builder: (anchor) => Obx(() {
+                        final mode = _layout.value;
+                        return IconButton(
+                          tooltip: 'Görünüm',
+                          icon: Icon(
+                            _layoutIcon(mode),
+                            size: 18,
+                            color: _textSecondary,
+                          ),
+                          onPressed: () => _showLayoutPicker(anchor),
+                        );
+                      }),
+                    ),
                     Obx(() {
                       if (!StaffService.to.hasActiveStaff)
                         return const SizedBox.shrink();
@@ -968,6 +1284,7 @@ class _TablesViewState extends State<TablesView> {
                               _SectionPill(
                                 label: 'Tümü',
                                 icon: CupertinoIcons.square_grid_2x2_fill,
+                                openCount: _openTableCount(tables),
                                 selected: _selectedSectionId.value == null,
                                 onTap: () => _selectedSectionId.value = null,
                               ),
@@ -977,6 +1294,8 @@ class _TablesViewState extends State<TablesView> {
                                       label: s['name'] as String,
                                       icon:
                                           _getSectionIcon(s['name'] as String),
+                                      openCount:
+                                          _openTableCount(tables, section: s),
                                       selected:
                                           _selectedSectionId.value == s['id'],
                                       onTap: () => _selectedSectionId.value =
@@ -1021,18 +1340,11 @@ class _TablesViewState extends State<TablesView> {
                     final selectedSection = sections.firstWhere(
                         (s) => s['id'] == sectionId,
                         orElse: () => {});
-                    final sectionName = selectedSection.isNotEmpty
-                        ? (selectedSection['name'] as String).toLowerCase()
-                        : '';
-
                     tables = allTables.where((t) {
-                      final tSectionId = t['sectionId'];
-                      final tName = (t['name'] as String).toLowerCase();
-
-                      // Match by exact sectionId OR if the table's name contains the section's name
-                      return tSectionId == sectionId ||
-                          (sectionName.isNotEmpty &&
-                              tName.contains(sectionName));
+                      if (selectedSection.isEmpty) {
+                        return t['sectionId'] == sectionId;
+                      }
+                      return _tableInSection(t, selectedSection);
                     }).toList();
                   } else {
                     tables = List<Map<String, dynamic>>.from(allTables);
@@ -1047,6 +1359,8 @@ class _TablesViewState extends State<TablesView> {
                   }
 
                   tables.sort(_compareTablesForGrid);
+                  SectionService.to.sections.length;
+                  final layout = _layout.value;
 
                   if (allTables.isEmpty) {
                     return Center(
@@ -1085,60 +1399,7 @@ class _TablesViewState extends State<TablesView> {
                     );
                   }
 
-                  return LayoutBuilder(builder: (context, constraints) {
-                    final cols = constraints.maxWidth < 500
-                        ? 3
-                        : constraints.maxWidth < 820
-                            ? 4
-                            : constraints.maxWidth < 1040
-                                ? 5
-                                : 6;
-                    final compact = cols >= 3 && constraints.maxWidth < 500;
-                    return GridView.builder(
-                      padding: EdgeInsets.fromLTRB(16, 0, 16,
-                          MediaQuery.of(context).padding.bottom + 88),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: cols,
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                        childAspectRatio: compact ? 0.85 : 0.95,
-                      ),
-                      itemCount: tables.length,
-                      itemBuilder: (context, i) {
-                        final table = tables[i];
-                        final actualIndex = allTables.indexOf(table);
-                        return _TableCard(
-                          table: table,
-                          index: actualIndex,
-                          compact: compact,
-                          onTap: () {
-                            final staffName =
-                                StaffService.to.currentStaffIdentifier;
-                            final id = staffName.isNotEmpty
-                                ? staffName
-                                : (AuthController.to.user.value?.email ?? '');
-                            if (!DayService.to.isDayStartedBy(id)) {
-                              _showDayNotStartedDialog(
-                                tableNumber: actualIndex + 1,
-                                tableName: table['name'] as String,
-                                isOccupied: table['isOccupied'] as bool,
-                                tableIndex: actualIndex,
-                              );
-                              return;
-                            }
-                            Get.to(() => TableDetailView(
-                                  tableNumber: actualIndex + 1,
-                                  tableName: table['name'] as String,
-                                  isOccupied: table['isOccupied'] as bool,
-                                  tableIndex: actualIndex,
-                                ));
-                          },
-                          onLongPress: (pos) =>
-                              _showTableContextMenu(context, actualIndex, pos),
-                        );
-                      },
-                    );
-                  });
+                  return _buildTableBody(context, tables, allTables, layout);
                 }),
               ),
             ),
@@ -1220,6 +1481,7 @@ class _SectionPill extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final IconData? icon;
+  final int openCount;
   final void Function(Offset)? onLongPress;
 
   const _SectionPill({
@@ -1227,6 +1489,7 @@ class _SectionPill extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.icon,
+    this.openCount = 0,
     this.onLongPress,
   });
 
@@ -1238,10 +1501,10 @@ class _SectionPill extends StatelessWidget {
           onLongPress == null ? null : (d) => onLongPress!(d.globalPosition),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: selected ? _orange : _card,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(22),
           border: selected
               ? null
               : Border.fromBorderSide(BorderSide(color: _border, width: 1)),
@@ -1265,19 +1528,40 @@ class _SectionPill extends StatelessWidget {
             if (icon != null) ...[
               Icon(
                 icon,
-                size: 16,
+                size: 18,
                 color: selected ? Colors.white : _textSecondary,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 7),
             ],
             Text(
               label,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: selected ? Colors.white : _textSecondary,
               ),
             ),
+            if (openCount > 0) ...[
+              const SizedBox(width: 7),
+              Container(
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: selected ? Colors.white : _occupied,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Text(
+                  '$openCount',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    height: 1,
+                    color: selected ? _orange : Colors.white,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1296,7 +1580,7 @@ class _AddSectionPill extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: _orange.withOpacity(0.08),
           borderRadius: BorderRadius.circular(20),
@@ -1305,12 +1589,12 @@ class _AddSectionPill extends StatelessWidget {
         child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(CupertinoIcons.add, size: 15, color: _orange),
-            SizedBox(width: 5),
+            Icon(CupertinoIcons.add, size: 17, color: _orange),
+            SizedBox(width: 6),
             Text(
               'Bölüm',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: _orange,
               ),
@@ -1580,6 +1864,408 @@ class _EmptyBadge extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _GroupHeader extends StatelessWidget {
+  const _GroupHeader({required this.name, required this.tables});
+
+  final String name;
+  final List<Map<String, dynamic>> tables;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _sectionColorFor(name);
+    final open = tables.where((t) => t['isOccupied'] == true).length;
+    return Row(
+      children: [
+        Icon(_sectionIconFor(name), size: 14, color: color),
+        const SizedBox(width: 6),
+        Text(
+          name,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: color,
+            letterSpacing: 0.2,
+          ),
+        ),
+        const Spacer(),
+        if (open > 0)
+          Text(
+            '$open açık',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: _occupied,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _TableListTile extends StatelessWidget {
+  const _TableListTile({
+    required this.table,
+    required this.onTap,
+    required this.onMenu,
+  });
+
+  final Map<String, dynamic> table;
+  final VoidCallback onTap;
+  final void Function(Offset) onMenu;
+
+  @override
+  Widget build(BuildContext context) {
+    final isOccupied = table['isOccupied'] == true;
+    final rawTotal = (table['total'] as num?)?.toDouble() ?? 0.0;
+    final discount = (table['discount'] as num?)?.toDouble() ?? 0.0;
+    final total = (rawTotal - discount).clamp(0.0, double.infinity);
+    final label = _tableLabel(table);
+    final accent = isOccupied ? _occupied : _available;
+    return GestureDetector(
+      onTap: onTap,
+      onLongPressStart: (d) => onMenu(d.globalPosition),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isOccupied ? _tableOccupiedBg : _tableFreeBg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border(left: BorderSide(color: accent, width: 4)),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 42,
+              child: Text(
+                label.number,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: _textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label.section,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: _sectionColorFor(label.section),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (isOccupied)
+              _PriceBadge(total: total, compact: true)
+            else
+              const _EmptyBadge(compact: true),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTapDown: (d) => onMenu(d.globalPosition),
+              child: Icon(
+                isOccupied ? CupertinoIcons.ellipsis : CupertinoIcons.add,
+                size: 18,
+                color: isOccupied ? _textSecondary : _available,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LayoutPopup extends StatelessWidget {
+  const _LayoutPopup({
+    required this.anchor,
+    required this.current,
+    required this.onPick,
+  });
+
+  final Rect anchor;
+  final _TableLayout current;
+  final ValueChanged<_TableLayout> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    const width = 280.0;
+    var left = anchor.right - width;
+    if (left < 12) left = 12;
+    if (left + width > size.width - 12) left = size.width - width - 12;
+    final top = (anchor.bottom + 8).clamp(12.0, size.height - 390);
+
+    const options = <_TableLayout, (String, String)>{
+      _TableLayout.list: ('Liste', 'Satır satır'),
+      _TableLayout.grouped2: ('2 kolon', 'Küçük kutular, bölümlere ayrılır'),
+      _TableLayout.grouped4: ('4 kolon', 'Küçük kutular, bölümlere ayrılır'),
+      _TableLayout.grid: ('Izgara', 'Şu anki görünüm'),
+      _TableLayout.gridSmall: ('Küçük ızgara', 'Küçük kutular, bölümlere ayrılır'),
+    };
+
+    return SizedBox.expand(
+      child: Stack(
+        children: [
+          Positioned(
+            left: left,
+            top: top,
+            width: width,
+            child: Material(
+              color: _card,
+              elevation: 12,
+              shadowColor: const Color(0x33000000),
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 2, 8, 8),
+                      child: Text(
+                        'Görünüm',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: _textSecondary,
+                        ),
+                      ),
+                    ),
+                    for (final entry in options.entries)
+                      _LayoutOption(
+                        layout: entry.key,
+                        title: entry.value.$1,
+                        subtitle: entry.value.$2,
+                        selected: entry.key == current,
+                        onTap: () => onPick(entry.key),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LayoutOption extends StatelessWidget {
+  const _LayoutOption({
+    required this.layout,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _TableLayout layout;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Material(
+        color: selected ? _orange.withValues(alpha: 0.12) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: selected ? _orange : Colors.transparent,
+              ),
+            ),
+            child: Row(
+              children: [
+                _LayoutSketch(layout: layout, selected: selected),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: _textPrimary,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        style: TextStyle(fontSize: 11, color: _textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                if (selected)
+                  const Icon(CupertinoIcons.checkmark_alt,
+                      size: 16, color: _orange),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LayoutSketch extends StatelessWidget {
+  const _LayoutSketch({required this.layout, required this.selected});
+
+  final _TableLayout layout;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final fill = selected ? _orange.withValues(alpha: 0.85) : _chip;
+    final line = selected ? _orange : _border;
+    return Container(
+      width: 46,
+      height: 34,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.isDark
+            ? const Color(0xFF1C1C1E)
+            : const Color(0xFFF4F4F6),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: line),
+      ),
+      child: switch (layout) {
+        _TableLayout.list => Column(
+            children: [
+              for (var i = 0; i < 3; i++) ...[
+                if (i > 0) const SizedBox(height: 3),
+                Expanded(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: fill,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        _TableLayout.grouped2 => Row(
+            children: [
+              for (var c = 0; c < 2; c++) ...[
+                if (c > 0) const SizedBox(width: 3),
+                Expanded(
+                  child: Column(
+                    children: [
+                      for (var r = 0; r < 2; r++) ...[
+                        if (r > 0) const SizedBox(height: 3),
+                        Expanded(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: fill,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        _TableLayout.grouped4 => Column(
+            children: [
+              Container(height: 3, color: line),
+              const SizedBox(height: 3),
+              Expanded(
+                child: Row(
+                  children: [
+                    for (var c = 0; c < 4; c++) ...[
+                      if (c > 0) const SizedBox(width: 2),
+                      Expanded(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: fill,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        _TableLayout.grid => Column(
+            children: [
+              for (var r = 0; r < 2; r++) ...[
+                if (r > 0) const SizedBox(height: 3),
+                Expanded(
+                  child: Row(
+                    children: [
+                      for (var c = 0; c < 3; c++) ...[
+                        if (c > 0) const SizedBox(width: 2),
+                        Expanded(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: fill,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        _TableLayout.gridSmall => Column(
+            children: [
+              Container(height: 3, color: line),
+              const SizedBox(height: 3),
+              Expanded(
+                child: Column(
+                  children: [
+                    for (var r = 0; r < 2; r++) ...[
+                      if (r > 0) const SizedBox(height: 2),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            for (var c = 0; c < 4; c++) ...[
+                              if (c > 0) const SizedBox(width: 2),
+                              Expanded(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: fill,
+                                    borderRadius: BorderRadius.circular(1.5),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+      },
     );
   }
 }
